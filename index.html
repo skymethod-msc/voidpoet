@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VOID POET</title>
+  <meta name="description" content="Sound as matter. Silence as structure. There is no ascent here. Only depth."/>
+  
+  <!-- Favicon básico (puedes cambiarlo después) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖤</text></svg>"/>
+  
+  <style>
+    :root {
+      --bg: #000000;
+      --text: #d0d0d0;
+      --text-dim: #777777;
+      --accent: #4a0000; /* rojo sangre sutil */
+      --accent-hover: #660000;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+    
+    header {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+    
+    h1 {
+      font-size: clamp(4rem, 12vw, 9rem);
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+      text-shadow: 0 0 40px rgba(74, 0, 0, 0.3);
+    }
+    
+    .tagline {
+      font-size: 1.4rem;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      max-width: 700px;
+      margin: 0 auto 3rem;
+    }
+    
+    .enter-btn {
+      display: inline-block;
+      padding: 1rem 2.5rem;
+      font-size: 1.2rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text);
+      border: 1px solid var(--text-dim);
+      text-decoration: none;
+      transition: all 0.4s ease;
+      background: transparent;
+    }
+    
+    .enter-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent-hover);
+      color: white;
+      box-shadow: 0 0 30px rgba(74, 0, 0, 0.6);
+    }
+    
+    .player-container {
+      margin: 4rem 0;
+      width: 100%;
+      max-width: 600px;
+    }
+    
+    section {
+      padding: 6rem 0;
+      text-align: center;
+    }
+    
+    h2 {
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+      letter-spacing: 0.1em;
+      color: var(--text);
+    }
+    
+    .bio {
+      font-size: 1.2rem;
+      max-width: 700px;
+      margin: 0 auto 3rem;
+      color: var(--text-dim);
+    }
+    
+    .links {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin: 3rem 0;
+    }
+    
+    .link {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 1.1rem;
+      transition: color 0.3s;
+    }
+    
+    .link:hover {
+      color: var(--accent);
+    }
+    
+    footer {
+      padding: 3rem 0;
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      border-top: 1px solid #111;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container">
+      <h1>VOID POET</h1>
+      <p class="tagline">Sound as matter. Silence as structure.<br>There is no ascent here. Only depth.</p>
+      
+      <a href="https://soundcloud.com/poetadelvacio" class="enter-btn" target="_blank">Enter the Void</a>
+      
+      <!-- Player de SoundCloud (cambia el src por tu track favorito) -->
+      <div class="player-container">
+        <iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay"
+          src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/TU_TRACK_ID_AQUI&auto_play=false&color=%234a0000&hide_related=false&show_comments=false&show_user=true&show_reposts=false&show_teaser=true">
+        </iframe>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="container">
+      <h2>Rituals</h2>
+      <p class="bio">Camino en el vacío.<br>Este es mi caos hecho música.</p>
+      
+      <ul style="list-style: none; margin: 2rem 0;">
+        <li><a href="https://soundcloud.com/poetadelvacio/the-great-immensity" class="link" target="_blank">The Great Immensity</a></li>
+        <li><a href="https://soundcloud.com/poetadelvacio/liminal-continuity" class="link" target="_blank">Liminal Continuity</a></li>
+        <li><a href="https://soundcloud.com/poetadelvacio/majestic-darkness" class="link" target="_blank">Majestic Darkness</a></li>
+        <li><a href="https://soundcloud.com/poetadelvacio/the-eternal-oceans" class="link" target="_blank">The Eternal Oceans</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Poeta del Vacío</h2>
+      <div class="links">
+        <a href="https://soundcloud.com/poetadelvacio" class="link" target="_blank">SoundCloud</a>
+        <a href="https://bandcamp.com/poetadelvacio" class="link" target="_blank">Bandcamp</a> <!-- si lo tienes -->
+        <a href="https://instagram.com/poetadelvacio" class="link" target="_blank">Instagram</a> <!-- ajusta -->
+        <a href="mailto:tuemail@voidpoet.com" class="link">Contact</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2026 VOID POET — Poeta del Vacío<br>All rights reserved.</p>
+  </footer>
+
+</body>
+</html>
