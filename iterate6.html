@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Coemergent System v5 — Living Balance</title>
+<style>
+body { margin:0; background:black; overflow:hidden; }
+canvas { display:block; }
+#overlay {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  color: white;
+  font-family: monospace;
+  font-size: 12px;
+  opacity: 0.6;
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="overlay">click to activate sound</div>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let t = 0;
+
+// --- AUDIO ---
+let audioCtx, osc, gain;
+let smoothFreq = 200;
+let smoothGain = 0;
+
+window.onclick = () => {
+  if(audioCtx) return;
+  audioCtx = new AudioContext();
+  osc = audioCtx.createOscillator();
+  gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  gain.gain.value = 0;
+  osc.start();
+};
+
+// --- PRIMITIVAS ---
+const ops = [(a,b)=>a+b,(a,b)=>a-b,(a,b)=>a*b,(a,b)=>b? a/b:0];
+const funcs = [Math.sin,Math.cos,Math.tanh];
+const vars = ["u","v","t"];
+
+// --- ÁRBOL ---
+function randomNode(d=0){
+  if(d>3 || Math.random()<0.3){
+    let r = Math.random();
+    if(r<0.33) return {type:"var", value: vars[Math.floor(Math.random()*3)]};
+    if(r<0.66) return {type:"const", value: Math.random()*2-1};
+    return {type:"func", fn: funcs[Math.floor(Math.random()*funcs.length)], arg: randomNode(d+1)};
+  }
+  return {
+    type:"op",
+    op: ops[Math.floor(Math.random()*ops.length)],
+    left: randomNode(d+1),
+    right: randomNode(d+1)
+  };
+}
+
+function evalNode(n,u,v,t){
+  try{
+    if(n.type==="var") return n.value==="u"?u:n.value==="v"?v:t;
+    if(n.type==="const") return n.value;
+    if(n.type==="func") return n.fn(evalNode(n.arg,u,v,t));
+    if(n.type==="op") return n.op(evalNode(n.left,u,v,t), evalNode(n.right,u,v,t));
+  }catch{ return 0; }
+}
+
+function mutate(n, rate){
+  if(Math.random()<rate) return randomNode();
+  if(n.type==="op"){
+    n.left = mutate(n.left,rate);
+    n.right = mutate(n.right,rate);
+  }
+  if(n.type==="func"){
+    n.arg = mutate(n.arg,rate);
+  }
+  return n;
+}
+
+function lerp(a,b,t){ return a+(b-a)*t; }
+
+// --- MEMORIA ---
+let memory = [];
+const MEMORY_SIZE = 12;
+
+// --- PESOS ---
+let weights = {
+  stability: 0.25,
+  richness: 0.2,
+  symmetry: 0.2,
+  rupture: 0.2,
+  surprise: 0.15
+};
+
+// --- ESTADO ---
+let prevFx = 0;
+
+// --- MÉTRICAS ---
+function computeMetrics(fx, fy, fc){
+
+  // ESTABILIDAD (zona media)
+  let delta = Math.abs(fx - prevFx);
+  let stability = 1 - Math.abs(delta - 0.25);
+
+  // RIQUEZA
+  let richness = Math.abs(fx * fy);
+
+  // SIMETRÍA
+  let symmetry = 1 - Math.abs(Math.abs(fx) - Math.abs(fy));
+
+  // RUPTURA
+  let rupture = Math.abs(fx - fy);
+
+  // SORPRESA
+  let surprise = 0;
+  for(let m of memory){
+    surprise += Math.abs(fx - m.fx);
+  }
+  surprise = memory.length ? surprise / memory.length : 0.5;
+
+  // limitar extremos
+  surprise = 1 - Math.abs(surprise - 0.5);
+
+  prevFx = fx;
+
+  return {stability, richness, symmetry, rupture, surprise};
+}
+
+// --- SCORE ---
+function computeScore(m){
+  return (
+    m.stability * weights.stability +
+    m.richness * weights.richness +
+    m.symmetry * weights.symmetry +
+    m.rupture * weights.rupture +
+    m.surprise * weights.surprise
+  );
+}
+
+// --- EVOLUCIÓN DE PESOS ---
+function evolveWeights(score){
+  let lr = 0.01;
+
+  for(let k in weights){
+    weights[k] += (Math.random() - 0.5) * lr * (0.5 + score);
+    weights[k] = Math.max(0.05, weights[k]);
+  }
+
+  let sum = Object.values(weights).reduce((a,b)=>a+b,0);
+  for(let k in weights){
+    weights[k] /= sum;
+  }
+}
+
+// --- ORGANISMO ---
+let organism = {
+  x: randomNode(),
+  y: randomNode(),
+  color: randomNode()
+};
+
+let target = JSON.parse(JSON.stringify(organism));
+let blend = 0;
+
+// --- LOOP ---
+function draw(){
+
+  ctx.fillStyle = "rgba(0,0,0,0.05)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  let fx=0, fy=0, fc=0;
+
+  for(let i=0;i<1200;i++){
+
+    let u=Math.random()*2-1;
+    let v=Math.random()*2-1;
+
+    let x = lerp(
+      evalNode(organism.x,u,v,t),
+      evalNode(target.x,u,v,t),
+      blend
+    );
+
+    let y = lerp(
+      evalNode(organism.y,u,v,t),
+      evalNode(target.y,u,v,t),
+      blend
+    );
+
+    let c = lerp(
+      evalNode(organism.color,u,v,t),
+      evalNode(target.color,u,v,t),
+      blend
+    );
+
+    if(!isFinite(x)||!isFinite(y)||!isFinite(c)) continue;
+
+    fx+=x; fy+=y; fc+=c;
+
+    let px = canvas.width/2 + x*260;
+    let py = canvas.height/2 + y*260;
+
+    let col = Math.floor((c+1)*127);
+    col = Math.max(0,Math.min(255,col));
+
+    ctx.fillStyle = `rgb(${col},120,${255-col})`;
+    ctx.fillRect(px,py,1,1);
+  }
+
+  fx/=1200; fy/=1200; fc/=1200;
+
+  let metrics = computeMetrics(fx,fy,fc);
+  let score = computeScore(metrics);
+
+  // --- AUDIO ---
+  if(audioCtx){
+    let f = 140 + fx*100 + metrics.surprise*120;
+    let g = Math.min(0.04, metrics.richness * 0.3);
+
+    smoothFreq = lerp(smoothFreq,f,0.05);
+    smoothGain = lerp(smoothGain,g,0.05);
+
+    osc.frequency.setValueAtTime(smoothFreq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(smoothGain, audioCtx.currentTime);
+  }
+
+  blend += 0.003;
+
+  if(blend>=1){
+
+    memory.push({
+      organism: JSON.parse(JSON.stringify(target)),
+      fx: fx,
+      score: score
+    });
+
+    memory.sort((a,b)=>b.score-a.score);
+    memory = memory.slice(0, MEMORY_SIZE);
+
+    evolveWeights(score);
+
+    let base = memory[Math.floor(Math.random()*memory.length)].organism;
+
+    organism = base;
+
+    target = {
+      x: mutate(JSON.parse(JSON.stringify(base.x)),0.08),
+      y: mutate(JSON.parse(JSON.stringify(base.y)),0.08),
+      color: mutate(JSON.parse(JSON.stringify(base.color)),0.08)
+    };
+
+    blend = 0;
+  }
+
+  t+=0.01;
+  requestAnimationFrame(draw);
+}
+
+draw();
+
+</script>
+</body>
+</html>
