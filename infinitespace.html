@@ -2,311 +2,129 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Coemergent System v6 — Survival</title>
+<title>Coemergent System v0</title>
 <style>
-body { margin:0; background:black; overflow:hidden; }
-canvas { display:block; }
-#overlay {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  color: white;
-  font-family: monospace;
-  font-size: 12px;
-  opacity: 0.6;
-}
+  body { margin:0; background:black; overflow:hidden; }
+  canvas { display:block; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="overlay">click</div>
-
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let t = 0;
 
-// --- AUDIO ---
-let audioCtx, osc, gain;
-let smoothFreq = 200;
-let smoothGain = 0;
-
-window.onclick = () => {
-  if(audioCtx) return;
-  audioCtx = new AudioContext();
-  osc = audioCtx.createOscillator();
-  gain = audioCtx.createGain();
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  gain.gain.value = 0;
-  osc.start();
-};
-
 // --- PRIMITIVAS ---
-const ops = [(a,b)=>a+b,(a,b)=>a-b,(a,b)=>a*b,(a,b)=>b? a/b:0];
-const funcs = [Math.sin,Math.cos,Math.tanh];
+const ops = [
+  (a,b)=>a+b,
+  (a,b)=>a-b,
+  (a,b)=>a*b,
+  (a,b)=>b!==0?a/b:0
+];
+
+const funcs = [
+  Math.sin,
+  Math.cos,
+  Math.tan,
+  Math.tanh
+];
+
 const vars = ["u","v","t"];
 
-// --- ÁRBOL ---
-function randomNode(d=0){
-  if(d>3 || Math.random()<0.3){
-    let r = Math.random();
-    if(r<0.33) return {type:"var", value: vars[Math.floor(Math.random()*3)]};
-    if(r<0.66) return {type:"const", value: Math.random()*2-1};
-    return {type:"func", fn: funcs[Math.floor(Math.random()*funcs.length)], arg: randomNode(d+1)};
+// --- CREAR ÁRBOL ALEATORIO ---
+function randomNode(depth=0){
+  if(depth > 3 || Math.random() < 0.3){
+    let type = Math.random();
+    if(type < 0.33) return {type:"var", value: vars[Math.floor(Math.random()*vars.length)]};
+    if(type < 0.66) return {type:"const", value: Math.random()*2-1};
+    return {type:"func", fn: funcs[Math.floor(Math.random()*funcs.length)], arg: randomNode(depth+1)};
   }
   return {
     type:"op",
     op: ops[Math.floor(Math.random()*ops.length)],
-    left: randomNode(d+1),
-    right: randomNode(d+1)
+    left: randomNode(depth+1),
+    right: randomNode(depth+1)
   };
 }
 
-function evalNode(n,u,v,t){
-  try{
-    if(n.type==="var") return n.value==="u"?u:n.value==="v"?v:t;
-    if(n.type==="const") return n.value;
-    if(n.type==="func") return n.fn(evalNode(n.arg,u,v,t));
-    if(n.type==="op") return n.op(evalNode(n.left,u,v,t), evalNode(n.right,u,v,t));
-  }catch{ return 0; }
+// --- EVALUAR ÁRBOL ---
+function evalNode(node, u,v,t){
+  switch(node.type){
+    case "var":
+      return node.value==="u"?u:node.value==="v"?v:t;
+    case "const":
+      return node.value;
+    case "func":
+      return node.fn(evalNode(node.arg,u,v,t));
+    case "op":
+      return node.op(
+        evalNode(node.left,u,v,t),
+        evalNode(node.right,u,v,t)
+      );
+  }
 }
 
-// --- MUTACIÓN ADAPTATIVA ---
-function mutate(n, rate, score){
-
-  let adaptiveRate = rate * (1 - score);
-
-  if(Math.random() < adaptiveRate){
+// --- MUTACIÓN ---
+function mutate(node, rate=0.1){
+  if(Math.random() < rate){
     return randomNode();
   }
-
-  if(n.type==="op"){
-    n.left = mutate(n.left, rate, score);
-    n.right = mutate(n.right, rate, score);
+  if(node.type==="op"){
+    node.left = mutate(node.left, rate);
+    node.right = mutate(node.right, rate);
   }
-
-  if(n.type==="func"){
-    n.arg = mutate(n.arg, rate, score);
+  if(node.type==="func"){
+    node.arg = mutate(node.arg, rate);
   }
-
-  return n;
+  return node;
 }
 
-function lerp(a,b,t){ return a+(b-a)*t; }
-
-// --- MEMORIA ---
-let memory = [];
-const MEMORY_SIZE = 15;
-
-// --- PESOS ---
-let weights = {
-  stability: 0.25,
-  richness: 0.25,
-  symmetry: 0.2,
-  rupture: 0.15,
-  surprise: 0.15
-};
-
-// --- ESTADO ---
-let prevFx = 0;
-
-// --- MÉTRICAS ---
-function computeMetrics(fx, fy, fc, structure){
-
-  let delta = Math.abs(fx - prevFx);
-  let stability = 1 - Math.abs(delta - 0.25);
-
-  let richness = structure;
-
-  let symmetry = 1 - Math.abs(Math.abs(fx) - Math.abs(fy));
-
-  let rupture = Math.abs(fx - fy);
-
-  let surprise = 0;
-  for(let m of memory){
-    surprise += Math.abs(fx - m.fx);
-  }
-  surprise = memory.length ? surprise / memory.length : 0.5;
-  surprise = 1 - Math.abs(surprise - 0.5);
-
-  prevFx = fx;
-
-  return {stability, richness, symmetry, rupture, surprise};
-}
-
-// --- SCORE ---
-function computeScore(m){
-  return (
-    m.stability * weights.stability +
-    m.richness * weights.richness +
-    m.symmetry * weights.symmetry +
-    m.rupture * weights.rupture +
-    m.surprise * weights.surprise
-  );
-}
-
-// --- EVOLUCIÓN DE PESOS ---
-function evolveWeights(score){
-  let lr = 0.01;
-
-  for(let k in weights){
-    weights[k] += (Math.random() - 0.5) * lr * (0.5 + score);
-    weights[k] = Math.max(0.05, weights[k]);
-  }
-
-  let sum = Object.values(weights).reduce((a,b)=>a+b,0);
-  for(let k in weights){
-    weights[k] /= sum;
-  }
-}
-
-// --- HERENCIA ---
-function inherit(base, score){
-
-  function mix(a, b, keepProb){
-    return Math.random() < keepProb ? a : b;
-  }
-
-  let keep = 0.7 * score;
-
-  return {
-    x: mix(base.x, mutate(JSON.parse(JSON.stringify(base.x)),0.08,score), keep),
-    y: mix(base.y, mutate(JSON.parse(JSON.stringify(base.y)),0.08,score), keep),
-    color: mix(base.color, mutate(JSON.parse(JSON.stringify(base.color)),0.08,score), keep)
-  };
-}
-
-// --- ORGANISMO ---
+// --- CREAR ORGANISMO ---
 let organism = {
   x: randomNode(),
   y: randomNode(),
   color: randomNode()
 };
 
-let target = JSON.parse(JSON.stringify(organism));
-let blend = 0;
-
-// --- LOOP ---
+// --- RENDER ---
 function draw(){
-
-  ctx.fillStyle = "rgba(0,0,0,0.05)";
+  ctx.fillStyle = "rgba(0,0,0,0.1)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  let fx=0, fy=0, fc=0;
-  let points = [];
+  for(let i=0;i<2000;i++){
+    let u = Math.random()*2-1;
+    let v = Math.random()*2-1;
 
-  for(let i=0;i<1200;i++){
+    let x = evalNode(organism.x, u,v,t);
+    let y = evalNode(organism.y, u,v,t);
+    let c = evalNode(organism.color, u,v,t);
 
-    let u=Math.random()*2-1;
-    let v=Math.random()*2-1;
-
-    let x = lerp(
-      evalNode(organism.x,u,v,t),
-      evalNode(target.x,u,v,t),
-      blend
-    );
-
-    let y = lerp(
-      evalNode(organism.y,u,v,t),
-      evalNode(target.y,u,v,t),
-      blend
-    );
-
-    let c = lerp(
-      evalNode(organism.color,u,v,t),
-      evalNode(target.color,u,v,t),
-      blend
-    );
-
-    if(!isFinite(x)||!isFinite(y)||!isFinite(c)) continue;
-
-    fx+=x; fy+=y; fc+=c;
-    points.push({x,y});
-
-    let px = canvas.width/2 + x*260;
-    let py = canvas.height/2 + y*260;
+    let px = canvas.width/2 + x*300;
+    let py = canvas.height/2 + y*300;
 
     let col = Math.floor((c+1)*127);
-    col = Math.max(0,Math.min(255,col));
+    ctx.fillStyle = `rgb(${col},${100},${255-col})`;
 
-    ctx.fillStyle = `rgb(${col},120,${255-col})`;
     ctx.fillRect(px,py,1,1);
   }
 
-  fx/=points.length;
-  fy/=points.length;
-  fc/=points.length;
-
-  // --- ESTRUCTURA ---
-  let varianceX = 0;
-  let varianceY = 0;
-
-  for(let p of points){
-    varianceX += Math.pow(p.x - fx, 2);
-    varianceY += Math.pow(p.y - fy, 2);
-  }
-
-  varianceX /= points.length;
-  varianceY /= points.length;
-
-  let structure = varianceX + varianceY;
-
-  let metrics = computeMetrics(fx,fy,fc,structure);
-  let score = computeScore(metrics);
-
-  // --- AUDIO ---
-  if(audioCtx){
-    let f = 140 + fx*100 + metrics.surprise*120;
-    let g = Math.min(0.04, metrics.richness * 0.3);
-
-    smoothFreq = lerp(smoothFreq,f,0.05);
-    smoothGain = lerp(smoothGain,g,0.05);
-
-    osc.frequency.setValueAtTime(smoothFreq, audioCtx.currentTime);
-    gain.gain.setValueAtTime(smoothGain, audioCtx.currentTime);
-  }
-
-  blend += 0.003;
-
-  if(blend>=1){
-
-    memory.push({
-      organism: JSON.parse(JSON.stringify(target)),
-      fx: fx,
-      score: score
-    });
-
-    memory.sort((a,b)=>b.score-a.score);
-    memory = memory.slice(0, MEMORY_SIZE);
-
-    evolveWeights(score);
-
-    // --- RECOMBINACIÓN ---
-    let m1 = memory[Math.floor(Math.random()*memory.length)];
-    let m2 = memory[Math.floor(Math.random()*memory.length)];
-
-    let base = {
-      x: Math.random()<0.5 ? m1.organism.x : m2.organism.x,
-      y: Math.random()<0.5 ? m1.organism.y : m2.organism.y,
-      color: Math.random()<0.5 ? m1.organism.color : m2.organism.color
-    };
-
-    organism = base;
-
-    target = inherit(base, score);
-
-    blend = 0;
-  }
-
-  t+=0.01;
+  t += 0.01;
   requestAnimationFrame(draw);
 }
 
 draw();
+
+// --- EVOLUCIÓN ---
+setInterval(()=>{
+  organism.x = mutate(organism.x, 0.2);
+  organism.y = mutate(organism.y, 0.2);
+  organism.color = mutate(organism.color, 0.2);
+}, 2000);
 
 </script>
 </body>
