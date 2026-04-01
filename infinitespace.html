@@ -2,29 +2,28 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Coemergent System v3 — Memory</title>
+<title>Coemergent System v4 — Living Criteria</title>
 <style>
-  body { margin:0; background:black; overflow:hidden; }
-  canvas { display:block; }
-  #overlay {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    color: white;
-    font-family: monospace;
-    font-size: 12px;
-    opacity: 0.6;
-  }
+body { margin:0; background:black; overflow:hidden; }
+canvas { display:block; }
+#overlay {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  color: white;
+  font-family: monospace;
+  font-size: 12px;
+  opacity: 0.6;
+}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="overlay">click to activate sound</div>
+<div id="overlay">click</div>
 
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const overlay = document.getElementById("overlay");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -32,120 +31,125 @@ canvas.height = window.innerHeight;
 let t = 0;
 
 // --- AUDIO ---
-let audioCtx = null;
-let osc, gain;
-
-let smoothFreq = 220;
+let audioCtx, osc, gain;
+let smoothFreq = 200;
 let smoothGain = 0;
 
-function initAudio(){
+window.onclick = () => {
   if(audioCtx) return;
-
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
+  audioCtx = new AudioContext();
   osc = audioCtx.createOscillator();
   gain = audioCtx.createGain();
-
   osc.connect(gain);
   gain.connect(audioCtx.destination);
-
   gain.gain.value = 0;
   osc.start();
-
-  overlay.innerText = "sound active";
-}
-
-window.addEventListener("click", initAudio);
+};
 
 // --- PRIMITIVAS ---
-const ops = [
-  (a,b)=>a+b,
-  (a,b)=>a-b,
-  (a,b)=>a*b,
-  (a,b)=> b!==0 ? a/b : 0
-];
-
-const funcs = [
-  Math.sin,
-  Math.cos,
-  Math.tan,
-  Math.tanh
-];
-
+const ops = [(a,b)=>a+b,(a,b)=>a-b,(a,b)=>a*b,(a,b)=>b? a/b:0];
+const funcs = [Math.sin,Math.cos,Math.tanh];
 const vars = ["u","v","t"];
 
 // --- ÁRBOL ---
-function randomNode(depth=0){
-  if(depth > 3 || Math.random() < 0.3){
-    let type = Math.random();
-    if(type < 0.33) return {type:"var", value: vars[Math.floor(Math.random()*vars.length)]};
-    if(type < 0.66) return {type:"const", value: Math.random()*2-1};
-    return {type:"func", fn: funcs[Math.floor(Math.random()*funcs.length)], arg: randomNode(depth+1)};
+function randomNode(d=0){
+  if(d>3 || Math.random()<0.3){
+    let r = Math.random();
+    if(r<0.33) return {type:"var", value: vars[Math.floor(Math.random()*3)]};
+    if(r<0.66) return {type:"const", value: Math.random()*2-1};
+    return {type:"func", fn: funcs[Math.floor(Math.random()*funcs.length)], arg: randomNode(d+1)};
   }
   return {
     type:"op",
     op: ops[Math.floor(Math.random()*ops.length)],
-    left: randomNode(depth+1),
-    right: randomNode(depth+1)
+    left: randomNode(d+1),
+    right: randomNode(d+1)
   };
 }
 
-// --- EVALUAR ---
-function evalNode(node, u,v,t){
+function evalNode(n,u,v,t){
   try{
-    switch(node.type){
-      case "var":
-        return node.value==="u"?u:node.value==="v"?v:t;
-      case "const":
-        return node.value;
-      case "func":
-        return node.fn(evalNode(node.arg,u,v,t));
-      case "op":
-        return node.op(
-          evalNode(node.left,u,v,t),
-          evalNode(node.right,u,v,t)
-        );
-    }
-  } catch(e){
-    return 0;
-  }
+    if(n.type==="var") return n.value==="u"?u:n.value==="v"?v:t;
+    if(n.type==="const") return n.value;
+    if(n.type==="func") return n.fn(evalNode(n.arg,u,v,t));
+    if(n.type==="op") return n.op(evalNode(n.left,u,v,t), evalNode(n.right,u,v,t));
+  }catch{ return 0; }
 }
 
-// --- MUTACIÓN ---
-function mutate(node, rate=0.05){
-  if(Math.random() < rate){
-    return randomNode();
+function mutate(n, rate){
+  if(Math.random()<rate) return randomNode();
+  if(n.type==="op"){
+    n.left = mutate(n.left,rate);
+    n.right = mutate(n.right,rate);
   }
-  if(node.type==="op"){
-    node.left = mutate(node.left, rate);
-    node.right = mutate(node.right, rate);
+  if(n.type==="func"){
+    n.arg = mutate(n.arg,rate);
   }
-  if(node.type==="func"){
-    node.arg = mutate(node.arg, rate);
-  }
-  return node;
+  return n;
 }
 
-// --- INTERPOLACIÓN ---
-function lerp(a, b, t){
-  return a + (b - a) * t;
-}
+function lerp(a,b,t){ return a+(b-a)*t; }
 
-// --- SCORE SIMPLE ---
+// --- MEMORIA PROFUNDA ---
+let memory = [];
+const MEMORY_SIZE = 12;
+
+// --- PESOS EVOLUTIVOS ---
+let weights = {
+  stability: 0.4,
+  energy: 0.3,
+  novelty: 0.2,
+  symmetry: 0.1
+};
+
+// --- MÉTRICAS ---
 let prevFx = 0;
 
-function computeScore(fx, fy, fc){
+function computeMetrics(fx, fy, fc){
+
   let stability = 1 - Math.abs(fx - prevFx);
   let energy = Math.abs(fc);
 
+  // simetría: comparar lados
+  let symmetry = 1 - Math.abs(fx + fy);
+
+  // novedad: distancia a memoria
+  let novelty = 0;
+  for(let m of memory){
+    novelty += Math.abs(fx - m.fx);
+  }
+  novelty = memory.length ? novelty / memory.length : 1;
+
   prevFx = fx;
 
-  return stability * 0.6 + energy * 0.4;
+  return {stability, energy, novelty, symmetry};
 }
 
-// --- MEMORIA ---
-let memory = [];
-const MEMORY_SIZE = 5;
+// --- SCORE DINÁMICO ---
+function computeScore(metrics){
+  return (
+    metrics.stability * weights.stability +
+    metrics.energy * weights.energy +
+    metrics.novelty * weights.novelty +
+    metrics.symmetry * weights.symmetry
+  );
+}
+
+// --- MUTACIÓN DE PESOS ---
+function evolveWeights(score){
+  let lr = 0.02;
+
+  for(let k in weights){
+    weights[k] += (Math.random()-0.5) * lr * score;
+    weights[k] = Math.max(0, weights[k]);
+  }
+
+  // normalizar
+  let sum = Object.values(weights).reduce((a,b)=>a+b,0);
+  for(let k in weights){
+    weights[k] /= sum;
+  }
+}
 
 // --- ORGANISMO ---
 let organism = {
@@ -154,105 +158,101 @@ let organism = {
   color: randomNode()
 };
 
-let target = {
-  x: randomNode(),
-  y: randomNode(),
-  color: randomNode()
-};
-
+let target = JSON.parse(JSON.stringify(organism));
 let blend = 0;
 
-// --- RENDER ---
+// --- LOOP ---
 function draw(){
 
   ctx.fillStyle = "rgba(0,0,0,0.05)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  let fx = 0, fy = 0, fc = 0;
+  let fx=0, fy=0, fc=0;
 
-  for(let i=0;i<1200;i++){
-    let u = Math.random()*2-1;
-    let v = Math.random()*2-1;
+  for(let i=0;i<1000;i++){
+    let u=Math.random()*2-1;
+    let v=Math.random()*2-1;
 
-    let x1 = evalNode(organism.x, u,v,t);
-    let y1 = evalNode(organism.y, u,v,t);
-    let c1 = evalNode(organism.color, u,v,t);
+    let x = lerp(
+      evalNode(organism.x,u,v,t),
+      evalNode(target.x,u,v,t),
+      blend
+    );
 
-    let x2 = evalNode(target.x, u,v,t);
-    let y2 = evalNode(target.y, u,v,t);
-    let c2 = evalNode(target.color, u,v,t);
+    let y = lerp(
+      evalNode(organism.y,u,v,t),
+      evalNode(target.y,u,v,t),
+      blend
+    );
 
-    let x = lerp(x1, x2, blend);
-    let y = lerp(y1, y2, blend);
-    let c = lerp(c1, c2, blend);
+    let c = lerp(
+      evalNode(organism.color,u,v,t),
+      evalNode(target.color,u,v,t),
+      blend
+    );
 
-    if(!isFinite(x) || !isFinite(y) || !isFinite(c)) continue;
+    if(!isFinite(x)||!isFinite(y)||!isFinite(c)) continue;
 
-    fx += x;
-    fy += y;
-    fc += c;
+    fx+=x; fy+=y; fc+=c;
 
     let px = canvas.width/2 + x*250;
     let py = canvas.height/2 + y*250;
 
     let col = Math.floor((c+1)*127);
-    col = Math.max(0, Math.min(255, col));
+    col = Math.max(0,Math.min(255,col));
 
-    ctx.fillStyle = `rgb(${col},${100},${255-col})`;
+    ctx.fillStyle = `rgb(${col},120,${255-col})`;
     ctx.fillRect(px,py,1,1);
   }
 
-  fx /= 1200;
-  fy /= 1200;
-  fc /= 1200;
+  fx/=1000; fy/=1000; fc/=1000;
 
-  // --- SCORE ---
-  let score = computeScore(fx, fy, fc);
+  let metrics = computeMetrics(fx,fy,fc);
+  let score = computeScore(metrics);
 
   // --- AUDIO ---
   if(audioCtx){
-    let targetFreq = 180 + fx * 120;
-    let targetGain = Math.min(0.06, Math.abs(fc) * 0.4);
+    let f = 150 + fx*120 + metrics.novelty*80;
+    let g = Math.min(0.05, metrics.energy*0.3);
 
-    smoothFreq = lerp(smoothFreq, targetFreq, 0.05);
-    smoothGain = lerp(smoothGain, targetGain, 0.05);
+    smoothFreq = lerp(smoothFreq,f,0.05);
+    smoothGain = lerp(smoothGain,g,0.05);
 
     osc.frequency.setValueAtTime(smoothFreq, audioCtx.currentTime);
     gain.gain.setValueAtTime(smoothGain, audioCtx.currentTime);
   }
 
-  // --- TRANSICIÓN ---
-  blend += 0.002;
+  blend += 0.003;
 
-  if(blend >= 1){
+  if(blend>=1){
 
-    // guardar en memoria si es bueno
+    // guardar experiencia
     memory.push({
       organism: JSON.parse(JSON.stringify(target)),
+      fx: fx,
       score: score
     });
 
-    // mantener solo mejores
-    memory.sort((a,b)=>b.score - a.score);
-    memory = memory.slice(0, MEMORY_SIZE);
+    memory.sort((a,b)=>b.score-a.score);
+    memory = memory.slice(0,MEMORY_SIZE);
 
-    // elegir base desde memoria
-    let base = memory.length > 0
-      ? memory[Math.floor(Math.random()*memory.length)].organism
-      : organism;
+    evolveWeights(score);
+
+    // elegir base
+    let base = memory[Math.floor(Math.random()*memory.length)].organism;
 
     organism = base;
 
     target = {
-      x: mutate(JSON.parse(JSON.stringify(base.x)), 0.08),
-      y: mutate(JSON.parse(JSON.stringify(base.y)), 0.08),
-      color: mutate(JSON.parse(JSON.stringify(base.color)), 0.08)
+      x: mutate(JSON.parse(JSON.stringify(base.x)),0.08),
+      y: mutate(JSON.parse(JSON.stringify(base.y)),0.08),
+      color: mutate(JSON.parse(JSON.stringify(base.color)),0.08)
     };
 
     blend = 0;
   }
 
-  t += 0.01;
+  t+=0.01;
   requestAnimationFrame(draw);
 }
 
