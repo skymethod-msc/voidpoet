@@ -1,0 +1,132 @@
+<a href="index.html">Home</a>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Coemergent System v0</title>
+<style>
+  body { margin:0; background:black; overflow:hidden; }
+  canvas { display:block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let t = 0;
+
+// --- PRIMITIVAS ---
+const ops = [
+  (a,b)=>a+b,
+  (a,b)=>a-b,
+  (a,b)=>a*b,
+  (a,b)=>b!==0?a/b:0
+];
+
+const funcs = [
+  Math.sin,
+  Math.cos,
+  Math.tan,
+  Math.tanh
+];
+
+const vars = ["u","v","t"];
+
+// --- CREAR ÁRBOL ALEATORIO ---
+function randomNode(depth=0){
+  if(depth > 3 || Math.random() < 0.3){
+    let type = Math.random();
+    if(type < 0.33) return {type:"var", value: vars[Math.floor(Math.random()*vars.length)]};
+    if(type < 0.66) return {type:"const", value: Math.random()*2-1};
+    return {type:"func", fn: funcs[Math.floor(Math.random()*funcs.length)], arg: randomNode(depth+1)};
+  }
+  return {
+    type:"op",
+    op: ops[Math.floor(Math.random()*ops.length)],
+    left: randomNode(depth+1),
+    right: randomNode(depth+1)
+  };
+}
+
+// --- EVALUAR ÁRBOL ---
+function evalNode(node, u,v,t){
+  switch(node.type){
+    case "var":
+      return node.value==="u"?u:node.value==="v"?v:t;
+    case "const":
+      return node.value;
+    case "func":
+      return node.fn(evalNode(node.arg,u,v,t));
+    case "op":
+      return node.op(
+        evalNode(node.left,u,v,t),
+        evalNode(node.right,u,v,t)
+      );
+  }
+}
+
+// --- MUTACIÓN ---
+function mutate(node, rate=0.1){
+  if(Math.random() < rate){
+    return randomNode();
+  }
+  if(node.type==="op"){
+    node.left = mutate(node.left, rate);
+    node.right = mutate(node.right, rate);
+  }
+  if(node.type==="func"){
+    node.arg = mutate(node.arg, rate);
+  }
+  return node;
+}
+
+// --- CREAR ORGANISMO ---
+let organism = {
+  x: randomNode(),
+  y: randomNode(),
+  color: randomNode()
+};
+
+// --- RENDER ---
+function draw(){
+  ctx.fillStyle = "rgba(0,0,0,0.1)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  for(let i=0;i<2000;i++){
+    let u = Math.random()*2-1;
+    let v = Math.random()*2-1;
+
+    let x = evalNode(organism.x, u,v,t);
+    let y = evalNode(organism.y, u,v,t);
+    let c = evalNode(organism.color, u,v,t);
+
+    let px = canvas.width/2 + x*300;
+    let py = canvas.height/2 + y*300;
+
+    let col = Math.floor((c+1)*127);
+    ctx.fillStyle = `rgb(${col},${100},${255-col})`;
+
+    ctx.fillRect(px,py,1,1);
+  }
+
+  t += 0.01;
+  requestAnimationFrame(draw);
+}
+
+draw();
+
+// --- EVOLUCIÓN ---
+setInterval(()=>{
+  organism.x = mutate(organism.x, 0.2);
+  organism.y = mutate(organism.y, 0.2);
+  organism.color = mutate(organism.color, 0.2);
+}, 2000);
+
+</script>
+</body>
+</html>
