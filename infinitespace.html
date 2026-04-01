@@ -75,7 +75,26 @@ function evalNode(n,u,v,t){
   }catch{ return 0; }
 }
 
-function mutate(n, rate){
+function mutate(n, rate, score){
+
+  // si el score es alto → mutar menos
+  let adaptiveRate = rate * (1 - score);
+
+  if(Math.random() < adaptiveRate){
+    return randomNode();
+  }
+
+  if(n.type==="op"){
+    n.left = mutate(n.left, rate, score);
+    n.right = mutate(n.right, rate, score);
+  }
+
+  if(n.type==="func"){
+    n.arg = mutate(n.arg, rate, score);
+  }
+
+  return n;
+}
   if(Math.random()<rate) return randomNode();
   if(n.type==="op"){
     n.left = mutate(n.left,rate);
@@ -261,16 +280,34 @@ function draw(){
 
     evolveWeights(score);
 
-    let base = memory[Math.floor(Math.random()*memory.length)].organism;
+let m1 = memory[Math.floor(Math.random()*memory.length)];
+let m2 = memory[Math.floor(Math.random()*memory.length)];
+
+let base = {
+  x: Math.random() < 0.5 ? m1.organism.x : m2.organism.x,
+  y: Math.random() < 0.5 ? m1.organism.y : m2.organism.y,
+  color: Math.random() < 0.5 ? m1.organism.color : m2.organism.color
+};
 
     organism = base;
 
-    target = {
-      x: mutate(JSON.parse(JSON.stringify(base.x)),0.08),
-      y: mutate(JSON.parse(JSON.stringify(base.y)),0.08),
-      color: mutate(JSON.parse(JSON.stringify(base.color)),0.08)
-    };
+function inherit(base, score){
 
+  function mix(a, b, keepProb){
+    return Math.random() < keepProb ? a : b;
+  }
+
+  let keep = 0.7 * score; // cuanto mejor, más se conserva
+
+  return {
+    x: mix(base.x, mutate(JSON.parse(JSON.stringify(base.x)),0.08,score), keep),
+    y: mix(base.y, mutate(JSON.parse(JSON.stringify(base.y)),0.08,score), keep),
+    color: mix(base.color, mutate(JSON.parse(JSON.stringify(base.color)),0.08,score), keep)
+  };
+}
+    
+target = inherit(base, score);
+    
     blend = 0;
   }
 
