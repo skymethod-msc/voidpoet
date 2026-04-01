@@ -106,28 +106,35 @@ let weights = {
 let prevFx = 0;
 
 // --- MÉTRICAS ---
-function computeMetrics(fx, fy, fc){
+function computeMetrics(fx, fy, fc, structure){
 
-  // ESTABILIDAD (zona media)
+  // estabilidad (igual)
   let delta = Math.abs(fx - prevFx);
   let stability = 1 - Math.abs(delta - 0.25);
 
-  // RIQUEZA
-  let richness = Math.abs(fx * fy);
+  // 🔥 riqueza REAL (estructura espacial)
+  let richness = structure;
 
-  // SIMETRÍA
+  // simetría
   let symmetry = 1 - Math.abs(Math.abs(fx) - Math.abs(fy));
 
-  // RUPTURA
+  // ruptura
   let rupture = Math.abs(fx - fy);
 
-  // SORPRESA
+  // sorpresa (igual)
   let surprise = 0;
   for(let m of memory){
     surprise += Math.abs(fx - m.fx);
   }
   surprise = memory.length ? surprise / memory.length : 0.5;
+  surprise = 1 - Math.abs(surprise - 0.5);
 
+  prevFx = fx;
+
+  return {stability, richness, symmetry, rupture, surprise};
+
+  let metrics = computeMetrics(fx, fy, fc, structure);
+}
   // limitar extremos
   surprise = 1 - Math.abs(surprise - 0.5);
 
@@ -172,7 +179,11 @@ let organism = {
 let target = JSON.parse(JSON.stringify(organism));
 let blend = 0;
 
+  let points = [];
+
 // --- LOOP ---
+
+  points.push({x, y});
 function draw(){
 
   ctx.fillStyle = "rgba(0,0,0,0.05)";
@@ -217,7 +228,20 @@ function draw(){
     ctx.fillRect(px,py,1,1);
   }
 
-  fx/=1200; fy/=1200; fc/=1200;
+  // medir VARIACIÓN (estructura real)
+let varianceX = 0;
+let varianceY = 0;
+
+for(let i=0;i<points.length;i++){
+  varianceX += Math.pow(points[i].x - fx, 2);
+  varianceY += Math.pow(points[i].y - fy, 2);
+}
+
+varianceX /= points.length;
+varianceY /= points.length;
+
+// nueva base
+let structure = varianceX + varianceY;
 
   let metrics = computeMetrics(fx,fy,fc);
   let score = computeScore(metrics);
