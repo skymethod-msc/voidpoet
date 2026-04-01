@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Coemergent System v4 — Living Criteria</title>
+<title>Coemergent System v5 — Living Balance</title>
 <style>
 body { margin:0; background:black; overflow:hidden; }
 canvas { display:block; }
@@ -19,12 +19,11 @@ canvas { display:block; }
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="overlay">click</div>
+<div id="overlay">click to activate sound</div>
 
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -90,61 +89,73 @@ function mutate(n, rate){
 
 function lerp(a,b,t){ return a+(b-a)*t; }
 
-// --- MEMORIA PROFUNDA ---
+// --- MEMORIA ---
 let memory = [];
 const MEMORY_SIZE = 12;
 
-// --- PESOS EVOLUTIVOS ---
+// --- PESOS ---
 let weights = {
-  stability: 0.4,
-  energy: 0.3,
-  novelty: 0.2,
-  symmetry: 0.1
+  stability: 0.25,
+  richness: 0.2,
+  symmetry: 0.2,
+  rupture: 0.2,
+  surprise: 0.15
 };
 
-// --- MÉTRICAS ---
+// --- ESTADO ---
 let prevFx = 0;
 
+// --- MÉTRICAS ---
 function computeMetrics(fx, fy, fc){
 
-  let stability = 1 - Math.abs(fx - prevFx);
-  let energy = Math.abs(fc);
+  // ESTABILIDAD (zona media)
+  let delta = Math.abs(fx - prevFx);
+  let stability = 1 - Math.abs(delta - 0.25);
 
-  // simetría: comparar lados
-  let symmetry = 1 - Math.abs(fx + fy);
+  // RIQUEZA
+  let richness = Math.abs(fx * fy);
 
-  // novedad: distancia a memoria
-  let novelty = 0;
+  // SIMETRÍA
+  let symmetry = 1 - Math.abs(Math.abs(fx) - Math.abs(fy));
+
+  // RUPTURA
+  let rupture = Math.abs(fx - fy);
+
+  // SORPRESA
+  let surprise = 0;
   for(let m of memory){
-    novelty += Math.abs(fx - m.fx);
+    surprise += Math.abs(fx - m.fx);
   }
-  novelty = memory.length ? novelty / memory.length : 1;
+  surprise = memory.length ? surprise / memory.length : 0.5;
+
+  // limitar extremos
+  surprise = 1 - Math.abs(surprise - 0.5);
 
   prevFx = fx;
 
-  return {stability, energy, novelty, symmetry};
+  return {stability, richness, symmetry, rupture, surprise};
 }
 
-// --- SCORE DINÁMICO ---
-function computeScore(metrics){
+// --- SCORE ---
+function computeScore(m){
   return (
-    metrics.stability * weights.stability +
-    metrics.energy * weights.energy +
-    metrics.novelty * weights.novelty +
-    metrics.symmetry * weights.symmetry
+    m.stability * weights.stability +
+    m.richness * weights.richness +
+    m.symmetry * weights.symmetry +
+    m.rupture * weights.rupture +
+    m.surprise * weights.surprise
   );
 }
 
-// --- MUTACIÓN DE PESOS ---
+// --- EVOLUCIÓN DE PESOS ---
 function evolveWeights(score){
-  let lr = 0.02;
+  let lr = 0.01;
 
   for(let k in weights){
-    weights[k] += (Math.random()-0.5) * lr * score;
-    weights[k] = Math.max(0, weights[k]);
+    weights[k] += (Math.random() - 0.5) * lr * (0.5 + score);
+    weights[k] = Math.max(0.05, weights[k]);
   }
 
-  // normalizar
   let sum = Object.values(weights).reduce((a,b)=>a+b,0);
   for(let k in weights){
     weights[k] /= sum;
@@ -169,7 +180,8 @@ function draw(){
 
   let fx=0, fy=0, fc=0;
 
-  for(let i=0;i<1000;i++){
+  for(let i=0;i<1200;i++){
+
     let u=Math.random()*2-1;
     let v=Math.random()*2-1;
 
@@ -195,8 +207,8 @@ function draw(){
 
     fx+=x; fy+=y; fc+=c;
 
-    let px = canvas.width/2 + x*250;
-    let py = canvas.height/2 + y*250;
+    let px = canvas.width/2 + x*260;
+    let py = canvas.height/2 + y*260;
 
     let col = Math.floor((c+1)*127);
     col = Math.max(0,Math.min(255,col));
@@ -205,15 +217,15 @@ function draw(){
     ctx.fillRect(px,py,1,1);
   }
 
-  fx/=1000; fy/=1000; fc/=1000;
+  fx/=1200; fy/=1200; fc/=1200;
 
   let metrics = computeMetrics(fx,fy,fc);
   let score = computeScore(metrics);
 
   // --- AUDIO ---
   if(audioCtx){
-    let f = 150 + fx*120 + metrics.novelty*80;
-    let g = Math.min(0.05, metrics.energy*0.3);
+    let f = 140 + fx*100 + metrics.surprise*120;
+    let g = Math.min(0.04, metrics.richness * 0.3);
 
     smoothFreq = lerp(smoothFreq,f,0.05);
     smoothGain = lerp(smoothGain,g,0.05);
@@ -226,7 +238,6 @@ function draw(){
 
   if(blend>=1){
 
-    // guardar experiencia
     memory.push({
       organism: JSON.parse(JSON.stringify(target)),
       fx: fx,
@@ -234,11 +245,10 @@ function draw(){
     });
 
     memory.sort((a,b)=>b.score-a.score);
-    memory = memory.slice(0,MEMORY_SIZE);
+    memory = memory.slice(0, MEMORY_SIZE);
 
     evolveWeights(score);
 
-    // elegir base
     let base = memory[Math.floor(Math.random()*memory.length)].organism;
 
     organism = base;
