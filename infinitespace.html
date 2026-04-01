@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Coemergent System v5 — Living Balance</title>
+<title>Coemergent System v6 — Structure Emergence</title>
 <style>
 body { margin:0; background:black; overflow:hidden; }
 canvas { display:block; }
@@ -19,7 +19,7 @@ canvas { display:block; }
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="overlay">click to activate sound</div>
+<div id="overlay">click</div>
 
 <script>
 const canvas = document.getElementById("c");
@@ -95,47 +95,32 @@ const MEMORY_SIZE = 12;
 
 // --- PESOS ---
 let weights = {
-  stability: 0.25,
-  richness: 0.2,
+  stability: 0.2,
+  richness: 0.3,
   symmetry: 0.2,
-  rupture: 0.2,
+  rupture: 0.15,
   surprise: 0.15
 };
 
-// --- ESTADO ---
 let prevFx = 0;
 
 // --- MÉTRICAS ---
 function computeMetrics(fx, fy, fc, structure){
 
-  // estabilidad (igual)
   let delta = Math.abs(fx - prevFx);
   let stability = 1 - Math.abs(delta - 0.25);
 
-  // 🔥 riqueza REAL (estructura espacial)
   let richness = structure;
 
-  // simetría
   let symmetry = 1 - Math.abs(Math.abs(fx) - Math.abs(fy));
 
-  // ruptura
   let rupture = Math.abs(fx - fy);
 
-  // sorpresa (igual)
   let surprise = 0;
   for(let m of memory){
     surprise += Math.abs(fx - m.fx);
   }
   surprise = memory.length ? surprise / memory.length : 0.5;
-  surprise = 1 - Math.abs(surprise - 0.5);
-
-  prevFx = fx;
-
-  return {stability, richness, symmetry, rupture, surprise};
-
-  let metrics = computeMetrics(fx, fy, fc, structure);
-}
-  // limitar extremos
   surprise = 1 - Math.abs(surprise - 0.5);
 
   prevFx = fx;
@@ -179,17 +164,14 @@ let organism = {
 let target = JSON.parse(JSON.stringify(organism));
 let blend = 0;
 
-  let points = [];
-
 // --- LOOP ---
-
-  points.push({x, y});
 function draw(){
 
   ctx.fillStyle = "rgba(0,0,0,0.05)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
   let fx=0, fy=0, fc=0;
+  let points = [];
 
   for(let i=0;i<1200;i++){
 
@@ -218,6 +200,8 @@ function draw(){
 
     fx+=x; fy+=y; fc+=c;
 
+    points.push({x,y});
+
     let px = canvas.width/2 + x*260;
     let py = canvas.height/2 + y*260;
 
@@ -228,28 +212,32 @@ function draw(){
     ctx.fillRect(px,py,1,1);
   }
 
-  // medir VARIACIÓN (estructura real)
-let varianceX = 0;
-let varianceY = 0;
+  fx/=points.length;
+  fy/=points.length;
+  fc/=points.length;
 
-for(let i=0;i<points.length;i++){
-  varianceX += Math.pow(points[i].x - fx, 2);
-  varianceY += Math.pow(points[i].y - fy, 2);
-}
+  // --- ESTRUCTURA ---
+  let varianceX = 0;
+  let varianceY = 0;
 
-varianceX /= points.length;
-varianceY /= points.length;
+  for(let p of points){
+    varianceX += Math.pow(p.x - fx, 2);
+    varianceY += Math.pow(p.y - fy, 2);
+  }
 
-// nueva base
-let structure = varianceX + varianceY;
+  varianceX /= points.length;
+  varianceY /= points.length;
 
-  let metrics = computeMetrics(fx,fy,fc);
+  let structure = varianceX + varianceY;
+
+  // --- MÉTRICAS ---
+  let metrics = computeMetrics(fx,fy,fc,structure);
   let score = computeScore(metrics);
 
   // --- AUDIO ---
   if(audioCtx){
-    let f = 140 + fx*100 + metrics.surprise*120;
-    let g = Math.min(0.04, metrics.richness * 0.3);
+    let f = 120 + structure*300;
+    let g = Math.min(0.05, metrics.richness * 0.3);
 
     smoothFreq = lerp(smoothFreq,f,0.05);
     smoothGain = lerp(smoothGain,g,0.05);
