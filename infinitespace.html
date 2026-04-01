@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Coemergent System v6 — Structure Emergence</title>
+<title>Coemergent System v6 — Survival</title>
 <style>
 body { margin:0; background:black; overflow:hidden; }
 canvas { display:block; }
@@ -75,9 +75,9 @@ function evalNode(n,u,v,t){
   }catch{ return 0; }
 }
 
+// --- MUTACIÓN ADAPTATIVA ---
 function mutate(n, rate, score){
 
-  // si el score es alto → mutar menos
   let adaptiveRate = rate * (1 - score);
 
   if(Math.random() < adaptiveRate){
@@ -95,32 +95,23 @@ function mutate(n, rate, score){
 
   return n;
 }
-  if(Math.random()<rate) return randomNode();
-  if(n.type==="op"){
-    n.left = mutate(n.left,rate);
-    n.right = mutate(n.right,rate);
-  }
-  if(n.type==="func"){
-    n.arg = mutate(n.arg,rate);
-  }
-  return n;
-}
 
 function lerp(a,b,t){ return a+(b-a)*t; }
 
 // --- MEMORIA ---
 let memory = [];
-const MEMORY_SIZE = 12;
+const MEMORY_SIZE = 15;
 
 // --- PESOS ---
 let weights = {
-  stability: 0.2,
-  richness: 0.3,
+  stability: 0.25,
+  richness: 0.25,
   symmetry: 0.2,
   rupture: 0.15,
   surprise: 0.15
 };
 
+// --- ESTADO ---
 let prevFx = 0;
 
 // --- MÉTRICAS ---
@@ -173,6 +164,22 @@ function evolveWeights(score){
   }
 }
 
+// --- HERENCIA ---
+function inherit(base, score){
+
+  function mix(a, b, keepProb){
+    return Math.random() < keepProb ? a : b;
+  }
+
+  let keep = 0.7 * score;
+
+  return {
+    x: mix(base.x, mutate(JSON.parse(JSON.stringify(base.x)),0.08,score), keep),
+    y: mix(base.y, mutate(JSON.parse(JSON.stringify(base.y)),0.08,score), keep),
+    color: mix(base.color, mutate(JSON.parse(JSON.stringify(base.color)),0.08,score), keep)
+  };
+}
+
 // --- ORGANISMO ---
 let organism = {
   x: randomNode(),
@@ -218,7 +225,6 @@ function draw(){
     if(!isFinite(x)||!isFinite(y)||!isFinite(c)) continue;
 
     fx+=x; fy+=y; fc+=c;
-
     points.push({x,y});
 
     let px = canvas.width/2 + x*260;
@@ -249,14 +255,13 @@ function draw(){
 
   let structure = varianceX + varianceY;
 
-  // --- MÉTRICAS ---
   let metrics = computeMetrics(fx,fy,fc,structure);
   let score = computeScore(metrics);
 
   // --- AUDIO ---
   if(audioCtx){
-    let f = 120 + structure*300;
-    let g = Math.min(0.05, metrics.richness * 0.3);
+    let f = 140 + fx*100 + metrics.surprise*120;
+    let g = Math.min(0.04, metrics.richness * 0.3);
 
     smoothFreq = lerp(smoothFreq,f,0.05);
     smoothGain = lerp(smoothGain,g,0.05);
@@ -280,34 +285,20 @@ function draw(){
 
     evolveWeights(score);
 
-let m1 = memory[Math.floor(Math.random()*memory.length)];
-let m2 = memory[Math.floor(Math.random()*memory.length)];
+    // --- RECOMBINACIÓN ---
+    let m1 = memory[Math.floor(Math.random()*memory.length)];
+    let m2 = memory[Math.floor(Math.random()*memory.length)];
 
-let base = {
-  x: Math.random() < 0.5 ? m1.organism.x : m2.organism.x,
-  y: Math.random() < 0.5 ? m1.organism.y : m2.organism.y,
-  color: Math.random() < 0.5 ? m1.organism.color : m2.organism.color
-};
+    let base = {
+      x: Math.random()<0.5 ? m1.organism.x : m2.organism.x,
+      y: Math.random()<0.5 ? m1.organism.y : m2.organism.y,
+      color: Math.random()<0.5 ? m1.organism.color : m2.organism.color
+    };
 
     organism = base;
 
-function inherit(base, score){
+    target = inherit(base, score);
 
-  function mix(a, b, keepProb){
-    return Math.random() < keepProb ? a : b;
-  }
-
-  let keep = 0.7 * score; // cuanto mejor, más se conserva
-
-  return {
-    x: mix(base.x, mutate(JSON.parse(JSON.stringify(base.x)),0.08,score), keep),
-    y: mix(base.y, mutate(JSON.parse(JSON.stringify(base.y)),0.08,score), keep),
-    color: mix(base.color, mutate(JSON.parse(JSON.stringify(base.color)),0.08,score), keep)
-  };
-}
-    
-target = inherit(base, score);
-    
     blend = 0;
   }
 
