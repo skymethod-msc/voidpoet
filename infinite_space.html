@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Coemergent System v1</title>
+<style>
+  body { margin:0; background:black; overflow:hidden; }
+  canvas { display:block; }
+  #overlay {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    color: white;
+    font-family: monospace;
+    font-size: 12px;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="overlay">click to activate sound</div>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const overlay = document.getElementById("overlay");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let t = 0;
+
+// --- AUDIO ---
+let audioCtx = null;
+let osc, gain;
+
+function initAudio(){
+  if(audioCtx) return;
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  osc = audioCtx.createOscillator();
+  gain = audioCtx.createGain();
+
+  osc.type = "sine";
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  gain.gain.value = 0;
+
+  osc.start();
+
+  overlay.innerText = "sound active";
+}
+
+window.addEventListener("click", initAudio);
+
+// --- PRIMITIVAS ---
+const ops = [
+  (a,b)=>a+b,
+  (a,b)=>a-b,
+  (a,b)=>a*b,
+  (a,b)=> b!==0 ? a/b : 0
+];
+
+const funcs = [
+  Math.sin,
+  Math.cos,
+  Math.tan,
+  Math.tanh
+];
+
+const vars = ["u","v","t"];
+
+// --- CREAR ÁRBOL ---
+function randomNode(depth=0){
+  if(depth > 3 || Math.random() < 0.3){
+    let type = Math.random();
+    if(type < 0.33) return {type:"var", value: vars[Math.floor(Math.random()*vars.length)]};
+    if(type < 0.66) return {type:"const", value: Math.random()*2-1};
+    return {type:"func", fn: funcs[Math.floor(Math.random()*funcs.length)], arg: randomNode(depth+1)};
+  }
+  return {
+    type:"op",
+    op: ops[Math.floor(Math.random()*ops.length)],
+    left: randomNode(depth+1),
+    right: randomNode(depth+1)
+  };
+}
+
+// --- EVALUAR ---
+function evalNode(node, u,v,t){
+  try{
+    switch(node.type){
+      case "var":
+        return node.value==="u"?u:node.value==="v"?v:t;
+      case "const":
+        return node.value;
+      case "func":
+        return node.fn(evalNode(node.arg,u,v,t));
+      case "op":
+        return node.op(
+          evalNode(node.left,u,v,t),
+          evalNode(node.right,u,v,t)
+        );
+    }
+  } catch(e){
+    return 0;
+  }
+}
+
+// --- MUTAR ---
+function mutate(node, rate=0.15){
+  if(Math.random() < rate){
+    return randomNode();
+  }
+  if(node.type==="op"){
+    node.left = mutate(node.left, rate);
+    node.right = mutate(node.right, rate);
+  }
+  if(node.type==="func"){
+    node.arg = mutate(node.arg, rate);
+  }
+  return node;
+}
+
+// --- ORGANISMO ---
+let organism = {
+  x: randomNode(),
+  y: randomNode(),
+  color: randomNode()
+};
+
+// --- RENDER ---
+function draw(){
+
+  ctx.fillStyle = "rgba(0,0,0,0.08)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  let fx = 0, fy = 0, fc = 0;
+
+  for(let i=0;i<1500;i++){
+    let u = Math.random()*2-1;
+    let v = Math.random()*2-1;
+
+    let x = evalNode(organism.x, u,v,t);
+    let y = evalNode(organism.y, u,v,t);
+    let c = evalNode(organism.color, u,v,t);
+
+    if(!isFinite(x) || !isFinite(y) || !isFinite(c)) continue;
+
+    fx += x;
+    fy += y;
+    fc += c;
+
+    let px = canvas.width/2 + x*250;
+    let py = canvas.height/2 + y*250;
+
+    let col = Math.floor((c+1)*127);
+    col = Math.max(0, Math.min(255, col));
+
+    ctx.fillStyle = `rgb(${col},${80},${255-col})`;
+    ctx.fillRect(px,py,1,1);
+  }
+
+  // PROMEDIOS (para sonido)
+  fx /= 1500;
+  fy /= 1500;
+  fc /= 1500;
+
+  // --- AUDIO MAPPING ---
+  if(audioCtx){
+    let baseFreq = 220 + fx * 200;
+    let modFreq = 2 + Math.abs(fy * 10);
+
+    let finalFreq = baseFreq + Math.sin(t * modFreq) * 40;
+
+    let volume = Math.min(0.15, Math.abs(fc));
+
+    osc.frequency.setValueAtTime(finalFreq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+  }
+
+  t += 0.01;
+  requestAnimationFrame(draw);
+}
+
+draw();
+
+  // --- AUDIO SUAVE ---
+  if(audioCtx){
+    let targetFreq = 180 + fx * 120;
+    let targetGain = Math.min(0.08, Math.abs(fc) * 0.9);
+
+    // interpolación (suavizado)
+    smoothFreq = lerp(smoothFreq, targetFreq, 0.05);
+    smoothGain = lerp(smoothGain, targetGain, 0.05);
+
+    osc.frequency.setValueAtTime(smoothFreq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(smoothGain, audioCtx.currentTime);
+  }
+
+// --- EVOLUCIÓN ---
+setInterval(()=>{
+  organism.x = mutate(organism.x, 0.2);
+  organism.y = mutate(organism.y, 0.2);
+  organism.color = mutate(organism.color, 0.2);
+}, 3000);
+
+</script>
+</body>
+</html>
