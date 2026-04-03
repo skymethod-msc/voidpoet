@@ -199,7 +199,7 @@ function draw(){
     let modFreq = 2 + Math.abs(fy * 10);
 
     let finalFreq = baseFreq + Math.sin(t * modFreq) * 40;
-    let volume = Math.min(0.15, Math.abs(fc));
+    let volume = Math.min(0.005, Math.abs(fc));
 
     osc.frequency.linearRampToValueAtTime(finalFreq, now + 0.1);
 
