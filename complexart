@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Coemergence System – Selective Memory</title>
+<style>
+  body { margin:0; background:black; overflow:hidden; }
+  canvas { display:block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.onresize = resize;
+
+let t = 0;
+
+// ----------------------
+// ÁRBOL
+// ----------------------
+function randomNode(depth=0){
+  if(depth > 3 || Math.random() < 0.3){
+    let terms = ["u","v","t","const"];
+    let term = terms[Math.floor(Math.random()*terms.length)];
+    if(term==="const"){
+      return {type:"const", value:Math.random()*2-1};
+    }
+    return {type:term};
+  }
+
+  let type = Math.random()<0.5?"op":"func";
+
+  if(type==="op"){
+    let ops = ["+","-","*"];
+    return {
+      type:"op",
+      op: ops[Math.floor(Math.random()*ops.length)],
+      left: randomNode(depth+1),
+      right: randomNode(depth+1)
+    };
+  }
+
+  if(type==="func"){
+    let funcs = ["sin","cos","tan"];
+    return {
+      type:"func",
+      func: funcs[Math.floor(Math.random()*funcs.length)],
+      arg: randomNode(depth+1)
+    };
+  }
+}
+
+function evalNode(node,u,v,t){
+  switch(node.type){
+    case "u": return u;
+    case "v": return v;
+    case "t": return t;
+    case "const": return node.value;
+
+    case "op":
+      let l = evalNode(node.left,u,v,t);
+      let r = evalNode(node.right,u,v,t);
+      if(node.op==="+") return l+r;
+      if(node.op==="-") return l-r;
+      if(node.op==="*") return l*r;
+
+    case "func":
+      let a = evalNode(node.arg,u,v,t);
+      if(node.func==="sin") return Math.sin(a);
+      if(node.func==="cos") return Math.cos(a);
+      if(node.func==="tan") return Math.tan(a);
+  }
+}
+
+// ----------------------
+// SISTEMA
+// ----------------------
+let organism = {
+  x: randomNode(),
+  y: randomNode(),
+  color: randomNode()
+};
+
+let core = JSON.parse(JSON.stringify(organism));
+
+let prevFx = 0;
+let memory = [];
+
+// memoria profunda selectiva
+let deepMemory = [];
+let lastSnapshot = 0;
+
+// ----------------------
+// AUDIO
+// ----------------------
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+let master = audioCtx.createGain();
+master.gain.value = 0.08;
+master.connect(audioCtx.destination);
+
+let osc1 = audioCtx.createOscillator();
+let osc2 = audioCtx.createOscillator();
+
+osc1.type = "sine";
+osc2.type = "sine";
+
+let g1 = audioCtx.createGain();
+let g2 = audioCtx.createGain();
+
+g1.gain.value = 0.05;
+g2.gain.value = 0.05;
+
+let filter = audioCtx.createBiquadFilter();
+filter.type = "lowpass";
+
+osc1.connect(g1);
+osc2.connect(g2);
+g1.connect(filter);
+g2.connect(filter);
+filter.connect(master);
+
+let lfo = audioCtx.createOscillator();
+let lfoGain = audioCtx.createGain();
+
+lfo.frequency.value = 0.05;
+lfoGain.gain.value = 20;
+
+lfo.connect(lfoGain);
+lfoGain.connect(osc2.frequency);
+
+osc1.start();
+osc2.start();
+lfo.start();
+
+let smoothFreq1 = 200;
+let smoothFreq2 = 300;
+let smoothGain = 0.05;
+
+window.addEventListener("click", () => audioCtx.resume());
+
+// ----------------------
+// MUTACIÓN
+// ----------------------
+function mutateLocal(node, rate, score){
+  if(Math.random() < rate * (1 - score)){
+    return randomNode();
+  }
+
+  if(node.type==="op"){
+    if(Math.random()<0.8){
+      node.left = mutateLocal(node.left,rate,score);
+    } else {
+      node.right = mutateLocal(node.right,rate,score);
+    }
+  }
+
+  if(node.type==="func"){
+    node.arg = mutateLocal(node.arg,rate,score);
+  }
+
+  return node;
+}
+
+// ----------------------
+// SIMILARIDAD
+// ----------------------
+function similarity(a,b){
+  let diff=0;
+  for(let i=0;i<40;i++){
+    let u=Math.random()*2-1;
+    let v=Math.random()*2-1;
+    diff+=Math.abs(evalNode(a.x,u,v,t)-evalNode(b.x,u,v,t));
+  }
+  return 1-(diff/40);
+}
+
+// ----------------------
+// HERENCIA
+// ----------------------
+function inherit(base, score, awareness){
+
+  let rate = 0.05 + (1 - awareness)*0.1;
+
+  let candidate = {
+    x: mutateLocal(JSON.parse(JSON.stringify(base.x)),rate,score),
+    y: mutateLocal(JSON.parse(JSON.stringify(base.y)),rate,score),
+    color: mutateLocal(JSON.parse(JSON.stringify(base.color)),rate,score)
+  };
+
+  if(similarity(base,candidate)<0.6) return base;
+
+  return candidate;
+}
+
+// ----------------------
+// MÉTRICAS
+// ----------------------
+function computeMetrics(fx, fy, fc, structure){
+
+  let delta = Math.abs(fx - prevFx);
+  let stability = 1 - Math.abs(delta - 0.25);
+
+  let richness = structure;
+
+  let symmetry = 1 - Math.abs(Math.abs(fx) - Math.abs(fy));
+
+  let rupture = Math.abs(fx - fy);
+
+  let surprise = 0;
+  for(let m of memory){
+    surprise += Math.abs(fx - m.fx);
+  }
+  surprise = memory.length ? surprise/memory.length : 0.5;
+  surprise = 1 - Math.abs(surprise - 0.5);
+
+  prevFx = fx;
+
+  return {stability, richness, symmetry, rupture, surprise};
+}
+
+// ----------------------
+// MEMORIA SELECTIVA
+// ----------------------
+function evaluateMemory(c){
+
+  let quality =
+    c.structure*0.4 +
+    c.awareness*0.3 +
+    c.score*0.3;
+
+  let novelty = 0;
+  for(let m of deepMemory){
+    novelty += Math.abs(c.structure - m.structure);
+  }
+  novelty = deepMemory.length ? novelty/deepMemory.length : 1;
+
+  let redundancy = 1 - novelty;
+
+  let value = quality*0.6 + novelty*0.4 - redundancy*0.3;
+
+  return value > 0.25;
+}
+
+function pruneMemory(){
+
+  let worst=0;
+  let worstScore=Infinity;
+
+  for(let i=0;i<deepMemory.length;i++){
+    let r=0;
+    for(let j=0;j<deepMemory.length;j++){
+      if(i!==j){
+        r += Math.abs(deepMemory[i].structure - deepMemory[j].structure);
+      }
+    }
+    if(r<worstScore){
+      worstScore=r;
+      worst=i;
+    }
+  }
+
+  deepMemory.splice(worst,1);
+}
+
+// ----------------------
+// AUTO-PERCEPCIÓN
+// ----------------------
+function selfAwareness(current){
+
+  if(deepMemory.length===0) return 0.5;
+
+  let attraction=0;
+  let repulsion=0;
+
+  for(let m of deepMemory){
+
+    let d =
+      Math.abs(current.structure - m.structure) +
+      Math.abs(current.freq1 - m.freq1)*0.002;
+
+    attraction += (1-d)*m.score;
+    repulsion += Math.exp(-d*10);
+  }
+
+  attraction /= deepMemory.length;
+  repulsion /= deepMemory.length;
+
+  return attraction - repulsion*0.5;
+}
+
+// ----------------------
+// LOOP
+// ----------------------
+function draw(){
+
+  ctx.fillStyle="rgba(0,0,0,0.001)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  let fx=0, fy=0, fc=0;
+  let pts=[];
+
+  for(let i=0;i<1200;i++){
+    let u=Math.random()*2-1;
+    let v=Math.random()*2-1;
+
+    let x=evalNode(organism.x,u,v,t);
+    let y=evalNode(organism.y,u,v,t);
+    let c=evalNode(organism.color,u,v,t);
+
+    fx+=x; fy+=y; fc+=c;
+    pts.push({x,y});
+
+    let px=canvas.width/2+x*200;
+    let py=canvas.height/2+y*200;
+
+    ctx.fillStyle=`hsla(${(c*200+200)%360},80%,60%,0.25)`;
+    ctx.fillRect(px,py,2,2);
+  }
+
+  fx/=1200; fy/=1200; fc/=1200;
+
+  let vx=0, vy=0;
+  for(let p of pts){
+    vx+=(p.x-fx)*(p.x-fx);
+    vy+=(p.y-fy)*(p.y-fy);
+  }
+  vx/=pts.length; vy/=pts.length;
+
+  let structure = vx+vy;
+
+  let m = computeMetrics(fx,fy,fc,structure);
+
+  // sonido
+  let base = 120 + m.richness*200;
+  let harmony = 1.5 + m.symmetry*0.5;
+  let detune = (m.rupture-0.5)*40;
+
+  smoothFreq1 += (base - smoothFreq1)*0.05;
+  smoothFreq2 += ((base*harmony+detune)-smoothFreq2)*0.05;
+
+  let gainTarget = 0.03 + m.stability*0.08;
+  smoothGain += (gainTarget - smoothGain)*0.05;
+
+  osc1.frequency.setValueAtTime(smoothFreq1,audioCtx.currentTime);
+  osc2.frequency.setValueAtTime(smoothFreq2,audioCtx.currentTime);
+
+  g1.gain.setValueAtTime(smoothGain,audioCtx.currentTime);
+  g2.gain.setValueAtTime(smoothGain*0.8,audioCtx.currentTime);
+
+  filter.frequency.setValueAtTime(300 + m.richness*1200,audioCtx.currentTime);
+
+  let awareness = selfAwareness({
+    fx, fy,
+    structure,
+    freq1: smoothFreq1,
+    freq2: smoothFreq2
+  });
+
+  let score =
+    m.stability*0.2 +
+    m.richness*0.2 +
+    m.symmetry*0.1 +
+    m.rupture*0.1 +
+    m.surprise*0.15 +
+    awareness*0.25;
+
+  let next = inherit(organism, score, awareness);
+
+  if(Math.random()<0.2) next.x = core.x;
+  if(Math.random()<0.2) next.y = core.y;
+
+  organism = next;
+
+  memory.push({fx,fy,fc});
+  if(memory.length>20) memory.shift();
+
+  // snapshot inteligente
+  if(t - lastSnapshot > 20){
+
+    let current = {
+      fx, fy, fc,
+      structure,
+      freq1: smoothFreq1,
+      freq2: smoothFreq2,
+      score,
+      awareness,
+      time: t
+    };
+
+    if(evaluateMemory(current)){
+      deepMemory.push(current);
+      if(deepMemory.length>6) pruneMemory();
+    }
+
+    lastSnapshot = t;
+  }
+
+  t+=0.01;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
