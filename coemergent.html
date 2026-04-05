@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Coemergence System – Controlled Evolution</title>
+<style>
+  body { margin:0; background:black; overflow:hidden; }
+  canvas { display:block; }
+
+  #ui {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-family: monospace;
+    font-size: 12px;
+    background: rgba(0,0,0,0.4);
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  label { display:block; margin-top:5px; }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <label>Trail <input type="range" id="trail" min="0.0001" max="0.05" step="0.0001" value="0.001"></label>
+
+  <label>Stability <input type="range" id="stability" min="0" max="1" step="0.01" value="0.3"></label>
+  <label>Richness <input type="range" id="richness" min="0" max="1" step="0.01" value="0.15"></label>
+  <label>Symmetry <input type="range" id="symmetry" min="0" max="1" step="0.01" value="0.1"></label>
+  <label>Rupture <input type="range" id="rupture" min="0" max="1" step="0.01" value="0.15"></label>
+  <label>Surprise <input type="range" id="surprise" min="0" max="1" step="0.01" value="0.25"></label>
+  <label>Awareness <input type="range" id="awareness" min="0" max="1" step="0.01" value="0.5"></label>
+
+  <label>Reset Time <input type="range" id="timer" min="5" max="60" step="1" value="20"></label>
+</div>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.onresize = resize;
+
+// UI
+const UI = {
+  trail: document.getElementById("trail"),
+  stability: document.getElementById("stability"),
+  richness: document.getElementById("richness"),
+  symmetry: document.getElementById("symmetry"),
+  rupture: document.getElementById("rupture"),
+  surprise: document.getElementById("surprise"),
+  awareness: document.getElementById("awareness"),
+  timer: document.getElementById("timer")
+};
+
+let t = 0;
+
+// contador
+let countdown = parseFloat(UI.timer.value);
+let lastSecond = 0;
+
+// ----------------------
+// ÁRBOL (igual)
+// ----------------------
+function randomNode(depth=0){
+  if(depth > 3 || Math.random() < 0.3){
+    let terms = ["u","v","t","const"];
+    let term = terms[Math.floor(Math.random()*terms.length)];
+    if(term==="const"){
+      return {type:"const", value:Math.random()*2-1};
+    }
+    return {type:term};
+  }
+
+  let type = Math.random()<0.5?"op":"func";
+
+  if(type==="op"){
+    let ops = ["+","-","*"];
+    return {
+      type:"op",
+      op: ops[Math.floor(Math.random()*ops.length)],
+      left: randomNode(depth+1),
+      right: randomNode(depth+1)
+    };
+  }
+
+  let funcs = ["sin","cos","tan"];
+  return {
+    type:"func",
+    func: funcs[Math.floor(Math.random()*funcs.length)],
+    arg: randomNode(depth+1)
+  };
+}
+
+function evalNode(node,u,v,t){
+  switch(node.type){
+    case "u": return u;
+    case "v": return v;
+    case "t": return t;
+    case "const": return node.value;
+
+    case "op":
+      let l = evalNode(node.left,u,v,t);
+      let r = evalNode(node.right,u,v,t);
+      if(node.op==="+") return l+r;
+      if(node.op==="-") return l-r;
+      if(node.op==="*") return l*r;
+
+    case "func":
+      let a = evalNode(node.arg,u,v,t);
+      if(node.func==="sin") return Math.sin(a);
+      if(node.func==="cos") return Math.cos(a);
+      if(node.func==="tan") return Math.tan(a);
+  }
+}
+
+// ----------------------
+let organism = {
+  x: randomNode(),
+  y: randomNode(),
+  z: randomNode(),
+  color: randomNode()
+};
+
+let prevFx = 0;
+let memory = [];
+
+// ----------------------
+function mutateLocal(node, rate, score){
+  if(Math.random() < rate * (1 - score)){
+    return randomNode();
+  }
+
+  if(node.type==="op"){
+    node.left = mutateLocal(node.left,rate,score);
+    node.right = mutateLocal(node.right,rate,score);
+  }
+
+  if(node.type==="func"){
+    node.arg = mutateLocal(node.arg,rate,score);
+  }
+
+  return node;
+}
+
+function similarity(a,b){
+  let diff=0;
+  for(let i=0;i<40;i++){
+    let u=Math.random()*2-1;
+    let v=Math.random()*2-1;
+    diff+=Math.abs(evalNode(a.x,u,v,t)-evalNode(b.x,u,v,t));
+  }
+  return 1-(diff/20);
+}
+
+function inherit(base, score, awareness){
+  let rate = 0.08 + (1 - awareness)*0.15;
+
+  let candidate = {
+    x: mutateLocal(JSON.parse(JSON.stringify(base.x)),rate,score),
+    y: mutateLocal(JSON.parse(JSON.stringify(base.y)),rate,score),
+    z: mutateLocal(JSON.parse(JSON.stringify(base.z)),rate,score),
+    color: mutateLocal(JSON.parse(JSON.stringify(base.color)),rate,score)
+  };
+
+  if(similarity(base,candidate)<0.6) return base;
+
+  return candidate;
+}
+
+// ----------------------
+function computeMetrics(fx, fy, fz, fc, structure){
+
+  let delta = Math.abs(fx - prevFx);
+  let stability = 1 - Math.abs(delta - 0.25);
+
+  let richness = structure;
+  let symmetry = 1 - Math.abs(Math.abs(fx) - Math.abs(fy));
+  let rupture = Math.abs(fx - fy);
+
+  let surprise = 0;
+  for(let m of memory){
+    surprise += Math.abs(fx - m.fx);
+  }
+  surprise = memory.length ? surprise/memory.length : 0.5;
+  surprise = 1 - Math.abs(surprise - 0.5);
+
+  prevFx = fx;
+
+  return {stability, richness, symmetry, rupture, surprise};
+}
+
+// ----------------------
+function draw(){
+
+  // timer dinámico
+  if (t - lastSecond >= 1) {
+    countdown--;
+    lastSecond = t;
+
+    if (countdown <= 0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      countdown = parseFloat(UI.timer.value);
+    }
+  }
+
+  // trail controlado
+  let trail = parseFloat(UI.trail.value);
+  ctx.fillStyle=`rgba(0,0,0,${trail})`;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  let fx=0, fy=0, fz=0, fc=0;
+  let pts=[];
+
+  let angle = t * 0.2;
+
+  for(let i=0;i<1200;i++){
+    let u=Math.random()*2-1;
+    let v=Math.random()*2-1;
+
+    let x=evalNode(organism.x,u,v,t);
+    let y=evalNode(organism.y,u,v,t);
+    let z=evalNode(organism.z,u,v,t);
+    let c=evalNode(organism.color,u,v,t);
+
+    let rx = x * Math.cos(angle) - z * Math.sin(angle);
+    let rz = x * Math.sin(angle) + z * Math.cos(angle);
+
+    let scale = 1 / (1 + rz * 0.5);
+
+    let px=canvas.width/2 + rx*200*scale;
+    let py=canvas.height/2 + y*200*scale;
+
+    let alpha = 0.1 + (1-scale)*0.5;
+
+    ctx.fillStyle=`hsla(${(c*200+200)%360},80%,60%,${alpha})`;
+    ctx.fillRect(px,py,2*scale,2*scale);
+
+    fx+=rx;
+    fy+=y;
+    fz+=rz;
+    fc+=c;
+
+    pts.push({x:rx,y:y,z:rz});
+  }
+
+  fx/=1200; fy/=1200; fz/=1200; fc/=1200;
+
+  let vx=0, vy=0, vz=0;
+
+  for(let p of pts){
+    vx+=(p.x-fx)*(p.x-fx);
+    vy+=(p.y-fy)*(p.y-fy);
+    vz+=(p.z-fz)*(p.z-fz);
+  }
+
+  vx/=pts.length;
+  vy/=pts.length;
+  vz/=pts.length;
+
+  let structure = vx + vy + vz;
+
+  let m = computeMetrics(fx,fy,fz,fc,structure);
+
+  // pesos dinámicos
+  let score =
+    m.stability * UI.stability.value +
+    m.richness * UI.richness.value +
+    m.symmetry * UI.symmetry.value +
+    m.rupture * UI.rupture.value +
+    m.surprise * UI.surprise.value +
+    parseFloat(UI.awareness.value) * 0.3;
+
+  organism = inherit(organism, score, parseFloat(UI.awareness.value));
+
+  memory.push({fx,fy,fc});
+  if(memory.length>80) memory.shift();
+
+  t+=0.01;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
