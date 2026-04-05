@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Coemergence System – 3D Emergence</title>
+<style>
+  body { margin:0; background:black; overflow:hidden; }
+  canvas { display:block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.onresize = resize;
+
+let t = 0;
+
+// CONTADOR
+let countdown = 20;
+let lastSecond = 0;
+
+// ----------------------
+// ÁRBOL
+// ----------------------
+function randomNode(depth=0){
+  if(depth > 3 || Math.random() < 0.3){
+    let terms = ["u","v","t","const"];
+    let term = terms[Math.floor(Math.random()*terms.length)];
+    if(term==="const"){
+      return {type:"const", value:Math.random()*2-1};
+    }
+    return {type:term};
+  }
+
+  let type = Math.random()<0.5?"op":"func";
+
+  if(type==="op"){
+    let ops = ["+","-","*"];
+    return {
+      type:"op",
+      op: ops[Math.floor(Math.random()*ops.length)],
+      left: randomNode(depth+1),
+      right: randomNode(depth+1)
+    };
+  }
+
+  if(type==="func"){
+    let funcs = ["sin","cos","tan"];
+    return {
+      type:"func",
+      func: funcs[Math.floor(Math.random()*funcs.length)],
+      arg: randomNode(depth+1)
+    };
+  }
+}
+
+function evalNode(node,u,v,t){
+  switch(node.type){
+    case "u": return u;
+    case "v": return v;
+    case "t": return t;
+    case "const": return node.value;
+
+    case "op":
+      let l = evalNode(node.left,u,v,t);
+      let r = evalNode(node.right,u,v,t);
+      if(node.op==="+") return l+r;
+      if(node.op==="-") return l-r;
+      if(node.op==="*") return l*r;
+
+    case "func":
+      let a = evalNode(node.arg,u,v,t);
+      if(node.func==="sin") return Math.sin(a);
+      if(node.func==="cos") return Math.cos(a);
+      if(node.func==="tan") return Math.tan(a);
+  }
+}
+
+// ----------------------
+// SISTEMA (3D)
+// ----------------------
+let organism = {
+  x: randomNode(),
+  y: randomNode(),
+  z: randomNode(),
+  color: randomNode()
+};
+
+let core = JSON.parse(JSON.stringify(organism));
+
+let prevFx = 0;
+let memory = [];
+
+let deepMemory = [];
+let lastSnapshot = 0;
+
+// ----------------------
+// AUDIO
+// ----------------------
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+let master = audioCtx.createGain();
+master.gain.value = 0.08;
+master.connect(audioCtx.destination);
+
+let osc1 = audioCtx.createOscillator();
+let osc2 = audioCtx.createOscillator();
+
+osc1.type = "sine";
+osc2.type = "sine";
+
+let g1 = audioCtx.createGain();
+let g2 = audioCtx.createGain();
+
+g1.gain.value = 0.05;
+g2.gain.value = 0.05;
+
+let filter = audioCtx.createBiquadFilter();
+filter.type = "lowpass";
+
+osc1.connect(g1);
+osc2.connect(g2);
+g1.connect(filter);
+g2.connect(filter);
+filter.connect(master);
+
+let lfo = audioCtx.createOscillator();
+let lfoGain = audioCtx.createGain();
+
+lfo.frequency.value = 0.05;
+lfoGain.gain.value = 20;
+
+lfo.connect(lfoGain);
+lfoGain.connect(osc2.frequency);
+
+osc1.start();
+osc2.start();
+lfo.start();
+
+let smoothFreq1 = 200;
+let smoothFreq2 = 300;
+let smoothGain = 0.05;
+
+window.addEventListener("click", () => audioCtx.resume());
+
+// ----------------------
+// MUTACIÓN
+// ----------------------
+function mutateLocal(node, rate, score){
+  if(Math.random() < rate * (1 - score)){
+    return randomNode();
+  }
+
+  if(node.type==="op"){
+    if(Math.random()<0.8){
+      node.left = mutateLocal(node.left,rate,score);
+    } else {
+      node.right = mutateLocal(node.right,rate,score);
+    }
+  }
+
+  if(node.type==="func"){
+    node.arg = mutateLocal(node.arg,rate,score);
+  }
+
+  return node;
+}
+
+// ----------------------
+// SIMILARIDAD
+// ----------------------
+function similarity(a,b){
+  let diff=0;
+  for(let i=0;i<40;i++){
+    let u=Math.random()*2-1;
+    let v=Math.random()*2-1;
+    diff+=Math.abs(evalNode(a.x,u,v,t)-evalNode(b.x,u,v,t));
+  }
+  return 1-(diff/20);
+}
+
+// ----------------------
+// HERENCIA
+// ----------------------
+function inherit(base, score, awareness){
+
+  let rate = 0.08 + (1 - awareness)*0.1;
+
+  let candidate = {
+    x: mutateLocal(JSON.parse(JSON.stringify(base.x)),rate,score),
+    y: mutateLocal(JSON.parse(JSON.stringify(base.y)),rate,score),
+    z: mutateLocal(JSON.parse(JSON.stringify(base.z)),rate,score),
+    color: mutateLocal(JSON.parse(JSON.stringify(base.color)),rate,score)
+  };
+
+  if(similarity(base,candidate)<0.6) return base;
+
+  return candidate;
+}
+
+// ----------------------
+// MÉTRICAS
+// ----------------------
+function computeMetrics(fx, fy, fz, fc, structure){
+
+  let delta = Math.abs(fx - prevFx);
+  let stability = 1 - Math.abs(delta - 0.25);
+
+  let richness = structure;
+
+  let symmetry = 1 - Math.abs(Math.abs(fx) - Math.abs(fy));
+
+  let rupture = Math.abs(fx - fy);
+
+  let surprise = 0;
+  for(let m of memory){
+    surprise += Math.abs(fx - m.fx);
+  }
+  surprise = memory.length ? surprise/memory.length : 0.5;
+  surprise = 1 - Math.abs(surprise - 0.5);
+
+  prevFx = fx;
+
+  return {stability, richness, symmetry, rupture, surprise};
+}
+
+// ----------------------
+// LOOP
+// ----------------------
+function draw(){
+
+  if (t - lastSecond >= 1) {
+    countdown--;
+    lastSecond = t;
+
+    if (countdown <= 0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      countdown = 20;
+    }
+  }
+
+  ctx.fillStyle="rgba(0,0,0,0.001)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  let fx=0, fy=0, fz=0, fc=0;
+  let pts=[];
+
+  let angle = t * 0.2;
+
+  for(let i=0;i<1200;i++){
+    let u=Math.random()*2-1;
+    let v=Math.random()*2-1;
+
+    let x=evalNode(organism.x,u,v,t);
+    let y=evalNode(organism.y,u,v,t);
+    let z=evalNode(organism.z,u,v,t);
+    let c=evalNode(organism.color,u,v,t);
+
+    // rotación
+    let rx = x * Math.cos(angle) - z * Math.sin(angle);
+    let rz = x * Math.sin(angle) + z * Math.cos(angle);
+
+    let scale = 1 / (1 + rz * 0.5);
+
+    let px=canvas.width/2 + rx*200*scale;
+    let py=canvas.height/2 + y*200*scale;
+
+    let alpha = 0.1 + (1-scale)*0.5;
+
+    ctx.fillStyle=`hsla(${(c*200+200)%360},80%,60%,${alpha})`;
+    ctx.fillRect(px,py,2*scale,2*scale);
+
+    fx+=rx;
+    fy+=y;
+    fz+=rz;
+    fc+=c;
+
+    pts.push({x:rx,y:y,z:rz});
+  }
+
+  fx/=1200; fy/=1200; fz/=1200; fc/=1200;
+
+  let vx=0, vy=0, vz=0;
+
+  for(let p of pts){
+    vx+=(p.x-fx)*(p.x-fx);
+    vy+=(p.y-fy)*(p.y-fy);
+    vz+=(p.z-fz)*(p.z-fz);
+  }
+
+  vx/=pts.length;
+  vy/=pts.length;
+  vz/=pts.length;
+
+  let structure = vx + vy + vz;
+
+  let m = computeMetrics(fx,fy,fz,fc,structure);
+
+  // sonido con profundidad
+  let base = 120 + m.richness*200;
+  let harmony = 1.5 + m.symmetry*0.5;
+  let detune = (m.rupture-0.5)*40;
+
+  smoothFreq1 += (base - smoothFreq1)*0.05;
+  smoothFreq2 += ((base*harmony+detune)-smoothFreq2)*0.05;
+
+  let gainTarget = 0.03 + m.stability*0.08;
+  smoothGain += (gainTarget - smoothGain)*0.05;
+
+  osc1.frequency.setValueAtTime(smoothFreq1,audioCtx.currentTime);
+  osc2.frequency.setValueAtTime(smoothFreq2,audioCtx.currentTime);
+
+  g1.gain.setValueAtTime(smoothGain,audioCtx.currentTime);
+  g2.gain.setValueAtTime(smoothGain*0.8,audioCtx.currentTime);
+
+  filter.frequency.setValueAtTime(
+    300 + m.richness*1000 + Math.abs(fz)*800,
+    audioCtx.currentTime
+  );
+
+  // evolución
+  let awareness = 0.5;
+
+  let score =
+    m.stability*0.2 +
+    m.richness*0.25 +
+    m.symmetry*0.1 +
+    m.rupture*0.1 +
+    m.surprise*0.15 +
+    awareness*0.2;
+
+  organism = inherit(organism, score, awareness);
+
+  memory.push({fx,fy,fc});
+  if(memory.length>80) memory.shift();
+
+  t+=0.01;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
