@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Proto-Lattice con Conexiones</title>
+<style>
+body { margin:0; overflow:hidden; background:black; }
+</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<script>
+
+let scene = new THREE.Scene();
+let camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 5000);
+let renderer = new THREE.WebGLRenderer({antialias:true});
+
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+camera.position.z = 400;
+
+// CONTROLES
+let dragging=false, prev={x:0,y:0};
+
+onmousedown=e=>{ dragging=true; prev={x:e.clientX,y:e.clientY}; }
+onmouseup=()=>dragging=false;
+
+onmousemove=e=>{
+  if(!dragging) return;
+  let dx=e.clientX-prev.x;
+  let dy=e.clientY-prev.y;
+
+  scene.rotation.y+=dx*0.005;
+  scene.rotation.x+=dy*0.005;
+
+  prev={x:e.clientX,y:e.clientY};
+};
+
+onwheel=e=>{
+  camera.position.z += e.deltaY*0.2;
+};
+
+// DATOS
+let points=[];
+let memoryGraph=[];
+let connectionLines;
+
+// PUNTOS
+for(let i=0;i<200;i++){
+  let p={
+    pos:new THREE.Vector3(
+      (Math.random()-0.5)*300,
+      (Math.random()-0.5)*300,
+      (Math.random()-0.5)*300
+    ),
+    vel:new THREE.Vector3(
+      (Math.random()-0.5)*2,
+      (Math.random()-0.5)*2,
+      (Math.random()-0.5)*2
+    )
+  };
+
+  let mesh=new THREE.Mesh(
+    new THREE.SphereGeometry(1.5,6,6),
+    new THREE.MeshBasicMaterial({color:0xffffff})
+  );
+
+  scene.add(mesh);
+  p.mesh=mesh;
+  points.push(p);
+}
+
+// CREAR NODO
+function storeMemory(p){
+  let node={
+    pos:p.pos.clone(),
+    connections:[],
+    signal:0.5+Math.random()*0.5,
+    mesh:new THREE.Mesh(
+      new THREE.SphereGeometry(2.5,8,8),
+      new THREE.MeshBasicMaterial({color:0xff6600})
+    )
+  };
+
+  scene.add(node.mesh);
+  memoryGraph.push(node);
+
+  for(let o of memoryGraph){
+    if(o===node) continue;
+    let d=node.pos.distanceTo(o.pos);
+    if(d<50){
+      node.connections.push(o);
+      o.connections.push(node);
+    }
+  }
+}
+
+// PROPAGACIÓN + COSTE
+function propagateSignal(){
+  let next=new Map();
+
+  for(let n of memoryGraph){
+    let total=0;
+
+    for(let c of n.connections){
+      let d=n.pos.distanceTo(c.pos)+0.01;
+      total += c.signal/(1+d*0.05);
+    }
+
+    let cost=0;
+    for(let c of n.connections){
+      let d=n.pos.distanceTo(c.pos);
+      cost += d * 0.002;
+    }
+
+    let newSignal=(total - cost)*0.96;
+    next.set(n,newSignal);
+  }
+
+  for(let n of memoryGraph){
+    n.signal=(next.get(n)||0)+0.001;
+  }
+}
+
+// FUERZA
+function applyForces(){
+  for(let n of memoryGraph){
+    let force=new THREE.Vector3();
+
+    for(let c of n.connections){
+      let dir=new THREE.Vector3().subVectors(c.pos,n.pos);
+      let d=dir.length()+0.01;
+
+      let flow=(c.signal - n.signal);
+
+      dir.normalize();
+      force.add(dir.multiplyScalar(flow*0.01));
+    }
+
+    n.pos.add(force);
+  }
+}
+
+// DISOLUCIÓN
+function decay(){
+  for(let i=memoryGraph.length-1;i>=0;i--){
+    let n=memoryGraph[i];
+
+    if(n.signal<0.005){
+      n.mesh.scale.multiplyScalar(0.9);
+
+      if(n.mesh.scale.x<0.05){
+        scene.remove(n.mesh);
+        memoryGraph.splice(i,1);
+      }
+    }
+  }
+}
+
+// CLUSTERS
+function clusterize(){
+  let clusters=[];
+
+  for(let n of memoryGraph){
+    let found=null;
+
+    for(let c of clusters){
+      if(n.pos.distanceTo(c.center)<40){
+        found=c;
+        break;
+      }
+    }
+
+    if(found){
+      found.nodes.push(n);
+    }else{
+      clusters.push({center:n.pos.clone(),nodes:[n]});
+    }
+  }
+
+  for(let c of clusters){
+
+    if(c.nodes.length<6) continue;
+
+    let center=new THREE.Vector3();
+    let signal=0;
+
+    for(let n of c.nodes){
+      center.add(n.pos);
+      signal+=n.signal;
+    }
+
+    center.divideScalar(c.nodes.length);
+
+    let meta={
+      pos:center,
+      connections:[],
+      signal:signal/c.nodes.length,
+      mesh:new THREE.Mesh(
+        new THREE.SphereGeometry(4,10,10),
+        new THREE.MeshBasicMaterial({color:0x00ffff})
+      )
+    };
+
+    scene.add(meta.mesh);
+    memoryGraph.push(meta);
+
+    for(let n of c.nodes){
+      scene.remove(n.mesh);
+      memoryGraph.splice(memoryGraph.indexOf(n),1);
+    }
+  }
+}
+
+// DIBUJAR CONEXIONES
+function drawConnections(){
+
+  if(connectionLines){
+    scene.remove(connectionLines);
+  }
+
+  let positions=[];
+  let colors=[];
+
+  for(let n of memoryGraph){
+    for(let c of n.connections){
+
+      if(n===c || memoryGraph.indexOf(n)>memoryGraph.indexOf(c)) continue;
+
+      positions.push(n.pos.x,n.pos.y,n.pos.z);
+      positions.push(c.pos.x,c.pos.y,c.pos.z);
+
+      let flow=Math.abs(n.signal - c.signal);
+      let intensity=Math.min(1, flow*5);
+
+      colors.push(intensity,intensity,intensity);
+      colors.push(intensity,intensity,intensity);
+    }
+  }
+
+  let geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+
+  let material=new THREE.LineBasicMaterial({
+    vertexColors:true,
+    transparent:true,
+    opacity:0.6
+  });
+
+  connectionLines=new THREE.LineSegments(geometry,material);
+  scene.add(connectionLines);
+}
+
+// EVOLUCIÓN
+function evolve(){
+
+  for(let p of points){
+    p.pos.add(p.vel);
+
+    if(Math.random()<0.05){
+      storeMemory(p);
+    }
+
+    p.mesh.position.copy(p.pos);
+  }
+
+  for(let p of points){
+    let nearest=null;
+    let min=Infinity;
+
+    for(let m of memoryGraph){
+      let d=p.pos.distanceTo(m.pos);
+      if(d<min){ min=d; nearest=m; }
+    }
+
+    if(nearest && min<80){
+      nearest.signal+=0.05;
+    }
+  }
+
+  propagateSignal();
+  applyForces();
+  clusterize();
+  decay();
+  drawConnections();
+
+  for(let n of memoryGraph){
+    n.mesh.position.copy(n.pos);
+
+    let s=Math.min(1,n.signal);
+    n.mesh.material.color.setRGB(1,s,0);
+  }
+}
+
+// LOOP
+function animate(){
+  requestAnimationFrame(animate);
+  evolve();
+  renderer.render(scene,camera);
+}
+
+animate();
+
+</script>
+</body>
+</html>
