@@ -246,15 +246,15 @@
 </footer>
 
 <!-- SOUND SCRIPT -->
-<script src="https://w.soundcloud.com/player/api.js"></script>
+//script src="https://w.soundcloud.com/player/api.js"></script>
 
 <script>
   const overlay = document.getElementById('overlay');
   const iframe = document.getElementById('sc-player');
   const widget = SC.Widget(iframe);
 
-  //overlay.addEventListener('click', () => {
-    //widget.play();
+  overlay.addEventListener('click', () => {
+    widget.play();
 
     overlay.classList.add('fade-out');
 
