@@ -1,12 +1,21 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VOID POET</title>
-  <meta name="description" content="Sound as matter. Silence as structure. There is no ascent here. Only depth."/>
 
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='white'/></svg>"/>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>VOID POET</title>
+
+  <meta
+    name="description"
+    content="Sound as matter. Silence as structure. There is no ascent here. Only depth."
+  >
+
+  <link
+    rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='white'/></svg>"
+  >
 
   <style>
     :root {
@@ -23,6 +32,11 @@
       box-sizing: border-box;
     }
 
+    html {
+      scroll-behavior: smooth;
+      background: #000;
+    }
+
     body {
       background: var(--bg);
       color: var(--text);
@@ -33,19 +47,25 @@
     }
 
     .container {
+      width: 100%;
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 2rem;
     }
 
+    /* =========================
+       HEADER
+    ========================= */
+
     header {
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
       position: relative;
+      padding: 4rem 0;
     }
 
     h1 {
@@ -66,9 +86,14 @@
       margin: 0 auto 3rem;
     }
 
+    /* =========================
+       ENTER BUTTON
+    ========================= */
+
     .enter-btn {
       display: inline-block;
       padding: 1rem 2.5rem;
+      margin-bottom: 2rem;
       font-size: 1.2rem;
       letter-spacing: 0.12em;
       text-transform: uppercase;
@@ -85,6 +110,23 @@
       color: white;
       box-shadow: 0 0 30px rgba(74, 0, 0, 0.6);
     }
+
+    /* =========================
+       SOUNDCLOUD PLAYER
+    ========================= */
+
+    #sc-player {
+      display: block;
+      width: 100%;
+      max-width: 1000px;
+      height: 300px;
+      margin: 0 auto;
+      border: none;
+    }
+
+    /* =========================
+       SECTIONS
+    ========================= */
 
     section {
       padding: 6rem 0;
@@ -104,6 +146,20 @@
       color: var(--text-dim);
     }
 
+    /* =========================
+       LINKS
+    ========================= */
+
+    ul.rituals {
+      list-style: none;
+      margin: 2rem 0;
+      padding: 0;
+    }
+
+    ul.rituals li {
+      margin: 0.4rem 0;
+    }
+
     .links {
       display: flex;
       justify-content: center;
@@ -116,12 +172,16 @@
       color: var(--text-dim);
       text-decoration: none;
       font-size: 1.1rem;
-      transition: color 0.3s;
+      transition: color 0.3s ease;
     }
 
     .link:hover {
-      color: var(--accent);
+      color: white;
     }
+
+    /* =========================
+       FOOTER
+    ========================= */
 
     footer {
       padding: 3rem 0;
@@ -131,139 +191,368 @@
       border-top: 1px solid #111;
     }
 
-    /* OVERLAY */
+    /* =========================
+       MOBILE
+    ========================= */
 
-    #overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: black;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      cursor: pointer;
-      transition: opacity 2s ease;
-    }
+    @media (max-width: 700px) {
 
-    #overlay-text {
-      color: #777;
-      font-size: 1.2rem;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      opacity: 0.6;
-      transition: opacity 1s ease;
-    }
+      .container {
+        padding: 0 1.2rem;
+      }
 
-    #overlay.fade-out {
-      opacity: 0;
-      pointer-events: none;
+      header {
+        padding: 3rem 0;
+      }
+
+      h1 {
+        font-size: clamp(3rem, 15vw, 6rem);
+        letter-spacing: 0.08em;
+      }
+
+      .tagline {
+        font-size: 1.1rem;
+      }
+
+      .enter-btn {
+        font-size: 1rem;
+        padding: 0.9rem 1.8rem;
+      }
+
+      #sc-player {
+        height: 250px;
+      }
+
+      h2 {
+        font-size: 2rem;
+      }
+
+      .links {
+        gap: 1.2rem;
+      }
     }
   </style>
 </head>
 
 <body>
 
-<!-- OVERLAY -->
-<div id="overlay">
-  <div id="overlay-text">enter</div>
-</div>
+  <!-- =========================
+       MAIN
+  ========================= -->
 
-<header>
-  <div class="container">
-    <h1>VOID POET</h1>
-    <p class="tagline">
-      Sound as matter. Silence as structure.<br>
-      There is no ascent here. Only depth.
+  <header>
+
+    <div class="container">
+
+      <h1>VOID POET</h1>
+
+      <p class="tagline">
+        Sound as matter. Silence as structure.<br>
+        There is no ascent here. Only depth.
+      </p>
+
+      <a
+        href="https://soundcloud.com/poetadelvacio"
+        class="enter-btn"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Enter the Void
+      </a>
+
+      <!-- SOUNDCLOUD PLAYER -->
+
+      <iframe
+        id="sc-player"
+        width="100%"
+        height="300"
+        scrolling="no"
+        frameborder="no"
+        allow="autoplay"
+        src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/2299913243&color=%23000000&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=true"
+      ></iframe>
+
+    </div>
+
+  </header>
+
+
+  <!-- =========================
+       RITUALS
+  ========================= -->
+
+  <section>
+
+    <div class="container">
+
+      <h2>Rituals</h2>
+
+      <p class="bio">
+        Camino en el vacío.<br>
+        Este es mi caos hecho música.
+      </p>
+
+      <ul class="rituals">
+
+        <li>
+          <a
+            href="https://soundcloud.com/poetadelvacio/the-great-immensity"
+            class="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            The Great Immensity
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="https://soundcloud.com/poetadelvacio/liminal-continuity"
+            class="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Liminal Continuity
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="https://soundcloud.com/poetadelvacio/majestic-darkness"
+            class="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Majestic Darkness
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="https://soundcloud.com/poetadelvacio/the-eternal-oceans"
+            class="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            The Eternal Oceans
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="https://soundcloud.com/poetadelvacio/holographic-sequence"
+            class="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Holographic Sequence
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="https://soundcloud.com/poetadelvacio/cosmic-circle"
+            class="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Cosmic Circle
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="https://soundcloud.com/poetadelvacio/rebirth-in-eternity"
+            class="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Rebirth in Eternity
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="https://soundcloud.com/poetadelvacio/the-long-om"
+            class="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            The Long Om
+          </a>
+        </li>
+
+        <li>
+          <a
+            href="https://soundcloud.com/poetadelvacio/inner-lotus"
+            class="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Inner Lotus
+          </a>
+        </li>
+
+      </ul>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       POETA DEL VACÍO
+  ========================= -->
+
+  <section>
+
+    <div class="container">
+
+      <h2>Poeta del Vacío</h2>
+
+      <div class="links">
+
+        <a
+          href="Portfolio - VOID POET.pdf"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Bio
+        </a>
+
+        <a
+          href="https://soundcloud.com/poetadelvacio"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          SoundCloud
+        </a>
+
+        <a
+          href="https://voidpoet.bandcamp.com/album/music-for-thresholds"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Bandcamp
+        </a>
+
+        <a
+          href="https://instagram.com/poetadelvacio"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Instagram
+        </a>
+
+        <a
+          href="mailto:poetadelvacio@gmail.com"
+          class="link"
+        >
+          Contact
+        </a>
+
+      </div>
+
+
+      <!-- ART SECTIONS -->
+
+      <div class="links">
+
+        <a
+          href="ambientspace.html"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          | Ambient Space |
+        </a>
+
+        <a
+          href="reiterate.html"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          | Reiterative |
+        </a>
+
+        <a
+          href="autoart.html"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          | Auto-Generative |
+        </a>
+
+        <a
+          href="complexart.html"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          | Evolutive |
+        </a>
+
+        <a
+          href="livingart.html"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          | Living |
+        </a>
+
+        <a
+          href="complex.html"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          | Complex |
+        </a>
+
+        <a
+          href="coemergent.html"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          | Coemergent |
+        </a>
+
+        <a
+          href="coexistence.html"
+          class="link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          | Coexistence |
+        </a>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       FOOTER
+  ========================= -->
+
+  <footer>
+
+    <p>
+      © 2026 VOID POET — Poeta del Vacío
     </p>
 
-    <a href="https://soundcloud.com/poetadelvacio" class="enter-btn" target="_blank">
-      Enter the Void
-    </a>
-
-    <!-- PLAYER -->
-    <iframe id="sc-player"
-      width="100%" 
-      height="300" 
-      scrolling="no" 
-      frameborder="no" 
-      // allow="autoplay"
-      src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/2299913243&color=%23000000&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=true">
-    </iframe>
-
-  </div>
-</header>
-
-<section>
-  <div class="container">
-    <h2>Rituals</h2>
-    <p class="bio">Camino en el vacío.<br>Este es mi caos hecho música.</p>
-
-    <ul style="list-style: none; margin: 2rem 0;">
-      <li><a href="https://soundcloud.com/poetadelvacio/the-great-immensity" class="link" target="_blank">The Great Immensity</a></li>
-      <li><a href="https://soundcloud.com/poetadelvacio/liminal-continuity" class="link" target="_blank">Liminal Continuity</a></li>
-      <li><a href="https://soundcloud.com/poetadelvacio/majestic-darkness" class="link" target="_blank">Majestic Darkness</a></li>
-      <li><a href="https://soundcloud.com/poetadelvacio/the-eternal-oceans" class="link" target="_blank">The Eternal Oceans</a></li>
-      <li><a href="https://soundcloud.com/poetadelvacio/holographic-sequence" class="link" target="_blank">Holographic Sequence</a></li>
-      <li><a href="https://soundcloud.com/poetadelvacio/cosmic-circle" class="link" target="_blank">Cosmic Circle</a></li>
-      <li><a href="https://soundcloud.com/poetadelvacio/rebirth-in-eternity" class="link" target="_blank">Rebirth in Eternity</a></li>
-      <li><a href="https://soundcloud.com/poetadelvacio/the-long-om" class="link" target="_blank">The Long Om</a></li>
-      <li><a href="https://soundcloud.com/poetadelvacio/inner-lotus" class="link" target="_blank">Inner Lotus</a></li>
-    </ul>
-  </div>
-</section>
-
-<section>
-  <div class="container">
-    <h2>Poeta del Vacío</h2>
-
-    <div class="links">
-      <a href="Portfolio - VOID POET.pdf" class="link"target="_blank">Bio</a>
-      <a href="https://soundcloud.com/poetadelvacio" class="link" target="_blank">SoundCloud</a>
-      <a href="https://voidpoet.bandcamp.com/album/music-for-thresholds" class="link" target="_blank">Bandcamp</a>
-      <a href="https://instagram.com/poetadelvacio" class="link" target="_blank">Instagram</a>
-      <a href="mailto:poetadelvacio@gmail.com" class="link">Contact</a>
-
-    </div>
-
-    <div class="links">
-      <a href="ambientspace.html" target="_blank" > | Ambient Space | </a>
-      <a href="reiterate.html" target="_blank" > | Reiterative | </a>
-      <a href="autoart.html" target="_blank" > | Auto-Generative | </a>
-      <a href="complexart.html" target="_blank" > | Evolutive | </a>
-      <a href="livingart.html" target="_blank" > | Living | </a>
-      <a href="complex.html" target="_blank" > | Complex | </a>
-      <a href="coemergent.html" target="_blank" > | Coemergent | </a>
-      <a href="coexistence.html" target="_blank" > | Coexistence | </a>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <p>© 2026 VOID POET — Poeta del Vacío</p>
-</footer>
-
-<!-- SOUND SCRIPT -->
-<script src="https://w.soundcloud.com/player/api.js"></script>
-
-<script>
-  const overlay = document.getElementById('overlay');
-  const iframe = document.getElementById('sc-player');
-  const widget = SC.Widget(iframe);
-
-  overlay.addEventListener('click', () => {
-    widget.play();
-
-    overlay.classList.add('fade-out');
-
-    setTimeout(() => {
-      overlay.style.display = 'none';
-    }, 2000);
-  });
-</script>
+  </footer>
 
 </body>
-</html>
 
+</html>
