@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 select-none">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coemergence System V4.0 - GPU Shader & Polyphonic Audio Ecosystem</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #030712;
+      color: #f3f4f6;
+    }
+    
+    canvas {
+      display: block;
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.4);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(129, 140, 248, 0.7);
+    }
+
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .glass-button {
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: all 0.2s ease;
+    }
+    .glass-button:hover {
+      background: rgba(51, 65, 85, 0.9);
+      border-color: rgba(129, 140, 248, 0.5);
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+    }
+
+    input[type=range] {
+      accent-color: #6366f1;
+    }
+
+    .glow-pulse {
+      box-shadow: 0 0 15px rgba(129, 140, 248, 0.35);
+    }
+
+    @keyframes cataclysm-flash {
+      0% { background-color: rgba(244, 63, 94, 0.5); }
+      100% { background-color: transparent; }
+    }
+    .flash-extinction {
+      animation: cataclysm-flash 0.6s ease-out;
+    }
+  </style>
+</head>
+<body class="h-full w-full relative font-sans overflow-hidden">
+
+  <!-- WebGL GPU Canvas Layer -->
+  <canvas id="gl-canvas" class="z-0"></canvas>
+  <!-- 2D Canvas Layer for Fallback & HUD Overlay -->
+  <canvas id="2d-canvas" class="z-0 pointer-events-none"></canvas>
+  
+  <!-- Flash overlay for Epoch Cataclysm Extinction events -->
+  <div id="extinction-overlay" class="absolute inset-0 pointer-events-none z-10 transition-all duration-300"></div>
+
+  <!-- Audio Activation Overlay / Splash Modal -->
+  <div id="audio-modal" class="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md transition-opacity duration-500">
+    <div class="glass-panel p-8 rounded-3xl max-w-md text-center shadow-2xl border border-indigo-500/30 transform hover:scale-[1.01] transition-transform">
+      <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-indigo-600/20 flex items-center justify-center text-indigo-400 border border-indigo-500/30 glow-pulse">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight text-white mb-1">Coemergence V4.0</h1>
+      <p class="text-xs text-indigo-300 font-mono mb-3">GLSL GPU Engine & Polyphonic Synthesizer Ecosystem</p>
+      <p class="text-xs text-slate-300 mb-6 leading-relaxed">
+        Featuring dynamic AST-to-GLSL vertex shader compilation, a 4-Voice Polyphonic FM acoustic synthesizer, and an Epoch Cataclysm life-cycle timer shielded by user spatial awareness.
+      </p>
+      <button id="start-btn" class="w-full py-3.5 px-6 rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-600 hover:from-indigo-400 hover:to-pink-500 shadow-lg shadow-indigo-500/25 transition-all duration-200">
+        Launch V4.0 Engine
+      </button>
+    </div>
+  </div>
+
+  <!-- AST Genome JSON Modal Editor -->
+  <div id="genome-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 transition-opacity duration-300">
+    <div class="glass-panel p-6 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-indigo-500/30">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-700/50 mb-4">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4"/>
+          </svg>
+          <h2 class="text-base font-bold text-white tracking-tight">Genome AST JSON Editor</h2>
+        </div>
+        <button id="btn-close-genome-modal" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+        Inspect, edit, or copy the live AST expression tree. Modifications are transpiled dynamically into GLSL shader instructions and polyphonic audio parameters.
+      </p>
+      <div class="flex-1 min-h-[260px] relative mb-4">
+        <textarea id="genome-json-area" class="w-full h-full min-h-[260px] bg-slate-950/90 border border-slate-800 rounded-xl p-3 font-mono text-xs text-emerald-400 focus:outline-none focus:border-indigo-500/80 resize-none selection:bg-indigo-600 selection:text-white" spellcheck="false"></textarea>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
+        <div class="flex items-center gap-2">
+          <button id="btn-refresh-json" class="glass-button px-3.5 py-2 rounded-xl text-xs font-medium text-slate-200 hover:text-white flex items-center gap-1.5">
+            🔄 Refresh Live
+          </button>
+          <button id="btn-copy-json" class="glass-button px-3.5 py-2 rounded-xl text-xs font-medium text-indigo-300 hover:text-white flex items-center gap-1.5">
+            📋 Copy JSON
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-import-json" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 shadow-md shadow-indigo-500/20 transition-all">
+            ⚡ Transpile & Inject AST
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Control Bar Header -->
+  <header class="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+    <!-- Brand / Status / Epoch HUD -->
+    <div class="glass-panel px-4 py-2 rounded-2xl flex items-center gap-4 pointer-events-auto shadow-lg">
+      <div class="flex items-center gap-2">
+        <div class="relative flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+        </div>
+        <div>
+          <h2 class="text-xs uppercase tracking-wider text-indigo-400 font-bold">Coemergence V4.0</h2>
+          <p class="text-[11px] text-slate-300 font-mono">
+            Gen: <span id="gen-counter" class="text-indigo-300 font-bold">1</span> | 
+            Score: <span id="score-val" class="text-emerald-400 font-bold">0.00</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Epoch Countdown HUD Timer -->
+      <div class="border-l border-slate-700/60 pl-3 flex items-center gap-2">
+        <div class="text-right">
+          <span class="text-[10px] uppercase font-bold text-amber-400 block tracking-wider">Epoch <span id="epoch-num">1</span> Timer</span>
+          <span id="epoch-timer-val" class="text-xs font-mono font-bold text-slate-200">25.0s</span>
+        </div>
+        <div class="w-10 bg-slate-800 rounded-full h-2 overflow-hidden border border-amber-500/30">
+          <div id="epoch-timer-bar" class="bg-amber-400 h-full transition-all duration-200" style="width: 100%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Action Controls -->
+    <div class="flex items-center gap-2 pointer-events-auto">
+      <button id="btn-toggle-gpu" class="glass-button px-3 py-2 rounded-xl text-xs font-mono text-cyan-300 hover:text-white flex items-center gap-1.5" title="Toggle GPU WebGL / 2D Canvas Engine">
+        <span id="gpu-dot" class="w-2 h-2 rounded-full bg-cyan-400"></span>
+        <span id="gpu-text">GPU GLSL</span>
+      </button>
+
+      <button id="btn-toggle-audio" class="glass-button p-2.5 rounded-xl text-slate-200 hover:text-white" title="Toggle Audio Synth (A)">
+        <svg id="icon-sound-on" class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+        </svg>
+        <svg id="icon-sound-off" class="w-5 h-5 text-rose-400 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+        </svg>
+      </button>
+
+      <button id="btn-pause-evo" class="glass-button px-3 py-2 rounded-xl text-xs font-medium text-slate-200 flex items-center gap-1.5" title="Pause / Resume Mutation (Space)">
+        <span id="pause-status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span id="pause-text">Evolving</span>
+      </button>
+
+      <button id="btn-cataclysm-now" class="glass-button px-3 py-2 rounded-xl text-xs font-semibold text-rose-300 hover:text-white border-rose-500/30" title="Trigger Epoch Cataclysm Extinction Event (E)">
+        💥 Cataclysm
+      </button>
+
+      <button id="btn-mutate-now" class="glass-button px-3 py-2 rounded-xl text-xs font-medium text-indigo-300 hover:text-white" title="Force Immediate Mutation (M)">
+        ⚡ Mutate
+      </button>
+
+      <button id="btn-genome-io" class="glass-button p-2.5 rounded-xl text-indigo-300 hover:text-white" title="Export / Import Genome AST (G)">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4"/>
+        </svg>
+      </button>
+
+      <button id="btn-snapshot" class="glass-button p-2.5 rounded-xl text-slate-200 hover:text-white" title="Export High-Res Canvas PNG (S)">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </button>
+
+      <button id="btn-toggle-panel" class="glass-button p-2.5 rounded-xl text-slate-200 hover:text-white" title="Toggle Controls Dashboard (H)">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Left Side Panel: Formula Tree & Metrics Radar -->
+  <aside id="left-panel" class="absolute top-20 left-4 bottom-20 w-80 z-20 flex flex-col gap-3 pointer-events-none transition-all duration-300">
+    
+    <!-- AST Formula Display -->
+    <div class="glass-panel p-4 rounded-2xl flex-1 flex flex-col overflow-hidden pointer-events-auto shadow-xl">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-700/50 mb-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+          </svg>
+          Genome AST Expressions
+        </h3>
+        <span id="transpile-status" class="text-[10px] text-cyan-400 font-mono">GLSL Ready</span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-2.5 pr-1 text-xs font-mono">
+        <div>
+          <span class="text-rose-400 font-semibold block mb-0.5">X(u, v, t):</span>
+          <div id="formula-x" class="p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 break-words leading-relaxed select-text"></div>
+        </div>
+        <div>
+          <span class="text-emerald-400 font-semibold block mb-0.5">Y(u, v, t):</span>
+          <div id="formula-y" class="p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 break-words leading-relaxed select-text"></div>
+        </div>
+        <div>
+          <span class="text-purple-400 font-semibold block mb-0.5">Z(u, v, t):</span>
+          <div id="formula-z" class="p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 break-words leading-relaxed select-text"></div>
+        </div>
+        <div>
+          <span class="text-cyan-400 font-semibold block mb-0.5">Color(u, v, t):</span>
+          <div id="formula-color" class="p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 break-words leading-relaxed select-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metrics Radar / Structural Progress Bars -->
+    <div class="glass-panel p-4 rounded-2xl pointer-events-auto shadow-xl space-y-2 text-xs">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-400 border-b border-slate-700/50 pb-2 mb-2">
+        Emergent Structural Metrics
+      </h3>
+
+      <div>
+        <div class="flex justify-between text-slate-300 mb-0.5">
+          <span>Stability</span>
+          <span id="metric-stability-val" class="font-mono text-emerald-400">0%</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div id="metric-stability-bar" class="bg-emerald-400 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex justify-between text-slate-300 mb-0.5">
+          <span>Richness (Entropy)</span>
+          <span id="metric-richness-val" class="font-mono text-indigo-400">0%</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div id="metric-richness-bar" class="bg-indigo-400 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex justify-between text-slate-300 mb-0.5">
+          <span>Symmetry</span>
+          <span id="metric-symmetry-val" class="font-mono text-cyan-400">0%</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div id="metric-symmetry-bar" class="bg-cyan-400 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex justify-between text-slate-300 mb-0.5">
+          <span>Rupture (Dissonance)</span>
+          <span id="metric-rupture-val" class="font-mono text-rose-400">0%</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div id="metric-rupture-bar" class="bg-rose-400 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex justify-between text-slate-300 mb-0.5">
+          <span>Awareness Shielding</span>
+          <span id="metric-awareness-val" class="font-mono text-purple-400">0%</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div id="metric-awareness-bar" class="bg-purple-400 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right Side Panel: Parameter Controls -->
+  <aside id="right-panel" class="absolute top-20 right-4 bottom-20 w-80 z-20 flex flex-col gap-3 pointer-events-none transition-all duration-300">
+    <div class="glass-panel p-4 rounded-2xl flex-1 overflow-y-auto pointer-events-auto shadow-xl space-y-4 text-xs">
+      
+      <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-400 border-b border-slate-700/50 pb-2">
+        V4.0 System Parameters
+      </h3>
+
+      <!-- Visual Settings -->
+      <div class="space-y-3">
+        <span class="text-slate-400 uppercase tracking-wider font-semibold text-[10px] block">GPU & Visual Engine</span>
+        
+        <div>
+          <div class="flex justify-between text-slate-300 mb-1">
+            <label for="input-particles">Particle Density</label>
+            <span id="val-particles" class="font-mono text-indigo-300">12000</span>
+          </div>
+          <input type="range" id="input-particles" min="1000" max="40000" step="1000" value="12000" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-slate-300 mb-1">
+            <label for="input-trail">Trail Persistence</label>
+            <span id="val-trail" class="font-mono text-indigo-300">0.08</span>
+          </div>
+          <input type="range" id="input-trail" min="0.01" max="0.30" step="0.01" value="0.08" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-slate-300 mb-1">
+            <label for="input-scale">Spatial Zoom</label>
+            <span id="val-scale" class="font-mono text-indigo-300">220</span>
+          </div>
+          <input type="range" id="input-scale" min="80" max="500" step="10" value="220" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+        </div>
+
+        <div>
+          <label class="text-slate-300 block mb-1">Render Mode</label>
+          <select id="select-render-mode" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 font-sans focus:outline-none focus:border-indigo-500">
+            <option value="dots">Quantum Particles</option>
+            <option value="lines">Neural Connections</option>
+            <option value="nebula">Nebula Cloud</option>
+            <option value="vectors">Vector Flow Lines</option>
+            <option value="tesseract">Hyperdimensional Tesseract (3D)</option>
+            <option value="ribbons">Harmonic Waves & Ribbons</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-slate-300 block mb-1">Color Palette Shader</label>
+          <select id="select-palette" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 font-sans focus:outline-none focus:border-indigo-500">
+            <option value="spectrum">Dynamic Spectrum</option>
+            <option value="cyberpunk">Neon Cyberpunk</option>
+            <option value="biolum">Deep Bioluminescence</option>
+            <option value="solar">Solar Flare & Gold</option>
+            <option value="monochrome">Quantum Monochrome</option>
+            <option value="aurora">Celestial Aurora</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Epoch Cataclysm & Genetic Cycle Controls -->
+      <div class="space-y-3 pt-3 border-t border-slate-700/50">
+        <span class="text-slate-400 uppercase tracking-wider font-semibold text-[10px] block">Epoch Life-Cycle & Genetics</span>
+        
+        <div>
+          <div class="flex justify-between text-slate-300 mb-1">
+            <label for="input-epoch-interval">Epoch Timer Interval</label>
+            <span id="val-epoch-interval" class="font-mono text-amber-300">25s</span>
+          </div>
+          <input type="range" id="input-epoch-interval" min="10" max="60" step="5" value="25" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-slate-300 mb-1">
+            <label for="input-mutation-rate">Mutation Velocity</label>
+            <span id="val-mutation-rate" class="font-mono text-indigo-300">0.08</span>
+          </div>
+          <input type="range" id="input-mutation-rate" min="0.01" max="0.30" step="0.01" value="0.08" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-slate-300 mb-1">
+            <label for="input-sim-threshold">Similarity Threshold</label>
+            <span id="val-sim-threshold" class="font-mono text-indigo-300">0.60</span>
+          </div>
+          <input type="range" id="input-sim-threshold" min="0.10" max="0.95" step="0.05" value="0.60" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+        </div>
+      </div>
+
+      <!-- 4-Voice Polyphonic Synthesizer Settings -->
+      <div class="space-y-3 pt-3 border-t border-slate-700/50">
+        <span class="text-slate-400 uppercase tracking-wider font-semibold text-[10px] block">4-Voice Polyphonic FM Synthesizer</span>
+        
+        <div>
+          <div class="flex justify-between text-slate-300 mb-1">
+            <label for="input-volume">Master Volume</label>
+            <span id="val-volume" class="font-mono text-indigo-300">18%</span>
+          </div>
+          <input type="range" id="input-volume" min="0" max="0.5" step="0.01" value="0.18" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-slate-300 mb-1">
+            <label for="input-fm-index">FM Mod Index</label>
+            <span id="val-fm-index" class="font-mono text-indigo-300">3.2</span>
+          </div>
+          <input type="range" id="input-fm-index" min="0" max="10" step="0.2" value="3.2" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+        </div>
+
+        <div>
+          <label class="text-slate-300 block mb-1">Musical Scale</label>
+          <select id="select-scale" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 font-sans focus:outline-none focus:border-indigo-500">
+            <option value="pentatonic">Minor Pentatonic (Celestial)</option>
+            <option value="dorian">Dorian Mode (Ambient)</option>
+            <option value="lydian">Lydian Mode (Etheric)</option>
+            <option value="harmonicMinor">Harmonic Minor (Dark)</option>
+            <option value="continuous">Unquantized Continuous</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-slate-300 block mb-1">Waveform</label>
+          <select id="select-waveform" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 font-sans focus:outline-none focus:border-indigo-500">
+            <option value="sine">Pure Sine Waves</option>
+            <option value="triangle">Warm Triangle</option>
+            <option value="sawtooth">Sharp Sawtooth</option>
+            <option value="square">Retro Square</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Bottom Bar: Presets & 4-Voice Polyphonic Oscilloscope -->
+  <footer class="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
+    <!-- Genome Archetype Presets -->
+    <div class="glass-panel px-3 py-2 rounded-2xl flex items-center gap-2 pointer-events-auto overflow-x-auto shadow-xl">
+      <span class="text-[10px] uppercase font-bold text-slate-400 px-2 tracking-wider">Archetypes:</span>
+      <button class="preset-btn text-xs px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-indigo-600/50 border border-slate-700 text-slate-200 hover:text-white transition-all whitespace-nowrap" data-preset="awareness">Awareness Field</button>
+      <button class="preset-btn text-xs px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-indigo-600/50 border border-slate-700 text-slate-200 hover:text-white transition-all whitespace-nowrap" data-preset="bloom">Harmonic Bloom</button>
+      <button class="preset-btn text-xs px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-indigo-600/50 border border-slate-700 text-slate-200 hover:text-white transition-all whitespace-nowrap" data-preset="vortex">Quantum Vortex</button>
+      <button class="preset-btn text-xs px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-indigo-600/50 border border-slate-700 text-slate-200 hover:text-white transition-all whitespace-nowrap" data-preset="lattice">Hyper Lattice</button>
+      <button class="preset-btn text-xs px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-indigo-600/50 border border-slate-700 text-slate-200 hover:text-white transition-all whitespace-nowrap" data-preset="chaos">Chaotic Attractor</button>
+    </div>
+
+    <!-- 4-Voice Polyphonic Oscilloscope Preview -->
+    <div class="glass-panel p-2 rounded-2xl pointer-events-auto hidden md:flex items-center gap-2 shadow-xl">
+      <div class="text-[10px] font-mono text-slate-400 pl-1">
+        <div>V1 <span id="v1-pitch" class="text-indigo-400">---</span></div>
+        <div>V2 <span id="v2-pitch" class="text-emerald-400">---</span></div>
+      </div>
+      <canvas id="audio-vis" width="130" height="38" class="rounded-lg bg-slate-950/90 border border-slate-800 relative inset-auto w-auto h-auto"></canvas>
+      <div class="text-[10px] font-mono text-slate-400 pr-1">
+        <div>V3 <span id="v3-pitch" class="text-cyan-400">---</span></div>
+        <div>V4 <span id="v4-pitch" class="text-rose-400">---</span></div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl glass-panel text-xs text-indigo-300 font-mono shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none">
+    Notification
+  </div>
+
+  <script>
+    // Dual Canvas Architecture setup (GL Canvas for WebGL GPU, 2D Canvas for HUD/Overlay)
+    const glCanvas = document.getElementById("gl-canvas");
+    const canvas2d = document.getElementById("2d-canvas");
+    
+    let gl = glCanvas.getContext("webgl") || glCanvas.getContext("experimental-webgl");
+    let ctx = canvas2d.getContext("2d");
+    let useGPU = !!gl;
+
+    const visCanvas = document.getElementById("audio-vis");
+    const visCtx = visCanvas ? visCanvas.getContext("2d") : null;
+
+    function resize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      glCanvas.width = w;
+      glCanvas.height = h;
+      canvas2d.width = w;
+      canvas2d.height = h;
+
+      if (gl) gl.viewport(0, 0, w, h);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Global Interactive System State
+    let t = 0;
+    let generation = 1;
+    let epochNumber = 1;
+    let epochTimeLeft = 25.0;
+    let isEvolving = true;
+    let audioActive = false;
+
+    // V4.0 System Parameters
+    const params = {
+      particles: 12000,
+      trailAlpha: 0.08,
+      spatialScale: 220,
+      renderMode: "dots",
+      palette: "spectrum",
+      epochInterval: 25,
+      mutationRate: 0.08,
+      simThreshold: 0.60,
+      volume: 0.18,
+      fmIndex: 3.2,
+      scale: "pentatonic",
+      waveform: "sine"
+    };
+
+    // Spatial Attractor & User Awareness
+    const mouse = {
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+      active: false,
+      u: 0,
+      v: 0,
+      speed: 0,
+      awareness: 0
+    };
+
+    let prevMouseX = window.innerWidth / 2;
+    let prevMouseY = window.innerHeight / 2;
+
+    window.addEventListener("mousemove", (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.u = (e.clientX - window.innerWidth / 2) / params.spatialScale;
+      mouse.v = (e.clientY - window.innerHeight / 2) / params.spatialScale;
+      
+      const dx = mouse.x - prevMouseX;
+      const dy = mouse.y - prevMouseY;
+      mouse.speed = Math.sqrt(dx * dx + dy * dy);
+      mouse.awareness = Math.min(1.0, mouse.awareness + 0.08 + mouse.speed * 0.005);
+      
+      prevMouseX = mouse.x;
+      prevMouseY = mouse.y;
+    });
+
+    window.addEventListener("mousedown", () => { 
+      mouse.active = true; 
+      mouse.awareness = Math.min(1.0, mouse.awareness + 0.35);
+    });
+    window.addEventListener("mouseup", () => { mouse.active = false; });
+
+    // Keyboard Shortcuts
+    window.addEventListener("keydown", (e) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+      if (e.code === "Space") { e.preventDefault(); document.getElementById("btn-pause-evo").click(); }
+      else if (e.code === "KeyE") { document.getElementById("btn-cataclysm-now").click(); }
+      else if (e.code === "KeyM") { document.getElementById("btn-mutate-now").click(); }
+      else if (e.code === "KeyA") { document.getElementById("btn-toggle-audio").click(); }
+      else if (e.code === "KeyS") { document.getElementById("btn-snapshot").click(); }
+      else if (e.code === "KeyH") { document.getElementById("btn-toggle-panel").click(); }
+      else if (e.code === "KeyG") { document.getElementById("btn-genome-io").click(); }
+    });
+
+    // AST Expression Engine & Math Functions
+    function randomNode(depth = 0) {
+      if (depth > 3 || Math.random() < 0.3) {
+        let terms = ["u", "v", "t", "r", "theta", "const"];
+        let term = terms[Math.floor(Math.random() * terms.length)];
+        if (term === "const") return { type: "const", value: Math.random() * 2 - 1 };
+        return { type: term };
+      }
+
+      let types = ["op", "func"];
+      let type = types[Math.floor(Math.random() * types.length)];
+
+      if (type === "op") {
+        let ops = ["+", "-", "*", "%"];
+        return {
+          type: "op",
+          op: ops[Math.floor(Math.random() * ops.length)],
+          left: randomNode(depth + 1),
+          right: randomNode(depth + 1)
+        };
+      }
+
+      if (type === "func") {
+        let funcs = ["sin", "cos", "tan", "sinh", "cosh", "tanh", "abs", "exp", "sqrt"];
+        return {
+          type: "func",
+          func: funcs[Math.floor(Math.random() * funcs.length)],
+          arg: randomNode(depth + 1)
+        };
+      }
+    }
+
+    function evalNode(node, u, v, t) {
+      if (!node) return 0;
+      switch (node.type) {
+        case "u": return u;
+        case "v": return v;
+        case "t": return t;
+        case "r": return Math.sqrt(u * u + v * v);
+        case "theta": return Math.atan2(v, u);
+        case "const": return node.value;
+
+        case "op": {
+          let l = evalNode(node.left, u, v, t);
+          let r = evalNode(node.right, u, v, t);
+          let val = 0;
+          if (node.op === "+") val = l + r;
+          else if (node.op === "-" || node.op === "−") val = l - r;
+          else if (node.op === "*") val = l * r;
+          else if (node.op === "%") val = Math.abs(r) > 0.001 ? l % r : 0;
+          return isFinite(val) ? val : 0;
+        }
+
+        case "func": {
+          let a = evalNode(node.arg, u, v, t);
+          let res = 0;
+          if (node.func === "sin") res = Math.sin(a);
+          else if (node.func === "cos") res = Math.cos(a);
+          else if (node.func === "tan") res = Math.tan(Math.min(Math.max(a, -1.55), 1.55));
+          else if (node.func === "sinh") res = Math.sinh(Math.min(Math.max(a, -2), 2));
+          else if (node.func === "cosh") res = Math.cosh(Math.min(Math.max(a, -2), 2));
+          else if (node.func === "tanh") res = Math.tanh(a);
+          else if (node.func === "abs") res = Math.abs(a);
+          else if (node.func === "exp") res = Math.exp(Math.min(Math.max(a, -3), 3)) - 1;
+          else if (node.func === "sqrt") res = Math.sqrt(Math.abs(a));
+          return isFinite(res) ? res : 0;
+        }
+      }
+      return 0;
+    }
+
+    function nodeToFormula(node) {
+      if (!node) return "0";
+      switch (node.type) {
+        case "u": return "u";
+        case "v": return "v";
+        case "t": return "t";
+        case "r": return "r";
+        case "theta": return "θ";
+        case "const": return typeof node.value === "number" ? node.value.toFixed(2) : "0";
+        case "op": {
+          let l = nodeToFormula(node.left);
+          let r = nodeToFormula(node.right);
+          return `(${l} ${node.op} ${r})`;
+        }
+        case "func": {
+          let a = nodeToFormula(node.arg);
+          return `${node.func}(${a})`;
+        }
+        default: return "0";
+      }
+    }
+
+    // Dynamic GLSL Code Transpiler for Vertex Shaders
+    function astToGLSL(node) {
+      if (!node) return "0.0";
+      switch (node.type) {
+        case "u": return "u";
+        case "v": return "v";
+        case "t": return "u_time";
+        case "r": return "length(vec2(u, v))";
+        case "theta": return "atan(v, u)";
+        case "const": {
+          let val = Number(node.value);
+          if (isNaN(val)) val = 0.0;
+          return val.toFixed(4);
+        }
+        case "op": {
+          let l = astToGLSL(node.left);
+          let r = astToGLSL(node.right);
+          if (node.op === "+") return `(${l} + ${r})`;
+          if (node.op === "-" || node.op === "−") return `(${l} - ${r})`;
+          if (node.op === "*") return `(${l} * ${r})`;
+          if (node.op === "%") return `mod(${l}, max(abs(${r}), 0.0001))`;
+          return `(${l} + ${r})`;
+        }
+        case "func": {
+          let a = astToGLSL(node.arg);
+          if (node.func === "sin") return `sin(${a})`;
+          if (node.func === "cos") return `cos(${a})`;
+          if (node.func === "tan") return `tan(clamp(${a}, -1.55, 1.55))`;
+          if (node.func === "sinh") return `((exp(clamp(${a},-2.0,2.0)) - exp(-clamp(${a},-2.0,2.0)))*0.5)`;
+          if (node.func === "cosh") return `((exp(clamp(${a},-2.0,2.0)) + exp(-clamp(${a},-2.0,2.0)))*0.5)`;
+          if (node.func === "tanh") return `tanh_fn(${a})`;
+          if (node.func === "abs") return `abs(${a})`;
+          if (node.func === "exp") return `(exp(clamp(${a}, -3.0, 3.0)) - 1.0)`;
+          if (node.func === "sqrt") return `sqrt(abs(${a}))`;
+          return `sin(${a})`;
+        }
+        default: return "0.0";
+      }
+    }
+
+    // WebGL Vertex Shader Particle Pipeline Management
+    let glProgram = null;
+    let glVBO = null;
+    let currentVboCount = 0;
+
+    function buildGLSLShader(organism) {
+      if (!gl) return;
+
+      const glslX = astToGLSL(organism.x);
+      const glslY = astToGLSL(organism.y);
+      const glslZ = astToGLSL(organism.z);
+      const glslColor = astToGLSL(organism.color);
+
+      const vertShaderSource = `
+        precision highp float;
+        attribute vec2 a_uv;
+
+        uniform float u_time;
+        uniform vec2 u_mouse;
+        uniform float u_awareness;
+        uniform float u_scale;
+        uniform vec2 u_resolution;
+
+        varying float v_color;
+
+        float tanh_fn(float x) {
+          float e2 = exp(clamp(2.0 * x, -10.0, 10.0));
+          return (e2 - 1.0) / (e2 + 1.0);
+        }
+
+        float evalX(float u, float v, float u_time) { return ${glslX}; }
+        float evalY(float u, float v, float u_time) { return ${glslY}; }
+        float evalZ(float u, float v, float u_time) { return ${glslZ}; }
+        float evalColor(float u, float v, float u_time) { return ${glslColor}; }
+
+        void main() {
+          float u = a_uv.x;
+          float v = a_uv.y;
+
+          if (u_awareness > 0.05) {
+            vec2 m = (u_mouse - u_resolution * 0.5) / u_scale;
+            vec2 dir = m - vec2(u, v);
+            u += dir.x * (u_awareness * 0.15);
+            v += dir.y * (u_awareness * 0.15);
+          }
+
+          float x = evalX(u, v, u_time);
+          float y = evalY(u, v, u_time);
+          float z = evalZ(u, v, u_time);
+          v_color = evalColor(u, v, u_time);
+
+          vec2 pos = vec2(x, y) * u_scale / (u_resolution * 0.5);
+          gl_Position = vec4(pos, z * 0.05, 1.0);
+          gl_PointSize = 2.5;
+        }
+      `;
+
+      const fragShaderSource = `
+        precision highp float;
+        varying float v_color;
+        uniform float u_time;
+        uniform int u_palette;
+
+        void main() {
+          float c = v_color;
+          vec3 col;
+
+          if (u_palette == 1) { // Cyberpunk
+            col = vec3(0.5 + 0.5 * sin(c * 6.28 + u_time), 0.2 + 0.8 * cos(c * 3.14), 0.9);
+          } else if (u_palette == 2) { // Biolum
+            col = vec3(0.1, 0.7 + 0.3 * sin(c * 5.0 + u_time), 0.6 + 0.4 * cos(c * 3.0));
+          } else if (u_palette == 3) { // Solar
+            col = vec3(0.95, 0.4 + 0.4 * sin(c * 4.0), 0.1 + 0.2 * cos(u_time));
+          } else if (u_palette == 4) { // Monochrome
+            col = vec3(0.6 + 0.3 * sin(c * 6.0));
+          } else if (u_palette == 5) { // Aurora
+            col = vec3(0.2, 0.8 + 0.2 * sin(c * 4.0 + u_time), 0.5 + 0.5 * cos(c * 2.0));
+          } else { // Dynamic Spectrum
+            col = vec3(0.5 + 0.5 * sin(c * 6.28 + u_time), 0.6 + 0.4 * cos(c * 3.14), 0.8 + 0.2 * sin(u_time));
+          }
+
+          gl_FragColor = vec4(col, 0.8);
+        }
+      `;
+
+      function compileShader(src, type) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          console.warn("GLSL Compile Warning:", gl.getShaderInfoLog(shader));
+          return null;
+        }
+        return shader;
+      }
+
+      const vs = compileShader(vertShaderSource, gl.VERTEX_SHADER);
+      const fs = compileShader(fragShaderSource, gl.FRAGMENT_SHADER);
+
+      if (!vs || !fs) {
+        document.getElementById("transpile-status").innerText = "2D Fallback";
+        return;
+      }
+
+      const prog = gl.createProgram();
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+
+      if (gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        glProgram = prog;
+        document.getElementById("transpile-status").innerText = "GLSL Active";
+      }
+    }
+
+    function updateWebGLBuffer(count) {
+      if (!gl) return;
+      const uvs = new Float32Array(count * 2);
+      for (let i = 0; i < count; i++) {
+        uvs[i * 2] = Math.random() * 2 - 1;
+        uvs[i * 2 + 1] = Math.random() * 2 - 1;
+      }
+      if (!glVBO) glVBO = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, glVBO);
+      gl.bufferData(gl.ARRAY_BUFFER, uvs, gl.STATIC_DRAW);
+      currentVboCount = count;
+    }
+    updateWebGLBuffer(params.particles);
+
+    // 4-Voice Polyphonic FM Acoustic Engine
+    let audioCtx = null;
+    let master = null;
+    let voices = [];
+    let fmMod = null;
+    let fmGain = null;
+    let filter = null;
+    let delayNode = null;
+    let feedbackGain = null;
+    let analyser = null;
+
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+
+        master = audioCtx.createGain();
+        master.gain.value = params.volume;
+
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+
+        filter = audioCtx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.value = 800;
+
+        delayNode = audioCtx.createDelay();
+        delayNode.delayTime.value = 0.22;
+        feedbackGain = audioCtx.createGain();
+        feedbackGain.gain.value = 0.35;
+
+        delayNode.connect(feedbackGain);
+        feedbackGain.connect(delayNode);
+        delayNode.connect(master);
+
+        filter.connect(master);
+        filter.connect(delayNode);
+        master.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        // FM Modulator Node
+        fmMod = audioCtx.createOscillator();
+        fmGain = audioCtx.createGain();
+        fmMod.type = "sine";
+        fmMod.frequency.value = 110;
+        fmGain.gain.value = params.fmIndex * 40;
+        fmMod.connect(fmGain);
+        fmMod.start();
+
+        // 4 Polyphonic Voices Setup
+        voices = [];
+        for (let i = 0; i < 4; i++) {
+          let osc = audioCtx.createOscillator();
+          let gain = audioCtx.createGain();
+          let panner = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
+
+          osc.type = params.waveform;
+          gain.gain.value = 0.05;
+
+          fmGain.connect(osc.frequency);
+
+          osc.connect(gain);
+          if (panner) {
+            gain.connect(panner);
+            panner.connect(filter);
+            panner.pan.value = (i - 1.5) / 1.5;
+          } else {
+            gain.connect(filter);
+          }
+
+          osc.start();
+          voices.push({ osc, gain, panner, targetFreq: 200 });
+        }
+
+        audioActive = true;
+        updateSoundIcons();
+      } catch (e) {
+        console.warn("Audio Context Initialization Error:", e);
+      }
+    }
+
+    const SCALES = {
+      pentatonic: [130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25], 
+      dorian: [130.81, 146.83, 155.56, 174.61, 196.00, 220.00, 233.08, 261.63, 293.66, 311.13, 349.23],     
+      lydian: [130.81, 146.83, 164.81, 185.00, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 369.99],     
+      harmonicMinor: [130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 246.94, 261.63, 293.66, 311.13], 
+    };
+
+    function quantizeFreq(rawFreq, scaleKey) {
+      if (scaleKey === "continuous" || !SCALES[scaleKey]) return rawFreq;
+      const notes = SCALES[scaleKey];
+      let closest = notes[0];
+      let minDiff = Math.abs(rawFreq - closest);
+      for (let i = 1; i < notes.length; i++) {
+        let diff = Math.abs(rawFreq - notes[i]);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = notes[i];
+        }
+      }
+      return closest;
+    }
+
+    // Genetic Organism & Epoch Life-Cycle Engine
+    let organism = {
+      x: randomNode(),
+      y: randomNode(),
+      z: randomNode(),
+      color: randomNode()
+    };
+
+    let core = JSON.parse(JSON.stringify(organism));
+    let prevFx = 0;
+    let memory = [];
+
+    function mutateLocal(node, rate, score) {
+      if (!node) return randomNode();
+      if (Math.random() < rate * (1 - score)) return randomNode();
+
+      if (node.type === "op") {
+        if (Math.random() < 0.5) node.left = mutateLocal(node.left, rate, score);
+        else node.right = mutateLocal(node.right, rate, score);
+      }
+      if (node.type === "func") {
+        node.arg = mutateLocal(node.arg, rate, score);
+      }
+      return node;
+    }
+
+    function similarity(a, b) {
+      let samples = 35;
+      let diff = 0;
+      for (let i = 0; i < samples; i++) {
+        let u = Math.random() * 2 - 1;
+        let v = Math.random() * 2 - 1;
+        let ax = evalNode(a.x, u, v, t);
+        let bx = evalNode(b.x, u, v, t);
+        diff += Math.abs(ax - bx);
+      }
+      return 1 - Math.min(1, diff / samples);
+    }
+
+    function inherit(base, score) {
+      let candidate = {
+        x: mutateLocal(JSON.parse(JSON.stringify(base.x)), params.mutationRate, score),
+        y: mutateLocal(JSON.parse(JSON.stringify(base.y)), params.mutationRate, score),
+        z: mutateLocal(JSON.parse(JSON.stringify(base.z || randomNode())), params.mutationRate, score),
+        color: mutateLocal(JSON.parse(JSON.stringify(base.color)), params.mutationRate, score)
+      };
+
+      if (similarity(base, candidate) < params.simThreshold) return base;
+      return candidate;
+    }
+
+    function computeMetrics(fx, fy, fz, fc, structure) {
+      let delta = Math.abs(fx - prevFx);
+      let stability = Math.max(0, 1 - Math.abs(delta - 0.25) * 2);
+      let richness = Math.min(1, structure / 2);
+      let symmetry = Math.max(0, 1 - Math.abs(Math.abs(fx) - Math.abs(fy)));
+      let rupture = Math.min(1, Math.abs(fx - fy));
+
+      let surprise = 0;
+      for (let m of memory) surprise += Math.abs(fx - m.fx);
+      surprise = memory.length ? surprise / memory.length : 0.5;
+      surprise = Math.max(0, 1 - Math.abs(surprise - 0.5) * 2);
+
+      mouse.awareness = Math.max(0, mouse.awareness - 0.003);
+      let awareness = mouse.awareness;
+
+      prevFx = fx;
+      return { stability, richness, symmetry, rupture, surprise, awareness };
+    }
+
+    // Trigger Epoch Cataclysm Extinction Event
+    function triggerCataclysm() {
+      const isShielded = mouse.awareness >= 0.70;
+      const overlay = document.getElementById("extinction-overlay");
+      overlay.className = "absolute inset-0 pointer-events-none z-10 flash-extinction";
+      setTimeout(() => { overlay.className = "absolute inset-0 pointer-events-none z-10 transition-all duration-300"; }, 600);
+
+      if (isShielded) {
+        showToast(`🛡️ Epoch ${epochNumber} Shielded by High Awareness!`);
+      } else {
+        organism = { x: randomNode(0), y: randomNode(0), z: randomNode(0), color: randomNode(0) };
+        core = JSON.parse(JSON.stringify(organism));
+        buildGLSLShader(organism);
+        showToast(`💥 Epoch Cataclysm! Organism Extinction in Epoch ${epochNumber}`);
+      }
+
+      epochNumber++;
+      epochTimeLeft = parseFloat(params.epochInterval);
+      document.getElementById("epoch-num").innerText = epochNumber;
+
+      // Sonic Filter Sweep Trigger
+      if (audioCtx && filter) {
+        filter.frequency.setValueAtTime(3200, audioCtx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(350, audioCtx.currentTime + 0.6);
+      }
+    }
+
+    function updateDashboard(m, score) {
+      document.getElementById("gen-counter").innerText = generation;
+      document.getElementById("score-val").innerText = score.toFixed(2);
+
+      document.getElementById("formula-x").innerText = nodeToFormula(organism.x);
+      document.getElementById("formula-y").innerText = nodeToFormula(organism.y);
+      document.getElementById("formula-z").innerText = nodeToFormula(organism.z);
+      document.getElementById("formula-color").innerText = nodeToFormula(organism.color);
+
+      const setMetric = (id, val) => {
+        const pct = Math.round(Math.min(100, Math.max(0, val * 100)));
+        document.getElementById(`metric-${id}-val`).innerText = `${pct}%`;
+        document.getElementById(`metric-${id}-bar`).style.width = `${pct}%`;
+      };
+
+      setMetric("stability", m.stability);
+      setMetric("richness", m.richness);
+      setMetric("symmetry", m.symmetry);
+      setMetric("rupture", m.rupture);
+      setMetric("awareness", m.awareness);
+
+      // Epoch timer HUD
+      document.getElementById("epoch-timer-val").innerText = `${epochTimeLeft.toFixed(1)}s`;
+      const timerPct = Math.max(0, (epochTimeLeft / params.epochInterval) * 100);
+      document.getElementById("epoch-timer-bar").style.width = `${timerPct}%`;
+    }
+
+    function getParticleColor(c, m) {
+      switch (params.palette) {
+        case "cyberpunk": return `hsla(${(c * 180 + t * 20 + m.awareness * 60) % 360}, 90%, 65%, 0.35)`;
+        case "biolum": return `hsla(${160 + Math.sin(c * 3 + t) * 50 + m.awareness * 40}, 85%, 55%, 0.3)`;
+        case "solar": return `hsla(${20 + Math.cos(c * 2) * 35}, 95%, 60%, 0.35)`;
+        case "monochrome": return `hsla(220, 20%, ${Math.floor(50 + Math.sin(c * 5) * 45)}%, 0.4)`;
+        case "aurora": return `hsla(${120 + Math.sin(c * 4 + t * 0.5) * 80}, 80%, 65%, 0.35)`;
+        default: return `hsla(${(c * 200 + 200 + t * 10) % 360}, 80%, 60%, 0.3)`;
+      }
+    }
+
+    function getPaletteId(palette) {
+      switch (palette) {
+        case "cyberpunk": return 1;
+        case "biolum": return 2;
+        case "solar": return 3;
+        case "monochrome": return 4;
+        case "aurora": return 5;
+        default: return 0;
+      }
+    }
+
+    // Main Render Loop
+    let lastTime = performance.now();
+
+    function draw() {
+      const now = performance.now();
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+
+      // Update Epoch Timer
+      if (isEvolving) {
+        epochTimeLeft -= dt;
+        if (epochTimeLeft <= 0) {
+          triggerCataclysm();
+        }
+      }
+
+      let fx = 0, fy = 0, fz = 0, fc = 0;
+      let points = [];
+      const count = parseInt(params.particles);
+
+      if (currentVboCount !== count) {
+        updateWebGLBuffer(count);
+      }
+
+      for (let i = 0; i < Math.min(count, 3000); i++) {
+        let u = Math.random() * 2 - 1;
+        let v = Math.random() * 2 - 1;
+
+        if (mouse.active || mouse.awareness > 0.1) {
+          const pull = 0.1 * (mouse.active ? 1.5 : mouse.awareness);
+          u += (mouse.u - u) * pull;
+          v += (mouse.v - v) * pull;
+        }
+
+        let x = evalNode(organism.x, u, v, t);
+        let y = evalNode(organism.y, u, v, t);
+        let z = evalNode(organism.z, u, v, t);
+        let c = evalNode(organism.color, u, v, t);
+
+        fx += x; fy += y; fz += z; fc += c;
+        points.push({ x, y, z, c });
+      }
+
+      fx /= points.length; fy /= points.length; fz /= points.length; fc /= points.length;
+
+      let varianceX = 0, varianceY = 0;
+      for (let p of points) {
+        varianceX += (p.x - fx) ** 2;
+        varianceY += (p.y - fy) ** 2;
+      }
+      let structure = (varianceX + varianceY) / points.length;
+      let m = computeMetrics(fx, fy, fz, fc, structure);
+
+      // Render Visual Universe
+      if (useGPU && gl && glProgram) {
+        // Clear GL viewport
+        gl.clearColor(0.01, 0.03, 0.07, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(glProgram);
+        gl.bindBuffer(gl.ARRAY_BUFFER, glVBO);
+
+        const posAttr = gl.getAttribLocation(glProgram, "a_uv");
+        gl.enableVertexAttribArray(posAttr);
+        gl.vertexAttribPointer(posAttr, 2, gl.FLOAT, false, 0, 0);
+
+        gl.uniform2f(gl.getUniformLocation(glProgram, "u_resolution"), glCanvas.width, glCanvas.height);
+        gl.uniform1f(gl.getUniformLocation(glProgram, "u_time"), t);
+        gl.uniform2f(gl.getUniformLocation(glProgram, "u_mouse"), mouse.x, glCanvas.height - mouse.y);
+        gl.uniform1f(gl.getUniformLocation(glProgram, "u_awareness"), m.awareness);
+        gl.uniform1f(gl.getUniformLocation(glProgram, "u_scale"), params.spatialScale);
+        gl.uniform1i(gl.getUniformLocation(glProgram, "u_palette"), getPaletteId(params.palette));
+
+        let glMode = gl.POINTS;
+        if (params.renderMode === "lines") glMode = gl.LINES;
+        else if (params.renderMode === "ribbons") glMode = gl.LINE_STRIP;
+
+        gl.drawArrays(glMode, 0, count);
+
+        // Clear 2D overlay context
+        ctx.clearRect(0, 0, canvas2d.width, canvas2d.height);
+      } else {
+        // Fallback 2D Canvas Renderer
+        ctx.fillStyle = `rgba(3, 7, 18, ${params.trailAlpha})`;
+        ctx.fillRect(0, 0, canvas2d.width, canvas2d.height);
+
+        const centerX = canvas2d.width / 2;
+        const centerY = canvas2d.height / 2;
+        const scale = parseFloat(params.spatialScale);
+
+        ctx.lineWidth = 1.0;
+        if (params.renderMode === "lines" || params.renderMode === "ribbons") {
+          ctx.beginPath();
+        }
+
+        for (let i = 0; i < points.length; i++) {
+          const p = points[i];
+          const px = centerX + p.x * scale;
+          const py = centerY + p.y * scale;
+
+          if (params.renderMode === "lines") {
+            if (i % 2 === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          } else if (params.renderMode === "ribbons") {
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          } else {
+            ctx.fillStyle = getParticleColor(p.c, m);
+            ctx.fillRect(px, py, 2.2, 2.2);
+          }
+        }
+
+        if (params.renderMode === "lines" || params.renderMode === "ribbons") {
+          ctx.strokeStyle = getParticleColor(0.5, m);
+          ctx.stroke();
+        }
+      }
+
+      // Draw interactive mouse awareness glow ring on 2D Overlay
+      if (mouse.awareness > 0.05) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(168, 85, 247, ${mouse.awareness * 0.45})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, 25 + mouse.awareness * 35, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 4-Voice Polyphonic Acoustic Synth Engine Update
+      if (audioCtx && audioActive && voices.length === 4) {
+        let rawBase = 120 + m.richness * 220 + m.awareness * 80;
+
+        let targets = [
+          quantizeFreq(rawBase, params.scale),
+          quantizeFreq(rawBase * (1.5 + m.symmetry * 0.5), params.scale),
+          quantizeFreq(rawBase * 0.5, params.scale),
+          quantizeFreq(rawBase * (2.0 + m.rupture), params.scale)
+        ];
+
+        for (let i = 0; i < 4; i++) {
+          let v = voices[i];
+          v.targetFreq += (targets[i] - v.targetFreq) * 0.05;
+          v.osc.frequency.setValueAtTime(v.targetFreq, audioCtx.currentTime);
+
+          let vGain = (0.04 + m.stability * 0.08) * (params.volume / 0.18);
+          v.gain.gain.setValueAtTime(vGain, audioCtx.currentTime);
+
+          if (v.panner) {
+            let pan = Math.sin(i * 1.57 + m.awareness);
+            v.panner.pan.setValueAtTime(pan, audioCtx.currentTime);
+          }
+
+          document.getElementById(`v${i+1}-pitch`).innerText = `${Math.round(v.targetFreq)}Hz`;
+        }
+
+        if (fmGain) fmGain.gain.setValueAtTime(params.fmIndex * 40 * (1 + m.awareness), audioCtx.currentTime);
+        filter.frequency.setValueAtTime(300 + m.richness * 1400 + m.awareness * 600, audioCtx.currentTime);
+      }
+
+      let score = m.stability * 0.20 + m.richness * 0.20 + m.symmetry * 0.15 + m.rupture * 0.15 + m.surprise * 0.15 + m.awareness * 0.15;
+
+      if (isEvolving) {
+        let target = inherit(organism, score);
+        if (Math.random() < 0.15) target.x = core.x;
+        if (Math.random() < 0.15) target.y = core.y;
+        if (JSON.stringify(target) !== JSON.stringify(organism)) {
+          organism = target;
+          buildGLSLShader(organism);
+        }
+        generation++;
+      }
+
+      memory.push({ fx, fy, fz, fc });
+      if (memory.length > 20) memory.shift();
+
+      updateDashboard(m, score);
+      drawOscilloscope();
+
+      t += 0.01;
+      requestAnimationFrame(draw);
+    }
+
+    function drawOscilloscope() {
+      if (!visCtx || !analyser) return;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      analyser.getByteTimeDomainData(dataArray);
+
+      visCtx.fillStyle = "rgba(15, 23, 42, 0.85)";
+      visCtx.fillRect(0, 0, visCanvas.width, visCanvas.height);
+
+      visCtx.lineWidth = 1.5;
+      visCtx.strokeStyle = "#818cf8";
+      visCtx.beginPath();
+
+      const sliceWidth = visCanvas.width / bufferLength;
+      let x = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = (v * visCanvas.height) / 2;
+        if (i === 0) visCtx.moveTo(x, y);
+        else visCtx.lineTo(x, y);
+        x += sliceWidth;
+      }
+      visCtx.lineTo(visCanvas.width, visCanvas.height / 2);
+      visCtx.stroke();
+    }
+
+    // Controls & Event Handlers
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.innerText = msg;
+      toast.classList.remove("opacity-0");
+      setTimeout(() => toast.classList.add("opacity-0"), 2200);
+    }
+
+    function updateSoundIcons() {
+      document.getElementById("icon-sound-on").classList.toggle("hidden", !audioActive);
+      document.getElementById("icon-sound-off").classList.toggle("hidden", audioActive);
+    }
+
+    document.getElementById("start-btn").addEventListener("click", () => {
+      document.getElementById("audio-modal").classList.add("opacity-0");
+      setTimeout(() => document.getElementById("audio-modal").classList.add("hidden"), 500);
+      buildGLSLShader(organism);
+      initAudio();
+    });
+
+    document.getElementById("btn-toggle-gpu").addEventListener("click", () => {
+      useGPU = !useGPU;
+      const dot = document.getElementById("gpu-dot");
+      const txt = document.getElementById("gpu-text");
+      if (useGPU && gl) {
+        dot.className = "w-2 h-2 rounded-full bg-cyan-400";
+        txt.innerText = "GPU GLSL";
+        showToast("GPU WebGL Transpiler Enabled");
+      } else {
+        dot.className = "w-2 h-2 rounded-full bg-amber-400";
+        txt.innerText = "Canvas 2D";
+        showToast("Canvas 2D Fallback Enabled");
+      }
+    });
+
+    document.getElementById("btn-toggle-audio").addEventListener("click", () => {
+      if (!audioCtx) {
+        initAudio();
+      } else {
+        audioActive = !audioActive;
+        if (audioActive) audioCtx.resume();
+        else audioCtx.suspend();
+        updateSoundIcons();
+      }
+    });
+
+    document.getElementById("btn-pause-evo").addEventListener("click", () => {
+      isEvolving = !isEvolving;
+      const dot = document.getElementById("pause-status-dot");
+      const txt = document.getElementById("pause-text");
+      dot.className = isEvolving ? "w-2 h-2 rounded-full bg-emerald-400" : "w-2 h-2 rounded-full bg-amber-400";
+      txt.innerText = isEvolving ? "Evolving" : "Paused";
+      showToast(isEvolving ? "Evolution Resumed" : "Evolution Paused");
+    });
+
+    document.getElementById("btn-cataclysm-now").addEventListener("click", triggerCataclysm);
+
+    document.getElementById("btn-mutate-now").addEventListener("click", () => {
+      organism.x = mutateLocal(organism.x, 0.25, 0);
+      organism.y = mutateLocal(organism.y, 0.25, 0);
+      organism.z = mutateLocal(organism.z, 0.25, 0);
+      organism.color = mutateLocal(organism.color, 0.25, 0);
+      buildGLSLShader(organism);
+      generation++;
+      showToast("⚡ Forced Mutation!");
+    });
+
+    document.getElementById("btn-snapshot").addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.download = `Coemergence-V4.0-Gen${generation}.png`;
+      link.href = useGPU ? glCanvas.toDataURL("image/png") : canvas2d.toDataURL("image/png");
+      link.click();
+      showToast("📸 Snapshot Saved");
+    });
+
+    const genomeModal = document.getElementById("genome-modal");
+    const genomeArea = document.getElementById("genome-json-area");
+
+    document.getElementById("btn-genome-io").addEventListener("click", () => {
+      genomeArea.value = JSON.stringify(organism, null, 2);
+      genomeModal.classList.remove("hidden");
+    });
+
+    document.getElementById("btn-close-genome-modal").addEventListener("click", () => genomeModal.classList.add("hidden"));
+
+    document.getElementById("btn-refresh-json").addEventListener("click", () => {
+      genomeArea.value = JSON.stringify(organism, null, 2);
+      showToast("🔄 JSON Refreshed");
+    });
+
+    document.getElementById("btn-copy-json").addEventListener("click", () => {
+      genomeArea.select();
+      document.execCommand('copy');
+      showToast("📋 Genome JSON Copied!");
+    });
+
+    document.getElementById("btn-import-json").addEventListener("click", () => {
+      try {
+        const parsed = JSON.parse(genomeArea.value);
+        if (!parsed || !parsed.x || !parsed.y) {
+          showToast("❌ Invalid AST JSON!");
+          return;
+        }
+        organism = parsed;
+        core = JSON.parse(JSON.stringify(organism));
+        buildGLSLShader(organism);
+        genomeModal.classList.add("hidden");
+        showToast("⚡ AST Transpiled & Injected!");
+      } catch (e) {
+        showToast("❌ JSON Parse Error: " + e.message);
+      }
+    });
+
+    document.getElementById("btn-toggle-panel").addEventListener("click", () => {
+      document.getElementById("left-panel").classList.toggle("opacity-0");
+      document.getElementById("left-panel").classList.toggle("pointer-events-none");
+      document.getElementById("right-panel").classList.toggle("opacity-0");
+      document.getElementById("right-panel").classList.toggle("pointer-events-none");
+    });
+
+    const bindSlider = (id, key, formatFn = v => v) => {
+      const elem = document.getElementById(id);
+      const valElem = document.getElementById(`val-${id.replace('input-', '')}`);
+      elem.addEventListener("input", (e) => {
+        params[key] = parseFloat(e.target.value);
+        if (valElem) valElem.innerText = formatFn(e.target.value);
+        if (key === "epochInterval") epochTimeLeft = params.epochInterval;
+        if (key === "volume" && master) master.gain.setValueAtTime(params.volume, audioCtx.currentTime);
+      });
+    };
+
+    bindSlider("input-particles", "particles");
+    bindSlider("input-trail", "trailAlpha");
+    bindSlider("input-scale", "spatialScale");
+    bindSlider("input-epoch-interval", "epochInterval", v => `${v}s`);
+    bindSlider("input-mutation-rate", "mutationRate");
+    bindSlider("input-sim-threshold", "simThreshold");
+    bindSlider("input-fm-index", "fmIndex");
+    bindSlider("input-volume", "volume", v => `${Math.round(v * 100)}%`);
+
+    document.getElementById("select-render-mode").addEventListener("change", (e) => params.renderMode = e.target.value);
+    document.getElementById("select-palette").addEventListener("change", (e) => params.palette = e.target.value);
+    document.getElementById("select-scale").addEventListener("change", (e) => params.scale = e.target.value);
+    document.getElementById("select-waveform").addEventListener("change", (e) => {
+      params.waveform = e.target.value;
+      voices.forEach(v => v.osc.type = params.waveform);
+    });
+
+    // Archetype Presets
+    document.querySelectorAll(".preset-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const pKey = e.target.getAttribute("data-preset");
+        if (pKey === "awareness") {
+          organism = {
+            x: { type: "func", func: "sinh", arg: { type: "u" } },
+            y: { type: "func", func: "cosh", arg: { type: "v" } },
+            z: { type: "func", func: "sin", arg: { type: "t" } },
+            color: { type: "op", op: "*", left: { type: "r" }, right: { type: "theta" } }
+          };
+        } else if (pKey === "bloom") {
+          organism = {
+            x: { type: "func", func: "sin", arg: { type: "op", op: "*", left: { type: "u" }, right: { type: "const", value: 2.5 } } },
+            y: { type: "func", func: "cos", arg: { type: "op", op: "*", left: { type: "v" }, right: { type: "const", value: 2.5 } } },
+            z: { type: "func", func: "tanh", arg: { type: "t" } },
+            color: { type: "op", op: "+", left: { type: "u" }, right: { type: "t" } }
+          };
+        } else if (pKey === "vortex") {
+          organism = {
+            x: { type: "op", op: "-", left: { type: "func", func: "sin", arg: { type: "v" } }, right: { type: "func", func: "cos", arg: { type: "t" } } },
+            y: { type: "op", op: "+", left: { type: "func", func: "cos", arg: { type: "u" } }, right: { type: "func", func: "sin", arg: { type: "t" } } },
+            z: { type: "func", func: "cos", arg: { type: "r" } },
+            color: { type: "func", func: "sin", arg: { type: "op", op: "*", left: { type: "u" }, right: { type: "v" } } }
+          };
+        } else if (pKey === "lattice") {
+          organism = {
+            x: { type: "func", func: "tan", arg: { type: "op", op: "*", left: { type: "u" }, right: { type: "const", value: 1.2 } } },
+            y: { type: "func", func: "sin", arg: { type: "op", op: "+", left: { type: "v" }, right: { type: "t" } } },
+            z: { type: "func", func: "abs", arg: { type: "u" } },
+            color: { type: "op", op: "*", left: { type: "u" }, right: { type: "v" } }
+          };
+        } else if (pKey === "chaos") {
+          organism = { x: randomNode(0), y: randomNode(0), z: randomNode(0), color: randomNode(0) };
+        }
+        core = JSON.parse(JSON.stringify(organism));
+        buildGLSLShader(organism);
+        showToast(`Preset Loaded: ${e.target.innerText}`);
+      });
+    });
+
+    window.onload = function() {
+      buildGLSLShader(organism);
+      draw();
+    };
+  </script>
+</body>
+</html>
