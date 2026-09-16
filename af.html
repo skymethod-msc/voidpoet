@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="es" class="dark" data-theme="stealth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attention Forge — Sistema de Entrenamiento Cognitivo y Prevención de Agotamiento</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          animation: {
+            'glow-pulse': 'glowPulse 3s ease-in-out infinite',
+            'radar-spin': 'radarSpin 8s linear infinite',
+            'float': 'float 6s ease-in-out infinite'
+          },
+          keyframes: {
+            glowPulse: {
+              '0%, 100%': { opacity: '0.4', filter: 'blur(20px)' },
+              '50%': { opacity: '0.8', filter: 'blur(30px)' }
+            },
+            radarSpin: {
+              '0%': { transform: 'rotate(0deg)' },
+              '100%': { transform: 'rotate(360deg)' }
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-6px)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Theme CSS Color Token Definitions */
+    :root[data-theme="stealth"] {
+      --bg-base: #000000;
+      --bg-surface: #0a0a0a;
+      --bg-card: #141414;
+      --bg-card-hover: #222222;
+      --border-color: rgba(255, 255, 255, 0.18);
+      --accent-primary: #ffffff;
+      --accent-secondary: #a1a1aa;
+      --text-main: #ffffff;
+      --text-muted: #a1a1aa;
+    }
+
+    :root[data-theme="obsidian"] {
+      --bg-base: #07080b;
+      --bg-surface: #0d0f17;
+      --bg-card: #131622;
+      --bg-card-hover: #1a1f30;
+      --border-color: rgba(255, 255, 255, 0.15);
+      --accent-primary: #06b6d4;
+      --accent-secondary: #8b5cf6;
+      --text-main: #f1f5f9;
+      --text-muted: #8c9bc2;
+    }
+
+    :root[data-theme="emerald"] {
+      --bg-base: #04100c;
+      --bg-surface: #0a1c17;
+      --bg-card: #102821;
+      --bg-card-hover: #18382f;
+      --border-color: rgba(16, 185, 129, 0.25);
+      --accent-primary: #10b981;
+      --accent-secondary: #06b6d4;
+      --text-main: #ecfdf5;
+      --text-muted: #6ee7b7;
+    }
+
+    :root[data-theme="nordic"] {
+      --bg-base: #0b1320;
+      --bg-surface: #131f33;
+      --bg-card: #1b2a45;
+      --bg-card-hover: #243759;
+      --border-color: rgba(56, 189, 248, 0.25);
+      --accent-primary: #38bdf8;
+      --accent-secondary: #818cf8;
+      --text-main: #f0f9ff;
+      --text-muted: #93c5fd;
+    }
+
+    :root[data-theme="solar"] {
+      --bg-base: #120e0a;
+      --bg-surface: #1e1711;
+      --bg-card: #2a2018;
+      --bg-card-hover: #382c22;
+      --border-color: rgba(245, 158, 11, 0.25);
+      --accent-primary: #f59e0b;
+      --accent-secondary: #ef4444;
+      --text-main: #fffbeb;
+      --text-muted: #fcd34d;
+    }
+
+    :root[data-theme="crimson"] {
+      --bg-base: #14090b;
+      --bg-surface: #200f13;
+      --bg-card: #2d161b;
+      --bg-card-hover: #3e1e25;
+      --border-color: rgba(244, 63, 94, 0.25);
+      --accent-primary: #f43f5e;
+      --accent-secondary: #a855f7;
+      --text-main: #fff1f2;
+      --text-muted: #fda4af;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      touch-action: manipulation;
+      overflow-x: hidden;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .hud-bg {
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03) 0%, transparent 60%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 36px 36px, 36px 36px;
+    }
+
+    .glass-panel {
+      background: var(--bg-surface);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      transition: all 0.25s ease;
+    }
+
+    .glass-card:hover {
+      background: var(--bg-card-hover);
+      box-shadow: 0 0 25px -5px var(--border-color);
+    }
+
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased hud-bg selection:bg-white/20 selection:text-white">
+
+  <header class="w-full border-b border-white/10 bg-black/80 backdrop-blur-xl sticky top-0 z-50 px-4 py-3">
+    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Logo & System Indicator -->
+      <div class="flex items-center gap-3">
+        <div class="relative flex items-center justify-center w-8 h-8 rounded-xl bg-white/5 border border-white/15 text-white font-mono font-bold text-xs">
+          AF
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-base tracking-wider font-bold text-white uppercase">ATTENTION<span class="text-neutral-400">FORGE</span></span>
+            <span class="px-2 py-0.5 text-[10px] font-mono rounded-md bg-white/10 text-white border border-white/20 font-semibold">NEURO v3.0</span>
+          </div>
+          <p class="text-xs font-mono text-neutral-400 hidden sm:block" id="txt-header-sub">Entrenamiento Atencional Basado en Neurociencia</p>
+        </div>
+      </div>
+
+      <!-- Theme Selector & Language Switcher -->
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 text-xs font-mono">
+          <label for="theme-select" class="sr-only">Tema</label>
+          <span class="text-neutral-400 px-1.5 uppercase text-[10px]">TEMA:</span>
+          <select id="theme-select" onchange="applyTheme(this.value)" class="bg-black text-white rounded-lg px-2 py-1 focus:outline-none text-xs border border-white/10 cursor-pointer">
+            <option value="stealth" selected>OLED Stealth</option>
+            <option value="obsidian">Obsidian Cyber</option>
+            <option value="emerald">Emerald Bio</option>
+            <option value="nordic">Nordic Frost</option>
+            <option value="solar">Solar Gold</option>
+            <option value="crimson">Crimson Focus</option>
+          </select>
+        </div>
+
+        <button onclick="toggleLanguage()" id="btn-lang" class="px-3 py-1.5 rounded-xl text-xs font-mono bg-white/10 hover:bg-white/20 text-white border border-white/15 transition-all font-bold flex items-center gap-1.5">
+          <span id="txt-lang-code">ES</span>
+        </button>
+      </div>
+
+      <!-- Main Navigation -->
+      <nav aria-label="Navegación principal" class="w-full md:w-auto flex items-center justify-start md:justify-end gap-1.5 bg-black/60 p-1.5 rounded-xl border border-white/10 overflow-x-auto hide-scrollbar">
+        <button id="nav-protocols" onclick="switchTab('protocols')" class="px-3.5 py-2 rounded-lg text-xs font-mono transition-all bg-white/15 text-white border border-white/20 flex items-center gap-2">
+          <span id="nav-lbl-protocols">Protocolos</span>
+        </button>
+        <button id="nav-burnout" onclick="switchTab('burnout')" class="px-3.5 py-2 rounded-lg text-xs font-mono transition-all text-neutral-400 hover:text-white flex items-center gap-2">
+          <span id="nav-lbl-burnout">Prevención Agotamiento</span>
+        </button>
+        <button id="nav-digest" onclick="switchTab('digest')" class="px-3.5 py-2 rounded-lg text-xs font-mono transition-all text-neutral-400 hover:text-white flex items-center gap-2">
+          <span id="nav-lbl-digest">Historial &amp; Datos</span>
+        </button>
+      </nav>
+
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6 flex flex-col justify-between">
+
+    <!-- Toast Notification System -->
+    <div id="modal-toast" role="alert" class="hidden fixed bottom-6 right-6 left-6 sm:left-auto sm:w-96 glass-panel border border-white/20 shadow-2xl p-4 rounded-2xl z-50 transition-all transform duration-300">
+      <div class="flex items-start gap-3">
+        <div id="toast-icon-bg" class="px-2 py-1 rounded-lg bg-white/10 text-white font-mono text-xs font-bold border border-white/20">SYS</div>
+        <div class="flex-1">
+          <h4 id="toast-title" class="text-xs font-mono font-bold uppercase text-white tracking-wider">Notificación</h4>
+          <p id="toast-msg" class="text-xs text-neutral-300 mt-1 leading-relaxed">Mensaje del sistema.</p>
+        </div>
+      </div>
+      <div class="mt-3 flex justify-end">
+        <button onclick="closeToast()" class="px-3 py-1 text-xs font-mono bg-white/10 text-white rounded-lg hover:bg-white/20 border border-white/10">OK</button>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="custom-confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+      <div class="glass-panel p-6 rounded-2xl border border-white/20 max-w-md w-full space-y-4 shadow-2xl">
+        <div class="flex items-center gap-2 text-white font-mono text-sm font-bold border-b border-white/10 pb-2">
+          <span>[ CONFIRMACIÓN ]</span>
+          <span id="confirm-modal-title">¿Confirmar Acción?</span>
+        </div>
+        <p id="confirm-modal-msg" class="text-xs text-neutral-300 leading-relaxed font-sans">Esta acción no se puede deshacer.</p>
+        <div class="flex justify-end gap-2 pt-2 font-mono text-xs">
+          <button id="confirm-btn-cancel" class="px-4 py-2 rounded-xl bg-white/10 text-neutral-300 hover:text-white hover:bg-white/20 border border-white/10 transition-all">Cancelar</button>
+          <button id="confirm-btn-accept" class="px-4 py-2 rounded-xl bg-white text-black font-bold hover:bg-neutral-200 transition-all shadow-lg">Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+    <section id="tab-protocols" class="space-y-6 flex-1 flex flex-col justify-between">
+      <div>
+        <div class="glass-panel p-5 sm:p-6 rounded-2xl mb-6 relative overflow-hidden">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+            <div>
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="text-xs font-mono text-white uppercase tracking-widest font-semibold" id="txt-matrix-title">// MATRIZ COGNITIVA</span>
+                <span class="text-xs font-mono text-neutral-400" id="txt-matrix-sub">Control Ejecutivo &amp; Metacognición</span>
+              </div>
+              <h1 class="text-xl sm:text-2xl font-bold text-white" id="txt-main-heading">Selecciona tu Protocolo Atencional</h1>
+              <p class="text-xs sm:text-sm text-neutral-300 mt-1 max-w-2xl leading-relaxed" id="txt-main-desc">
+                Diseñado para mitigar la fatiga por interrupciones, disolver el residuo mental y entrenar la capacidad prefrontal de reconexión atencional.
+              </p>
+            </div>
+
+            <!-- Profile Selector -->
+            <div class="flex items-center gap-1.5 bg-black/60 p-1.5 rounded-xl border border-white/10">
+              <button onclick="setPersona('general')" id="persona-general" class="persona-btn px-3 py-1.5 rounded-lg text-xs font-mono bg-white/10 text-white border border-white/20 transition-all">
+                General
+              </button>
+              <button onclick="setPersona('code')" id="persona-code" class="persona-btn px-3 py-1.5 rounded-lg text-xs font-mono text-neutral-400 hover:text-white transition-all">
+                Dev / Tech
+              </button>
+              <button onclick="setPersona('neuro')" id="persona-neuro" class="persona-btn px-3 py-1.5 rounded-lg text-xs font-mono text-neutral-400 hover:text-white transition-all">
+                Neuro
+              </button>
+            </div>
+          </div>
+
+          <!-- Dynamic Context Descriptor -->
+          <div id="persona-desc" class="mt-4 pt-3 border-t border-white/10 text-xs font-mono text-neutral-300 flex flex-wrap items-center justify-between gap-2">
+            <span id="txt-persona-context">&gt; Contexto Activo: Enfoque equilibrado para estudio, lectura crítica y tareas complejas.</span>
+            <button onclick="toggleQuickGuide()" id="guide-toggle-btn" class="text-white hover:underline text-xs font-mono font-medium">[ Metacognición: Guía ]</button>
+          </div>
+
+          <!-- Quick Interactive Guide -->
+          <div id="quick-guide" class="hidden mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-white/10 text-xs">
+            <div class="p-3.5 rounded-xl bg-black/80 border border-white/10">
+              <span class="font-mono text-white font-bold block mb-1" id="g-step1-t">1. Fija tu Ancla Mental</span>
+              <p class="text-neutral-300 leading-relaxed text-xs" id="g-step1-d">Elige un objeto de enfoque único (ej: respiración, línea de código o concepto clave).</p>
+            </div>
+            <div class="p-3.5 rounded-xl bg-black/80 border border-white/10">
+              <span class="font-mono text-white font-bold block mb-1" id="g-step2-t">2. Detecta la Dispersión</span>
+              <p class="text-neutral-300 leading-relaxed text-xs" id="g-step2-d">La mente se dispersará (Pensamientos No Relacionados o TUT). Es un proceso fisiológico natural.</p>
+            </div>
+            <div class="p-3.5 rounded-xl bg-black/80 border border-white/10">
+              <span class="font-mono text-white font-bold block mb-1" id="g-step3-t">3. Marca la Reconexión</span>
+              <p class="text-neutral-300 leading-relaxed text-xs" id="g-step3-d">En cuanto notes la distracción, presiona [Espacio] o la pantalla. Cada rep refuerza la red prefrontal.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROTOCOL CARDS GRID -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+          <!-- PROTOCOL 1: ANCHOR -->
+          <div onclick="selectProtocol('anchor')" id="card-anchor" class="protocol-card glass-card p-6 rounded-2xl cursor-pointer relative overflow-hidden group border-2 border-white">
+            <div class="flex justify-between items-start mb-3">
+              <span class="font-mono text-xs text-white font-bold uppercase tracking-widest">PROTOCOLO 01</span>
+              <span class="px-2.5 py-0.5 text-xs font-mono rounded-md bg-white/10 text-white border border-white/20 font-semibold">FAM • Atención Focalizada</span>
+            </div>
+            
+            <h2 class="text-xl font-bold text-white group-hover:translate-x-1 transition-transform flex items-center gap-2">
+              <span>ANCHOR</span>
+              <span class="text-xs font-normal text-neutral-400">(Anclaje Atencional)</span>
+            </h2>
+            
+            <p class="text-xs text-neutral-300 mt-2 leading-relaxed" id="p1-desc">
+              Entrena el control ejecutivo superior para sostener la concentración activa frente a estímulos distractores continuos.
+            </p>
+
+            <button onclick="event.stopPropagation(); toggleScienceModal('anchor')" class="mt-3 text-xs font-mono text-neutral-300 hover:text-white hover:underline block text-left">
+              [ Base Neuro: Red de Control Ejecutivo vs. DMN ]
+            </button>
+
+            <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
+              <span class="text-neutral-400" id="p1-meta">Meta: Trabajo Profundo &amp; Inmersión</span>
+              <span class="text-white font-bold group-hover:underline" id="p1-btn">Seleccionar &rarr;</span>
+            </div>
+          </div>
+
+          <!-- PROTOCOL 2: SWITCH -->
+          <div onclick="selectProtocol('switch')" id="card-switch" class="protocol-card glass-card p-6 rounded-2xl cursor-pointer relative overflow-hidden group border-2 border-transparent hover:border-white/50">
+            <div class="flex justify-between items-start mb-3">
+              <span class="font-mono text-xs text-neutral-400 uppercase tracking-widest">PROTOCOLO 02</span>
+              <span class="px-2.5 py-0.5 text-xs font-mono rounded-md bg-white/10 text-neutral-300 border border-white/20 font-semibold">Flexibilidad Cognitiva</span>
+            </div>
+            
+            <h2 class="text-xl font-bold text-white group-hover:translate-x-1 transition-transform flex items-center gap-2">
+              <span>SWITCH</span>
+              <span class="text-xs font-normal text-neutral-400">(Reset de Cambio de Tarea)</span>
+            </h2>
+            
+            <p class="text-xs text-neutral-300 mt-2 leading-relaxed" id="p2-desc">
+              Disuelve la "inercia atencional" y los residuos cognitivos de la tarea previa para iniciar una nueva actividad con mente despejada.
+            </p>
+
+            <button onclick="event.stopPropagation(); toggleScienceModal('switch')" class="mt-3 text-xs font-mono text-neutral-300 hover:text-white hover:underline block text-left">
+              [ Base Neuro: Eliminación de Residuo Atencional ]
+            </button>
+
+            <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
+              <span class="text-neutral-400" id="p2-meta">Meta: Transición Eficiente de Contexto</span>
+              <span class="text-neutral-400 group-hover:text-white font-bold" id="p2-btn">Seleccionar &rarr;</span>
+            </div>
+          </div>
+
+          <!-- PROTOCOL 3: DRIFT -->
+          <div onclick="selectProtocol('drift')" id="card-drift" class="protocol-card glass-card p-6 rounded-2xl cursor-pointer relative overflow-hidden group border-2 border-transparent hover:border-white/50">
+            <div class="flex justify-between items-start mb-3">
+              <span class="font-mono text-xs text-neutral-400 uppercase tracking-widest">PROTOCOLO 03</span>
+              <span class="px-2.5 py-0.5 text-xs font-mono rounded-md bg-white/10 text-neutral-300 border border-white/20 font-semibold">Monitoreo Abierto (OM)</span>
+            </div>
+            
+            <h2 class="text-xl font-bold text-white group-hover:translate-x-1 transition-transform flex items-center gap-2">
+              <span>DRIFT</span>
+              <span class="text-xs font-normal text-neutral-400">(Regulación del Estrés)</span>
+            </h2>
+            
+            <p class="text-xs text-neutral-300 mt-2 leading-relaxed" id="p3-desc">
+              Reduce la sobreactivación simpática tras periodos de alta presión, reuniones exigentes o sobrecarga de estímulos.
+            </p>
+
+            <button onclick="event.stopPropagation(); toggleScienceModal('drift')" class="mt-3 text-xs font-mono text-neutral-300 hover:text-white hover:underline block text-left">
+              [ Base Neuro: Activación Parasimpática Vagal ]
+            </button>
+
+            <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
+              <span class="text-neutral-400" id="p3-meta">Meta: Calma Activa &amp; Descompresión</span>
+              <span class="text-neutral-400 group-hover:text-white font-bold" id="p3-btn">Seleccionar &rarr;</span>
+            </div>
+          </div>
+
+          <!-- PROTOCOL 4: RESTORE -->
+          <div onclick="selectProtocol('restore')" id="card-restore" class="protocol-card glass-card p-6 rounded-2xl cursor-pointer relative overflow-hidden group border-2 border-transparent hover:border-white/50">
+            <div class="flex justify-between items-start mb-3">
+              <span class="font-mono text-xs text-neutral-400 uppercase tracking-widest">PROTOCOLO 04</span>
+              <span class="px-2.5 py-0.5 text-xs font-mono rounded-md bg-white/10 text-neutral-300 border border-white/20 font-semibold">ART • Restauración Atencional</span>
+            </div>
+            
+            <h2 class="text-xl font-bold text-white group-hover:translate-x-1 transition-transform flex items-center gap-2">
+              <span>RESTORE</span>
+              <span class="text-xs font-normal text-neutral-400">(Recarga Antifatiga)</span>
+            </h2>
+            
+            <p class="text-xs text-neutral-300 mt-2 leading-relaxed" id="p4-desc">
+              Restauración pasiva de la atención dirigida agotada. Ideal para recuperar la lucidez mental sin recurrir a sobreestimulantes.
+            </p>
+
+            <button onclick="event.stopPropagation(); toggleScienceModal('restore')" class="mt-3 text-xs font-mono text-neutral-300 hover:text-white hover:underline block text-left">
+              [ Base Neuro: Teoría de Restauración Atencional ]
+            </button>
+
+            <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
+              <span class="text-neutral-400" id="p4-meta">Meta: Recuperación de Capacidad Dirigida</span>
+              <span class="text-neutral-400 group-hover:text-white font-bold" id="p4-btn">Seleccionar &rarr;</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SCIENCE DETAIL MODAL -->
+      <div id="science-modal" class="hidden glass-panel p-6 rounded-2xl border border-white/20 my-4 space-y-3 relative">
+        <button onclick="closeScienceModal()" class="absolute top-4 right-4 text-xs font-mono text-neutral-400 hover:text-white">[ CERRAR X ]</button>
+        <span class="text-xs font-mono text-white uppercase font-bold tracking-widest block" id="sci-modal-badge">// EXPLICACIÓN NEUROCIENTÍFICA RIGUROSA</span>
+        <h3 id="science-title" class="text-base font-bold text-white">Título Neuro</h3>
+        <p id="science-body" class="text-xs sm:text-sm text-neutral-300 leading-relaxed font-sans">Cuerpo...</p>
+      </div>
+
+      <!-- SESSION CONFIGURATION CARD -->
+      <div class="glass-panel p-6 rounded-2xl space-y-5 mt-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-mono text-white uppercase tracking-widest block font-bold" id="txt-cfg-hdr">CONFIGURACIÓN DE SESIÓN</span>
+            <h3 class="text-sm font-semibold text-white mt-0.5" id="txt-cfg-sub">Duración del Protocolo Atencional</h3>
+          </div>
+
+          <!-- Duration Buttons -->
+          <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar" id="duration-selector">
+            <button onclick="setDuration(3)" class="dur-btn px-3.5 py-2 rounded-xl text-xs font-mono border border-white/10 text-neutral-400 hover:text-white transition-all">3 min (Express)</button>
+            <button onclick="setDuration(5)" class="dur-btn px-3.5 py-2 rounded-xl text-xs font-mono border border-white bg-white/10 text-white font-bold transition-all">5 min (Recomendado)</button>
+            <button onclick="setDuration(10)" class="dur-btn px-3.5 py-2 rounded-xl text-xs font-mono border border-white/10 text-neutral-400 hover:text-white transition-all">10 min</button>
+            <button onclick="setDuration(15)" class="dur-btn px-3.5 py-2 rounded-xl text-xs font-mono border border-white/10 text-neutral-400 hover:text-white transition-all">15 min</button>
+          </div>
+        </div>
+
+        <button onclick="goToCheckin()" class="w-full py-4 px-6 bg-white text-black font-bold text-sm sm:text-base rounded-xl hover:bg-neutral-200 transition-all shadow-xl flex items-center justify-center gap-2">
+          <span id="btn-start-checkin">Iniciar Check-in de Claridad Mental</span>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+        </button>
+      </div>
+
+    </section>
+
+    <section id="tab-checkin" class="hidden flex-1 flex flex-col justify-between max-w-xl mx-auto w-full py-4">
+      <div class="space-y-6">
+        <div class="flex items-center justify-between font-mono text-xs text-neutral-400 border-b border-white/10 pb-3">
+          <span id="chk-hdr">[ EVALUACIÓN PREVIA DE ENERGÍA COGNITIVA ]</span>
+          <span id="selected-protocol-label" class="text-white font-bold">ANCHOR • 5 min</span>
+        </div>
+
+        <div class="text-center py-2 space-y-1">
+          <h2 class="text-2xl font-bold text-white" id="chk-q">¿Cuál es tu nivel actual de claridad mental?</h2>
+          <p class="text-xs text-neutral-300" id="chk-sub">Esta autoevaluación registrará tu estado base para calcular el incremento post-sesión.</p>
+        </div>
+
+        <div class="glass-panel p-8 rounded-2xl text-center space-y-6">
+          <div id="checkin-score-display" class="font-mono text-5xl font-light text-white">
+            05 <span class="text-xs text-neutral-300 font-sans block mt-2 font-normal" id="checkin-status-text">Carga Moderada / Transición Recomendada</span>
+          </div>
+
+          <div class="relative py-3">
+            <input type="range" id="checkin-slider" min="1" max="10" value="5" oninput="updateCheckinValue(this.value)" class="w-full h-3 bg-black rounded-lg appearance-none cursor-pointer accent-white" aria-label="Nivel de energía inicial">
+            <div class="flex justify-between text-xs font-mono text-neutral-400 mt-4">
+              <span id="chk-low">01 (Agotado)</span>
+              <span id="chk-mid">05 (Neutro)</span>
+              <span id="chk-high">10 (Claridad Total)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl border border-white/10 bg-black/60 flex items-center gap-3.5">
+          <p class="text-xs text-neutral-300 leading-relaxed" id="chk-tip">
+            <span class="text-white font-semibold">Modo sin pantalla:</span> Puedes colocar el dispositivo boca abajo. Los pulsos sonoros te guiarán sin necesidad de mirar la pantalla.
+          </p>
+        </div>
+      </div>
+
+      <div class="pt-6">
+        <button onclick="startActiveSession()" class="w-full py-4 px-6 bg-white text-black font-bold text-sm sm:text-base rounded-xl hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 shadow-xl">
+          <span id="btn-execute-proto">Ejecutar Protocolo Atencional</span>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+        </button>
+      </div>
+    </section>
+
+    <section id="tab-session" class="hidden flex-1 flex flex-col justify-between items-center relative select-none min-h-[500px]">
+      
+      <!-- Top Status Header (Fades out during inactivity) -->
+      <div id="session-hud-top" class="w-full flex items-center justify-between text-xs font-mono text-neutral-400 border-b border-white/10 pb-3 transition-opacity duration-700 ease-in-out opacity-100">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
+          <span id="session-active-protocol-title" class="text-white font-bold">ANCHOR (FAM)</span>
+        </div>
+        <div id="session-timer-display" class="text-white font-mono font-bold text-xl tracking-wider">05:00</div>
+        <button onclick="promptCancelSession()" class="hover:text-neutral-200 transition-colors font-semibold" id="btn-abort-session">
+          [ Finalizar ]
+        </button>
+      </div>
+
+      <!-- Streamlined Audio Settings Bar (Only shown when required by protocol) -->
+      <div id="session-hud-controls" class="w-full max-w-xl my-3 p-3 glass-panel rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono transition-opacity duration-700 ease-in-out opacity-100">
+        <div class="space-y-1" id="box-visual-anchor">
+          <label for="select-visual-anchor" class="text-xs text-neutral-400 uppercase tracking-wider block font-bold" id="lbl-vis-anchor">Ancla Visual:</label>
+          <select id="select-visual-anchor" onchange="setVisualAnchor(this.value)" class="w-full bg-black border border-white/10 text-white rounded-lg p-2 focus:outline-none focus:border-white cursor-pointer">
+            <option value="halo">Halo Cuántico Respiratorio</option>
+            <option value="spiral">Espiral Fractal Logarítmica</option>
+            <option value="particles">Campo Neuronal de Partículas</option>
+            <option value="stealth">Punto OLED Mínimo</option>
+          </select>
+        </div>
+
+        <div class="space-y-1" id="box-audio-pulse">
+          <div class="flex justify-between items-center text-xs text-neutral-400 uppercase tracking-wider font-bold">
+            <label for="select-audio-pulse" id="lbl-aud-pulse">Pulso Acústico (ASSR):</label>
+            <span id="vol-display-text" class="text-white">30%</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="select-audio-pulse" onchange="setAudioPulseMode(this.value)" class="w-full bg-black border border-white/10 text-white rounded-lg p-2 focus:outline-none focus:border-white cursor-pointer">
+              <option value="gamma">40Hz Gamma (Enfoque Profundo)</option>
+              <option value="alpha">10Hz Alpha (Flujo Calmo)</option>
+              <option value="theta">4Hz Theta (Relajación)</option>
+              <option value="pink">Ruido Rosa Terapéutico</option>
+              <option value="off">Silencio</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas Interactive Visualizer Box -->
+      <div class="w-full max-w-xl flex-1 min-h-[280px] my-2 relative rounded-2xl glass-panel overflow-hidden flex flex-col items-center justify-center border border-white/15">
+        <canvas id="session-canvas" class="absolute inset-0 w-full h-full cursor-pointer"></canvas>
+        
+        <!-- Pacer Cadence Guide Text -->
+        <div id="pacer-text" class="relative z-10 font-mono text-xs uppercase tracking-widest px-3 py-1.5 rounded-full bg-black/80 border border-white/20 text-white pointer-events-none transition-opacity duration-700 ease-in-out opacity-100">
+          INHALA (4s)
+        </div>
+
+        <!-- Touch / Click Interaction Overlay Button -->
+        <button onclick="registerReconnectionRep()" class="absolute inset-0 w-full h-full z-20 flex flex-col items-center justify-between p-4 bg-transparent group focus:outline-none">
+          <span class="sr-only">Registrar Reconexión</span>
+          <div></div>
+          <div id="session-overlay-instruction" class="opacity-0 group-hover:opacity-100 transition-opacity font-mono text-xs text-neutral-300 bg-black/80 px-4 py-2 rounded-xl border border-white/20 pointer-events-none">
+            Toca en pantalla o presiona [ESPACIO] al distraerte
+          </div>
+        </button>
+      </div>
+
+      <!-- Bottom Interactive HUD (Fades out during inactivity) -->
+      <div id="session-hud-bottom" class="w-full max-w-xl flex items-center justify-between p-4 glass-panel rounded-2xl text-xs font-mono transition-opacity duration-700 ease-in-out opacity-100">
+        <div>
+          <span class="text-neutral-400 block" id="lbl-reconnect-count">Reconexiones (Reps):</span>
+          <span id="reconnection-counter" class="text-xl font-bold text-white">0</span>
+        </div>
+
+        <button id="btn-reconnect-action" onclick="registerReconnectionRep()" class="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold transition-all flex items-center gap-2 active:scale-95">
+          <span id="btn-tap-reconnect">Marcar Reconexión [Espacio]</span>
+        </button>
+      </div>
+
+    </section>
+
+    <section id="tab-post" class="hidden flex-1 flex flex-col justify-between max-w-xl mx-auto w-full py-4 space-y-6">
+      <div class="space-y-6">
+        <div class="text-center py-2 space-y-1">
+          <span class="text-xs font-mono text-white font-bold uppercase tracking-widest">// SESIÓN COMPLETADA CON ÉXITO</span>
+          <h2 class="text-2xl font-bold text-white" id="txt-post-hdr">Evaluación Post-Entrenamiento</h2>
+          <p class="text-xs text-neutral-300" id="txt-post-sub">Indica tu claridad mental actual para calcular tu incremento neurocognitivo.</p>
+        </div>
+
+        <!-- Metric Display Grid -->
+        <div class="grid grid-cols-3 gap-3 font-mono text-center">
+          <div class="glass-panel p-3.5 rounded-xl border border-white/10">
+            <span class="text-[10px] text-neutral-400 block" id="lbl-stat-time">DURACIÓN</span>
+            <span id="stat-post-time" class="text-lg font-bold text-white">05:00</span>
+          </div>
+          <div class="glass-panel p-3.5 rounded-xl border border-white/10">
+            <span class="text-[10px] text-neutral-400 block" id="lbl-stat-reps">RECONEXIONES</span>
+            <span id="stat-post-reps" class="text-lg font-bold text-white">0</span>
+          </div>
+          <div class="glass-panel p-3.5 rounded-xl border border-white/10">
+            <span class="text-[10px] text-neutral-400 block" id="lbl-stat-gain">GANANCIA DE CLARIDAD</span>
+            <span id="stat-post-delta" class="text-lg font-bold text-white">+0</span>
+          </div>
+        </div>
+
+        <!-- Post Rating Slider -->
+        <div class="glass-panel p-6 rounded-2xl text-center space-y-5">
+          <div id="post-score-display" class="font-mono text-4xl font-light text-white">
+            07 <span class="text-xs text-neutral-300 font-sans block mt-2 font-normal" id="post-status-text">Claridad Restaurada</span>
+          </div>
+
+          <input type="range" id="post-slider" min="1" max="10" value="7" oninput="updatePostValue(this.value)" class="w-full h-3 bg-black rounded-lg appearance-none cursor-pointer accent-white" aria-label="Nivel de energía final">
+        </div>
+
+        <!-- Qualitative Note Input -->
+        <div class="space-y-1.5 font-mono text-xs">
+          <label for="post-notes-input" class="text-neutral-400 block" id="lbl-post-notes">Notas / Observaciones Metacognitivas (Opcional):</label>
+          <input type="text" id="post-notes-input" placeholder="Ej: Reduje el residuo atencional antes de programar..." class="w-full bg-black border border-white/10 text-white p-3 rounded-xl focus:outline-none focus:border-white font-sans text-xs">
+        </div>
+      </div>
+
+      <button onclick="saveAndFinishSession()" class="w-full py-4 px-6 bg-white text-black font-bold text-sm sm:text-base rounded-xl transition-all shadow-xl flex items-center justify-center gap-2 hover:bg-neutral-200">
+        <span id="btn-save-session">Guardar en Historial &amp; Volver</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+      </button>
+    </section>
+
+    <section id="tab-burnout" class="hidden space-y-6 flex-1">
+      <div class="glass-panel p-6 rounded-2xl space-y-4">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-mono text-white font-bold uppercase tracking-widest" id="bo-hdr">// MÓDULO PREVENTIVO DE AGOTAMIENTO</span>
+        </div>
+        <h2 class="text-2xl font-bold text-white" id="bo-title">Autoevaluación de Carga Cognitiva &amp; Suspiro Fisiológico</h2>
+        <p class="text-xs sm:text-sm text-neutral-300 leading-relaxed" id="bo-desc">
+          Mide tu riesgo actual de agotamiento basándote en indicadores adaptados del Inventario de Maslach (MBI) y activa intervenciones neurofisiológicas inmediatas.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Diagnostic Gauge -->
+        <div class="glass-panel p-6 rounded-2xl space-y-5 flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-white font-mono uppercase mb-4" id="bo-q-title">Diagnosticador Rápido de Fatiga</h3>
+            
+            <div class="space-y-4 font-mono text-xs">
+              <div>
+                <div class="flex justify-between text-neutral-300 mb-1">
+                  <span id="bo-lbl-1">1. Fatiga Mental acumulada</span>
+                  <span id="bo-val-1" class="text-white">5/10</span>
+                </div>
+                <input type="range" id="bo-range-1" min="1" max="10" value="5" oninput="calculateBurnoutRisk()" class="w-full h-2 bg-black rounded-lg accent-white">
+              </div>
+
+              <div>
+                <div class="flex justify-between text-neutral-300 mb-1">
+                  <span id="bo-lbl-2">2. Fricción en cambio de tarea</span>
+                  <span id="bo-val-2" class="text-white">5/10</span>
+                </div>
+                <input type="range" id="bo-range-2" min="1" max="10" value="5" oninput="calculateBurnoutRisk()" class="w-full h-2 bg-black rounded-lg accent-white">
+              </div>
+
+              <div>
+                <div class="flex justify-between text-neutral-300 mb-1">
+                  <span id="bo-lbl-3">3. Cinismo / Sobrecarga emocional</span>
+                  <span id="bo-val-3" class="text-white">5/10</span>
+                </div>
+                <input type="range" id="bo-range-3" min="1" max="10" value="5" oninput="calculateBurnoutRisk()" class="w-full h-2 bg-black rounded-lg accent-white">
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-black/80 border border-white/10 mt-4 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-mono text-neutral-400 block uppercase" id="lbl-risk-level">NIVEL DE RIESGO ESTIMADO</span>
+              <span id="bo-risk-label" class="text-base font-bold font-mono text-white">MODERADO (50%)</span>
+            </div>
+            <span id="bo-risk-icon" class="text-xs font-mono font-bold px-2 py-1 bg-white/10 rounded border border-white/20">MED</span>
+          </div>
+        </div>
+
+        <!-- Physiological Sigh Breather -->
+        <div class="glass-panel p-6 rounded-2xl space-y-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xs font-mono text-white font-bold uppercase tracking-widest">// HERRAMIENTA BIOLÓGICA</span>
+            </div>
+            <h3 class="text-lg font-bold text-white" id="ps-title">Suspiro Fisiológico (Physiological Sigh)</h3>
+            <p class="text-xs text-neutral-300 leading-relaxed mt-1" id="ps-desc">
+              Descubierto por neurobiólogos de Stanford. Consiste en dos inhalaciones seguidas por la nariz y una exhalación prolongada por la boca para vaciar alvéolos colapsados y ralentizar el ritmo cardíaco de forma rápida.
+            </p>
+          </div>
+
+          <div class="p-6 rounded-xl bg-black/80 border border-white/10 text-center space-y-3">
+            <div id="ps-visual-circle" class="w-20 h-20 mx-auto rounded-full border-2 border-white/40 flex items-center justify-center transition-all duration-1000">
+              <span id="ps-phase-text" class="text-xs font-mono font-bold text-white">PREPARADO</span>
+            </div>
+            <p id="ps-instruction" class="text-xs font-mono text-neutral-400">Presiona iniciar para realizar 3 ciclos de regulación vagal.</p>
+          </div>
+
+          <button onclick="startPhysiologicalSigh()" id="btn-start-sigh" class="w-full py-3 px-4 bg-white/10 hover:bg-white/20 text-white font-mono font-bold text-xs rounded-xl border border-white/20 transition-all">
+            Iniciar Suspiro Fisiológico (1 min)
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="tab-digest" class="hidden space-y-6 flex-1">
+      <div class="glass-panel p-6 rounded-2xl space-y-4">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-mono text-white font-bold uppercase tracking-widest" id="dig-hdr">// HISTORIAL DE ENTRENAMIENTO &amp; EXPORTACIÓN</span>
+        </div>
+        <h2 class="text-2xl font-bold text-white" id="dig-title">Registro de Métricas Atencionales</h2>
+        <p class="text-xs sm:text-sm text-neutral-300 leading-relaxed" id="dig-desc">
+          Análisis cuantitativo de tu progresión, reps de metacognición acumuladas y exportación de datos locales.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
+        <div class="glass-panel p-5 rounded-2xl border border-white/10">
+          <span class="text-xs text-neutral-400 block" id="lbl-total-sessions">SESIONES COMPLETADAS</span>
+          <span id="stat-total-sessions" class="text-3xl font-bold text-white mt-1 block">0</span>
+        </div>
+
+        <div class="glass-panel p-5 rounded-2xl border border-white/10">
+          <span class="text-xs text-neutral-400 block" id="lbl-total-minutes">MINUTOS ENTRENADOS</span>
+          <span id="stat-total-minutes" class="text-3xl font-bold text-white mt-1 block">0</span>
+        </div>
+
+        <div class="glass-panel p-5 rounded-2xl border border-white/10">
+          <span class="text-xs text-neutral-400 block" id="lbl-avg-gain">GANANCIA MEDIA CLARIDAD</span>
+          <span id="stat-avg-gain" class="text-3xl font-bold text-white mt-1 block">+0.0</span>
+        </div>
+      </div>
+
+      <div class="glass-panel p-6 rounded-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <h3 class="text-sm font-bold text-white font-mono uppercase" id="txt-log-title">Registro de Sesiones Recientes</h3>
+          <div class="flex gap-2">
+            <button onclick="exportData('json')" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-mono text-white border border-white/10">JSON</button>
+            <button onclick="exportData('csv')" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-mono text-white border border-white/10">CSV</button>
+            <button onclick="confirmClearHistory()" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-mono text-neutral-300 border border-white/10">Borrar</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left font-mono text-xs">
+            <thead>
+              <tr class="text-neutral-400 border-b border-white/10">
+                <th class="py-2.5 px-2" id="th-date">FECHA</th>
+                <th class="py-2.5 px-2" id="th-proto">PROTOCOLO</th>
+                <th class="py-2.5 px-2" id="th-dur">DURACIÓN</th>
+                <th class="py-2.5 px-2" id="th-reps">REPS</th>
+                <th class="py-2.5 px-2" id="th-delta">Δ CLARIDAD</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body" class="divide-y divide-white/5 text-neutral-300">
+              <!-- Dynamically Populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="w-full border-t border-white/10 py-4 px-4 text-center font-mono text-xs text-neutral-400 mt-8">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <span>Attention Forge © Neuro-Cognitive Architecture System</span>
+      <span class="text-neutral-500">Herramienta no médica • Basada en Neurociencia de la Atención</span>
+    </div>
+  </footer>
+
+  <script>
+    let currentLang = 'ES';
+    let currentTheme = 'stealth';
+    let currentPersona = 'general';
+    let currentProtocol = 'anchor';
+    let currentDuration = 5;
+    let preClarityScore = 5;
+    let postClarityScore = 7;
+    let reconnectionReps = 0;
+    
+    // Session Timer State
+    let sessionTimeRemaining = 0;
+    let sessionInterval = null;
+    let isSessionRunning = false;
+    let sessionInactivityTimer = null;
+    
+    // Audio Synthesizer State
+    let audioCtx = null;
+    let audioGainNode = null;
+    let audioOscLeft = null;
+    let audioOscRight = null;
+    let noiseNode = null;
+    let audioPulseMode = 'gamma';
+    let audioVolume = 0.3;
+
+    // Canvas Engine State
+    let canvas = null;
+    let ctx = null;
+    let visualAnchorMode = 'halo';
+    let animFrameId = null;
+    let canvasAngle = 0;
+    let particles = [];
+
+    // Protocol Differentiation Engine State
+    let switchPhase = 0; // 0: Flush, 1: Shift, 2: Lock
+    let switchTimer = 0;
+
+    const STORAGE_KEY = 'attention_forge_history_v3';
+
+    const i18n = {
+      ES: {
+        hdrSub: "Entrenamiento Atencional Basado en Neurociencia",
+        navProtocols: "Protocolos",
+        navBurnout: "Prevención Agotamiento",
+        navDigest: "Historial & Datos",
+        matrixTitle: "// MATRIZ COGNITIVA",
+        matrixSub: "Control Ejecutivo & Metacognición",
+        mainHeading: "Selecciona tu Protocolo Atencional",
+        mainDesc: "Diseñado para mitigar la fatiga por interrupciones, disolver el residuo mental y entrenar la capacidad prefrontal de reconexión atencional.",
+        cfgHdr: "CONFIGURACIÓN DE SESIÓN",
+        cfgSub: "Duración del Protocolo Atencional",
+        btnStartCheckin: "Iniciar Check-in de Claridad Mental",
+        chkHdr: "[ EVALUACIÓN PREVIA DE ENERGÍA COGNITIVA ]",
+        chkQ: "¿Cuál es tu nivel actual de claridad mental?",
+        chkSub: "Esta autoevaluación registrará tu estado base para calcular el incremento post-sesión.",
+        chkLow: "01 (Agotado)",
+        chkMid: "05 (Neutro)",
+        chkHigh: "10 (Claridad Total)",
+        btnExecute: "Ejecutar Protocolo Atencional",
+        btnAbort: "[ Finalizar ]",
+        lblVisAnchor: "Ancla Visual:",
+        lblAudPulse: "Pulso Acústico (ASSR):",
+        lblReconnectCount: "Reconexiones (Reps):",
+        btnTapReconnect: "Marcar Reconexión [Espacio]",
+        postHdr: "Evaluación Post-Entrenamiento",
+        postSub: "Indica tu claridad mental actual para calcular tu incremento neurocognitivo.",
+        btnSaveSession: "Guardar en Historial & Volver",
+        boHdr: "// MÓDULO PREVENTIVO DE AGOTAMIENTO",
+        boTitle: "Autoevaluación de Carga Cognitiva & Suspiro Fisiológico",
+        psTitle: "Suspiro Fisiológico (Physiological Sigh)",
+        digHdr: "// HISTORIAL DE ENTRENAMIENTO & EXPORTACIÓN",
+        digTitle: "Registro de Métricas Atencionales",
+        txtLogTitle: "Registro de Sesiones Recientes"
+      },
+      EN: {
+        hdrSub: "Neuroscience-Based Attentional Training",
+        navProtocols: "Protocols",
+        navBurnout: "Burnout Prevention",
+        navDigest: "History & Data",
+        matrixTitle: "// COGNITIVE MATRIX",
+        matrixSub: "Executive Control & Metacognition",
+        mainHeading: "Select Your Attentional Protocol",
+        mainDesc: "Designed to mitigate interruption fatigue, dissolve mental residue, and train prefrontal reconnection capacity.",
+        cfgHdr: "SESSION CONFIGURATION",
+        cfgSub: "Attentional Protocol Duration",
+        btnStartCheckin: "Start Mental Clarity Check-in",
+        chkHdr: "[ PRE-SESSION COGNITIVE ENERGY ASSESSMENT ]",
+        chkQ: "What is your current level of mental clarity?",
+        chkSub: "This self-assessment logs your baseline state to measure post-session boost.",
+        chkLow: "01 (Exhausted)",
+        chkMid: "05 (Neutral)",
+        chkHigh: "10 (Peak Clarity)",
+        btnExecute: "Execute Attentional Protocol",
+        btnAbort: "[ Terminate ]",
+        lblVisAnchor: "Visual Anchor:",
+        lblAudPulse: "Acoustic Pulse (ASSR):",
+        lblReconnectCount: "Reconnections (Reps):",
+        btnTapReconnect: "Mark Reconnection [Space]",
+        postHdr: "Post-Training Assessment",
+        postSub: "Rate your current mental clarity to measure your neurocognitive gain.",
+        btnSaveSession: "Save to History & Return",
+        boHdr: "// BURNOUT PREVENTION MODULE",
+        boTitle: "Cognitive Load Self-Assessment & Physiological Sigh",
+        psTitle: "Physiological Sigh Breather",
+        digHdr: "// TRAINING HISTORY & EXPORT",
+        digTitle: "Attentional Metrics Log",
+        txtLogTitle: "Recent Sessions History"
+      }
+    };
+
+    function switchTab(tabId) {
+      const tabs = ['protocols', 'checkin', 'session', 'post', 'burnout', 'digest'];
+      tabs.forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        if (el) el.classList.add('hidden');
+      });
+
+      const target = document.getElementById(`tab-${tabId}`);
+      if (target) target.classList.remove('hidden');
+
+      // Update Navigation Bar highlighting
+      const navProto = document.getElementById('nav-protocols');
+      const navBurn = document.getElementById('nav-burnout');
+      const navDig = document.getElementById('nav-digest');
+
+      const inactiveClass = "px-3.5 py-2 rounded-lg text-xs font-mono transition-all text-neutral-400 hover:text-white flex items-center gap-2";
+      const activeClass = "px-3.5 py-2 rounded-lg text-xs font-mono transition-all bg-white/15 text-white border border-white/20 flex items-center gap-2";
+
+      if (navProto) navProto.className = tabId === 'protocols' || tabId === 'checkin' || tabId === 'session' || tabId === 'post' ? activeClass : inactiveClass;
+      if (navBurn) navBurn.className = tabId === 'burnout' ? activeClass : inactiveClass;
+      if (navDig) navDig.className = tabId === 'digest' ? activeClass : inactiveClass;
+
+      if (tabId === 'digest') {
+        renderHistoryTable();
+      }
+    }
+
+    function goToCheckin() {
+      const label = document.getElementById('selected-protocol-label');
+      if (label) {
+        label.innerText = `${currentProtocol.toUpperCase()} • ${currentDuration} min`;
+      }
+      switchTab('checkin');
+    }
+
+    function applyTheme(themeName) {
+      currentTheme = themeName;
+      document.documentElement.setAttribute('data-theme', themeName);
+    }
+
+    function toggleLanguage() {
+      currentLang = currentLang === 'ES' ? 'EN' : 'ES';
+      document.getElementById('txt-lang-code').innerText = currentLang;
+      
+      const langData = i18n[currentLang];
+      document.getElementById('txt-header-sub').innerText = langData.hdrSub;
+      document.getElementById('nav-lbl-protocols').innerText = langData.navProtocols;
+      document.getElementById('nav-lbl-burnout').innerText = langData.navBurnout;
+      document.getElementById('nav-lbl-digest').innerText = langData.navDigest;
+      document.getElementById('txt-matrix-title').innerText = langData.matrixTitle;
+      document.getElementById('txt-matrix-sub').innerText = langData.matrixSub;
+      document.getElementById('txt-main-heading').innerText = langData.mainHeading;
+      document.getElementById('txt-main-desc').innerText = langData.mainDesc;
+      document.getElementById('txt-cfg-hdr').innerText = langData.cfgHdr;
+      document.getElementById('txt-cfg-sub').innerText = langData.cfgSub;
+      document.getElementById('btn-start-checkin').innerText = langData.btnStartCheckin;
+      document.getElementById('chk-hdr').innerText = langData.chkHdr;
+      document.getElementById('chk-q').innerText = langData.chkQ;
+      document.getElementById('chk-sub').innerText = langData.chkSub;
+      document.getElementById('chk-low').innerText = langData.chkLow;
+      document.getElementById('chk-mid').innerText = langData.chkMid;
+      document.getElementById('chk-high').innerText = langData.chkHigh;
+      document.getElementById('btn-execute-proto').innerText = langData.btnExecute;
+      document.getElementById('btn-abort-session').innerText = langData.btnAbort;
+      document.getElementById('lbl-vis-anchor').innerText = langData.lblVisAnchor;
+      document.getElementById('lbl-aud-pulse').innerText = langData.lblAudPulse;
+      document.getElementById('lbl-reconnect-count').innerText = langData.lblReconnectCount;
+      document.getElementById('btn-tap-reconnect').innerText = langData.btnTapReconnect;
+      document.getElementById('txt-post-hdr').innerText = langData.postHdr;
+      document.getElementById('txt-post-sub').innerText = langData.postSub;
+      document.getElementById('btn-save-session').innerText = langData.btnSaveSession;
+      document.getElementById('bo-hdr').innerText = langData.boHdr;
+      document.getElementById('bo-title').innerText = langData.boTitle;
+      document.getElementById('ps-title').innerText = langData.psTitle;
+      document.getElementById('dig-hdr').innerText = langData.digHdr;
+      document.getElementById('dig-title').innerText = langData.digTitle;
+      document.getElementById('txt-log-title').innerText = langData.txtLogTitle;
+      
+      updatePersonaUI();
+    }
+
+    function setPersona(personaKey) {
+      currentPersona = personaKey;
+      document.querySelectorAll('.persona-btn').forEach(btn => {
+        btn.classList.remove('bg-white/10', 'text-white', 'border', 'border-white/20');
+        btn.classList.add('text-neutral-400');
+      });
+
+      const activeBtn = document.getElementById(`persona-${personaKey}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-white/10', 'text-white', 'border', 'border-white/20');
+        activeBtn.classList.remove('text-neutral-400');
+      }
+
+      updatePersonaUI();
+    }
+
+    function updatePersonaUI() {
+      const ctxText = document.getElementById('txt-persona-context');
+      if (!ctxText) return;
+
+      if (currentLang === 'ES') {
+        if (currentPersona === 'general') ctxText.innerText = "> Contexto Activo: Enfoque equilibrado para estudio, lectura crítica y tareas complejas.";
+        else if (currentPersona === 'code') ctxText.innerText = "> Contexto Activo: Optimizado para desarrolladores, arquitectura de software y depuración profunda.";
+        else if (currentPersona === 'neuro') ctxText.innerText = "> Contexto Activo: Protocolos de supresión de DMN y regulación del tono vagal parasimpático.";
+      } else {
+        if (currentPersona === 'general') ctxText.innerText = "> Active Context: Balanced focus for study, critical reading, and complex tasks.";
+        else if (currentPersona === 'code') ctxText.innerText = "> Active Context: Optimized for developers, software architecture, and deep debugging.";
+        else if (currentPersona === 'neuro') ctxText.innerText = "> Active Context: DMN suppression protocols and vagal parasympathetic regulation.";
+      }
+    }
+
+    function toggleQuickGuide() {
+      const guide = document.getElementById('quick-guide');
+      if (guide) guide.classList.toggle('hidden');
+    }
+
+    function selectProtocol(protoKey) {
+      currentProtocol = protoKey;
+      document.querySelectorAll('.protocol-card').forEach(card => {
+        card.classList.remove('border-white');
+        card.classList.add('border-transparent');
+      });
+
+      const selectedCard = document.getElementById(`card-${protoKey}`);
+      if (selectedCard) {
+        selectedCard.classList.remove('border-transparent');
+        selectedCard.classList.add('border-white');
+      }
+
+      const audSelect = document.getElementById('select-audio-pulse');
+      if (protoKey === 'anchor') audioPulseMode = 'gamma';
+      else if (protoKey === 'switch') audioPulseMode = 'alpha';
+      else if (protoKey === 'drift') audioPulseMode = 'theta';
+      else if (protoKey === 'restore') audioPulseMode = 'pink';
+
+      if (audSelect) audSelect.value = audioPulseMode;
+
+      showToast("Protocolo Seleccionado", `Has activado el protocolo ${protoKey.toUpperCase()}`);
+    }
+
+    function toggleScienceModal(protoKey) {
+      const modal = document.getElementById('science-modal');
+      const title = document.getElementById('science-title');
+      const body = document.getElementById('science-body');
+
+      const data = {
+        anchor: {
+          title: "ANCHOR (FAM) • Activación de la Red de Control Ejecutivo Superior",
+          body: "Basado en estudios de neuroimagen funcional (Lutz et al., 2008), la Atención Focalizada (FAM) desacopla la Red por Defecto (DMN, asociada a la rumiación y la distracción) y recluta la Red Frontoparietal de Control. La práctica continua de notar la dispersión y reconectar activa la corteza prefrontal dorsolateral (dlPFC)."
+        },
+        switch: {
+          title: "SWITCH • Supresión de Residuo Atencional & Reconfiguración",
+          body: "Basado en la investigación de Sophie Leroy (2009) sobre el Residuo Atencional. Pasar de una tarea compleja a otra deja rastros cognitivos activos en la memoria de trabajo. El protocolo SWITCH utiliza cambios dirigidos para forzar al cerebro a soltar el contexto previo antes de asumir uno nuevo."
+        },
+        drift: {
+          title: "DRIFT (OM) • Monitoreo Abierto & Modulación Vagal",
+          body: "Inspirado en el Monitoreo Abierto (Open Monitoring) y la teoría polivagal. Al no fijar la atención en un objeto rígido sino mantener una conciencia no reactiva del entorno, se reduce la hiperactivación del sistema nervioso simpático, bajando los niveles de cortisol."
+        },
+        restore: {
+          title: "RESTORE (ART) • Teoría de Restauración Atencional",
+          body: "Formulado por Kaplan & Kaplan (1995). La atención dirigida requiere esfuerzo consciente y glucosa. RESTORE utiliza la 'Fascinación Suave' (movimiento armónico de bajo esfuerzo) para permitir que los mecanismos de atención dirigida se recuperen sin desconectarse por completo."
+        }
+      };
+
+      if (data[protoKey]) {
+        title.innerText = data[protoKey].title;
+        body.innerText = data[protoKey].body;
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closeScienceModal() {
+      document.getElementById('science-modal').classList.add('hidden');
+    }
+
+    function setDuration(mins) {
+      currentDuration = mins;
+      document.querySelectorAll('.dur-btn').forEach(btn => {
+        btn.classList.remove('border-white', 'bg-white/10', 'text-white', 'font-bold');
+        btn.classList.add('border-white/10', 'text-neutral-400');
+      });
+
+      event.target.classList.remove('border-white/10', 'text-neutral-400');
+      event.target.classList.add('border-white', 'bg-white/10', 'text-white', 'font-bold');
+    }
+
+    function updateCheckinValue(val) {
+      preClarityScore = parseInt(val);
+      const disp = document.getElementById('checkin-score-display');
+      const formatted = val < 10 ? `0${val}` : `${val}`;
+      
+      let status = "Carga Moderada / Transición Recomendada";
+      if (preClarityScore <= 3) status = "Fatiga Aguda / Se sugiere protocolo DRIFT o RESTORE";
+      else if (preClarityScore >= 8) status = "Claridad Optima / Preparado para ANCHOR";
+
+      disp.innerHTML = `${formatted} <span class="text-xs text-neutral-300 font-sans block mt-2 font-normal" id="checkin-status-text">${status}</span>`;
+    }
+
+    function applyProtocolControlsFilter(protoKey) {
+      const boxVisual = document.getElementById('box-visual-anchor');
+      const boxAudio = document.getElementById('box-audio-pulse');
+      const hudControls = document.getElementById('session-hud-controls');
+
+      if (protoKey === 'restore') {
+        if (hudControls) hudControls.classList.add('hidden');
+      } else if (protoKey === 'drift') {
+        if (hudControls) hudControls.classList.remove('hidden');
+        if (boxVisual) boxVisual.classList.add('hidden');
+        if (boxAudio) boxAudio.classList.remove('hidden');
+      } else {
+        if (hudControls) hudControls.classList.remove('hidden');
+        if (boxVisual) boxVisual.classList.remove('hidden');
+        if (boxAudio) boxAudio.classList.remove('hidden');
+      }
+    }
+
+    function resetSessionInactivityTimer() {
+      if (!isSessionRunning) return;
+
+      const elements = [
+        document.getElementById('session-hud-top'),
+        document.getElementById('session-hud-controls'),
+        document.getElementById('session-hud-bottom'),
+        document.getElementById('pacer-text')
+      ];
+
+      elements.forEach(el => {
+        if (el) {
+          el.classList.remove('opacity-0', 'pointer-events-none');
+          el.classList.add('opacity-100');
+        }
+      });
+
+      if (sessionInactivityTimer) clearTimeout(sessionInactivityTimer);
+
+      sessionInactivityTimer = setTimeout(() => {
+        if (isSessionRunning) {
+          elements.forEach(el => {
+            if (el) {
+              el.classList.remove('opacity-100');
+              el.classList.add('opacity-0', 'pointer-events-none');
+            }
+          });
+        }
+      }, 10000);
+    }
+
+    function startActiveSession() {
+      reconnectionReps = 0;
+      document.getElementById('reconnection-counter').innerText = "0";
+
+      sessionTimeRemaining = currentDuration * 60;
+      updateTimerDisplay();
+
+      applyProtocolControlsFilter(currentProtocol);
+
+      const protoTitle = document.getElementById('session-active-protocol-title');
+      if (protoTitle) protoTitle.innerText = `${currentProtocol.toUpperCase()} (${currentDuration} min)`;
+
+      const reconnectBtn = document.getElementById('btn-reconnect-action');
+      const reconnectInstruction = document.getElementById('session-overlay-instruction');
+
+      if (currentProtocol === 'restore') {
+        reconnectBtn.classList.add('opacity-40', 'pointer-events-none');
+        reconnectInstruction.innerText = "Modo Restauración Pasiva: Sin demanda de respuesta";
+      } else if (currentProtocol === 'drift') {
+        reconnectBtn.classList.remove('opacity-40', 'pointer-events-none');
+        reconnectInstruction.innerText = "Toca solo al notar fijación rígida en un pensamiento";
+      } else {
+        reconnectBtn.classList.remove('opacity-40', 'pointer-events-none');
+        reconnectInstruction.innerText = "Toca en pantalla o presiona [ESPACIO] al distraerte";
+      }
+
+      switchTab('session');
+      isSessionRunning = true;
+
+      initAudioEngine();
+      playToneGenerator();
+
+      initCanvas();
+      renderCanvasFrame();
+
+      window.addEventListener('mousemove', resetSessionInactivityTimer);
+      window.addEventListener('touchstart', resetSessionInactivityTimer);
+      window.addEventListener('keydown', handleSpacebarTap);
+
+      resetSessionInactivityTimer();
+
+      sessionInterval = setInterval(() => {
+        sessionTimeRemaining--;
+        updateTimerDisplay();
+
+        if (sessionTimeRemaining <= 0) {
+          completeActiveSession();
+        }
+      }, 1000);
+    }
+
+    function handleSpacebarTap(e) {
+      resetSessionInactivityTimer();
+      if (e.code === 'Space' && isSessionRunning && currentProtocol !== 'restore') {
+        e.preventDefault();
+        registerReconnectionRep();
+      }
+    }
+
+    function registerReconnectionRep() {
+      if (!isSessionRunning || currentProtocol === 'restore') return;
+      reconnectionReps++;
+      document.getElementById('reconnection-counter').innerText = reconnectionReps;
+
+      // Pulse visualizer effect
+      canvasAngle += 0.5;
+    }
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(sessionTimeRemaining / 60);
+      const secs = sessionTimeRemaining % 60;
+      const formatted = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+      document.getElementById('session-timer-display').innerText = formatted;
+    }
+
+    function promptCancelSession() {
+      showConfirmModal(
+        "Finalizar Sesión",
+        "¿Deseas interrumpir el protocolo actual? Tu progreso parcial no se guardará.",
+        () => {
+          completeActiveSession();
+        }
+      );
+    }
+
+    function completeActiveSession() {
+      clearInterval(sessionInterval);
+      if (sessionInactivityTimer) clearTimeout(sessionInactivityTimer);
+      isSessionRunning = false;
+      stopAudioGenerator();
+      
+      window.removeEventListener('mousemove', resetSessionInactivityTimer);
+      window.removeEventListener('touchstart', resetSessionInactivityTimer);
+      window.removeEventListener('keydown', handleSpacebarTap);
+      
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+
+      playChimeSound();
+
+      document.getElementById('stat-post-time').innerText = `${currentDuration}:00`;
+      document.getElementById('stat-post-reps').innerText = reconnectionReps;
+      
+      postClarityScore = Math.min(10, preClarityScore + 2);
+      document.getElementById('post-slider').value = postClarityScore;
+      updatePostValue(postClarityScore);
+
+      switchTab('post');
+    }
+
+    function updatePostValue(val) {
+      postClarityScore = parseInt(val);
+      const disp = document.getElementById('post-score-display');
+      const formatted = val < 10 ? `0${val}` : `${val}`;
+      const delta = postClarityScore - preClarityScore;
+      
+      document.getElementById('stat-post-delta').innerText = `${delta >= 0 ? '+' : ''}${delta}`;
+
+      disp.innerHTML = `${formatted} <span class="text-xs text-neutral-300 font-sans block mt-2 font-normal" id="post-status-text">Claridad Restaurada (${delta >= 0 ? '+' : ''}${delta})</span>`;
+    }
+
+    function saveAndFinishSession() {
+      const notes = document.getElementById('post-notes-input').value.trim();
+      const newEntry = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        protocol: currentProtocol.toUpperCase(),
+        duration: currentDuration,
+        reps: reconnectionReps,
+        preClarity: preClarityScore,
+        postClarity: postClarityScore,
+        delta: postClarityScore - preClarityScore,
+        notes: notes
+      };
+
+      const history = getHistoryFromStorage();
+      history.unshift(newEntry);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+
+      showToast("Sesión Guardada", "Tu registro de atención ha sido actualizado con éxito.");
+      switchTab('protocols');
+    }
+
+    function initAudioEngine() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function setAudioPulseMode(val) {
+      audioPulseMode = val;
+      if (isSessionRunning) {
+        playToneGenerator();
+      }
+    }
+
+    function setVisualAnchor(val) {
+      visualAnchorMode = val;
+    }
+
+    function playToneGenerator() {
+      stopAudioGenerator();
+      if (!audioCtx || audioPulseMode === 'off') return;
+
+      audioGainNode = audioCtx.createGain();
+      audioGainNode.gain.setValueAtTime(audioVolume, audioCtx.currentTime);
+      audioGainNode.connect(audioCtx.destination);
+
+      if (audioPulseMode === 'pink') {
+        // Generate Pink Noise procedurally
+        const bufferSize = audioCtx.sampleRate * 2;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < bufferSize; i++) {
+          let white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          b3 = 0.86650 * b3 + white * 0.3104856;
+          b4 = 0.55000 * b4 + white * 0.5329522;
+          b5 = -0.7616 * b5 - white * 0.0168980;
+          output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+          output[i] *= 0.11;
+          b6 = white * 0.115926;
+        }
+        noiseNode = audioCtx.createBufferSource();
+        noiseNode.buffer = noiseBuffer;
+        noiseNode.loop = true;
+        noiseNode.connect(audioGainNode);
+        noiseNode.start();
+      } else {
+        let baseFreq = 200;
+        let beatFreq = 40; // Gamma
+
+        if (audioPulseMode === 'alpha') beatFreq = 10;
+        else if (audioPulseMode === 'theta') beatFreq = 4;
+
+        // Stereo Binaural Beat setup
+        const merger = audioCtx.createChannelMerger(2);
+
+        audioOscLeft = audioCtx.createOscillator();
+        audioOscRight = audioCtx.createOscillator();
+
+        audioOscLeft.frequency.value = baseFreq;
+        audioOscRight.frequency.value = baseFreq + beatFreq;
+
+        audioOscLeft.type = 'sine';
+        audioOscRight.type = 'sine';
+
+        audioOscLeft.connect(merger, 0, 0); // Left channel
+        audioOscRight.connect(merger, 0, 1); // Right channel
+
+        merger.connect(audioGainNode);
+
+        audioOscLeft.start();
+        audioOscRight.start();
+      }
+    }
+
+    function stopAudioGenerator() {
+      if (audioOscLeft) { audioOscLeft.stop(); audioOscLeft.disconnect(); audioOscLeft = null; }
+      if (audioOscRight) { audioOscRight.stop(); audioOscRight.disconnect(); audioOscRight = null; }
+      if (noiseNode) { noiseNode.stop(); noiseNode.disconnect(); noiseNode = null; }
+    }
+
+    function playChimeSound() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5 note
+      osc.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 1.2);
+
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 1.5);
+    }
+
+    function initCanvas() {
+      canvas = document.getElementById('session-canvas');
+      if (!canvas) return;
+      ctx = canvas.getContext('2d');
+
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+
+      // Particle initialization
+      particles = [];
+      for (let i = 0; i < 40; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 2 + 1,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
+          alpha: Math.random() * 0.5 + 0.2
+        });
+      }
+    }
+
+    function renderCanvasFrame() {
+      if (!isSessionRunning || !canvas || !ctx) return;
+
+      const width = canvas.width;
+      const height = canvas.height;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      ctx.clearRect(0, 0, width, height);
+
+      canvasAngle += 0.01;
+
+      // Pacer Cadence Text Update
+      const pacerEl = document.getElementById('pacer-text');
+      const cycleTime = (Date.now() / 1000) % 12; // 12-second cycle
+      if (pacerEl) {
+        if (cycleTime < 4) pacerEl.innerText = "INHALA (4s)";
+        else if (cycleTime < 8) pacerEl.innerText = "SOSTÉN (4s)";
+        else pacerEl.innerText = "EXHALA (4s)";
+      }
+
+      if (currentProtocol === 'anchor') {
+        // High-precision focal point visualizer
+        ctx.save();
+        ctx.translate(centerX, centerY);
+
+        const pulseScale = 1 + 0.15 * Math.sin(Date.now() / 800);
+
+        if (visualAnchorMode === 'halo') {
+          ctx.beginPath();
+          ctx.arc(0, 0, 50 * pulseScale, 0, Math.PI * 2);
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(0, 0, 8, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+        } else if (visualAnchorMode === 'spiral') {
+          ctx.rotate(canvasAngle);
+          ctx.beginPath();
+          for (let i = 0; i < 200; i++) {
+            const angle = 0.1 * i;
+            const r = 2 * angle;
+            const x = r * Math.cos(angle);
+            const y = r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        } else if (visualAnchorMode === 'stealth') {
+          ctx.beginPath();
+          ctx.arc(0, 0, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+        } else {
+          // Particles
+          particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < 0 || p.x > width) p.vx *= -1;
+            if (p.y < 0 || p.y > height) p.vy *= -1;
+
+            ctx.beginPath();
+            ctx.arc(p.x - centerX, p.y - centerY, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+            ctx.fill();
+          });
+        }
+        ctx.restore();
+
+      } else if (currentProtocol === 'switch') {
+        // Reconfiguration phase matrix
+        ctx.save();
+        switchTimer += 0.01;
+        const phase = Math.floor((switchTimer % 9) / 3);
+
+        const pos = [
+          { x: centerX - 80, y: centerY },
+          { x: centerX + 80, y: centerY },
+          { x: centerX, y: centerY - 60 }
+        ];
+
+        pos.forEach((p, idx) => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, idx === phase ? 24 : 12, 0, Math.PI * 2);
+          ctx.fillStyle = idx === phase ? '#ffffff' : 'rgba(255, 255, 255, 0.2)';
+          ctx.fill();
+        });
+        ctx.restore();
+
+      } else if (currentProtocol === 'drift') {
+        // Floating open-monitoring field
+        ctx.save();
+        const offsetX = Math.sin(canvasAngle * 0.8) * 60;
+        const offsetY = Math.cos(canvasAngle * 0.6) * 40;
+
+        const grad = ctx.createRadialGradient(
+          centerX + offsetX, centerY + offsetY, 10,
+          centerX + offsetX, centerY + offsetY, 120
+        );
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(centerX + offsetX, centerY + offsetY, 120, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+      } else if (currentProtocol === 'restore') {
+        // Soft fascination wave motion
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        for (let x = 0; x < width; x += 10) {
+          const y = centerY + Math.sin(x * 0.01 + canvasAngle) * 25;
+          ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      animFrameId = requestAnimationFrame(renderCanvasFrame);
+    }
+
+    function getHistoryFromStorage() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      try {
+        return JSON.parse(raw);
+      } catch(e) {
+        return [];
+      }
+    }
+
+    function renderHistoryTable() {
+      const history = getHistoryFromStorage();
+      const tbody = document.getElementById('history-table-body');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+
+      if (history.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-neutral-500 font-mono">No hay sesiones registradas.</td></tr>`;
+        document.getElementById('stat-total-sessions').innerText = "0";
+        document.getElementById('stat-total-minutes').innerText = "0";
+        document.getElementById('stat-avg-gain').innerText = "+0.0";
+        return;
+      }
+
+      let totalMins = 0;
+      let totalDelta = 0;
+
+      history.forEach(item => {
+        totalMins += item.duration;
+        totalDelta += item.delta;
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-white/5 transition-colors";
+        tr.innerHTML = `
+          <td class="py-2.5 px-2 text-neutral-400">${item.date}</td>
+          <td class="py-2.5 px-2 font-bold text-white">${item.protocol}</td>
+          <td class="py-2.5 px-2">${item.duration} min</td>
+          <td class="py-2.5 px-2 text-white">${item.reps}</td>
+          <td class="py-2.5 px-2 font-bold text-white">${item.delta >= 0 ? '+' : ''}${item.delta}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('stat-total-sessions').innerText = history.length;
+      document.getElementById('stat-total-minutes').innerText = totalMins;
+      document.getElementById('stat-avg-gain').innerText = `+${(totalDelta / history.length).toFixed(1)}`;
+    }
+
+    function confirmClearHistory() {
+      showConfirmModal(
+        "Borrar Historial",
+        "¿Estás seguro de que deseas eliminar todos los datos de sesiones guardados?",
+        () => {
+          localStorage.removeItem(STORAGE_KEY);
+          renderHistoryTable();
+          showToast("Datos Eliminados", "Se ha limpiado el historial.");
+        }
+      );
+    }
+
+    function exportData(type) {
+      const history = getHistoryFromStorage();
+      if (history.length === 0) {
+        showToast("Exportación vacía", "No hay datos para exportar.");
+        return;
+      }
+
+      let content = "";
+      let filename = `attention_forge_data.${type}`;
+
+      if (type === 'json') {
+        content = JSON.stringify(history, null, 2);
+      } else {
+        content = "Fecha,Protocolo,Duracion_Min,Reps_Reconexion,Claridad_Pre,Claridad_Post,Delta\n";
+        history.forEach(h => {
+          content += `"${h.date}","${h.protocol}",${h.duration},${h.reps},${h.preClarity},${h.postClarity},${h.delta}\n`;
+        });
+      }
+
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function calculateBurnoutRisk() {
+      const v1 = parseInt(document.getElementById('bo-range-1').value);
+      const v2 = parseInt(document.getElementById('bo-range-2').value);
+      const v3 = parseInt(document.getElementById('bo-range-3').value);
+
+      document.getElementById('bo-val-1').innerText = `${v1}/10`;
+      document.getElementById('bo-val-2').innerText = `${v2}/10`;
+      document.getElementById('bo-val-3').innerText = `${v3}/10`;
+
+      const avg = Math.round(((v1 + v2 + v3) / 30) * 100);
+      const lbl = document.getElementById('bo-risk-label');
+      const icon = document.getElementById('bo-risk-icon');
+
+      if (avg < 35) {
+        lbl.innerText = `BAJO (${avg}%)`;
+        lbl.className = "text-base font-bold font-mono text-white";
+        icon.innerText = "LOW";
+      } else if (avg < 70) {
+        lbl.innerText = `MODERADO (${avg}%)`;
+        lbl.className = "text-base font-bold font-mono text-white";
+        icon.innerText = "MED";
+      } else {
+        lbl.innerText = `ELEVADO (${avg}%)`;
+        lbl.className = "text-base font-bold font-mono text-white";
+        icon.innerText = "HIGH";
+      }
+    }
+
+    let sighInterval = null;
+    function startPhysiologicalSigh() {
+      initAudioEngine();
+      const circle = document.getElementById('ps-visual-circle');
+      const txt = document.getElementById('ps-phase-text');
+      const instr = document.getElementById('ps-instruction');
+      const btn = document.getElementById('btn-start-sigh');
+
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+
+      let step = 0;
+      const cycleSteps = [
+        { t: "INHALA 1 (Nariz)", c: "scale-125 border-white bg-white/20", d: "Inhala profundamente por la nariz." },
+        { t: "INHALA 2 (Extra)", c: "scale-150 border-white bg-white/30", d: "Inhala un segundo sorbo de aire extra al final." },
+        { t: "EXHALA (Boca)", c: "scale-90 border-white/40 bg-white/5", d: "Exhala despacio y prolongado por la boca..." }
+      ];
+
+      sighInterval = setInterval(() => {
+        const curr = cycleSteps[step % 3];
+        txt.innerText = curr.t;
+        instr.innerText = curr.d;
+        circle.className = `w-20 h-20 mx-auto rounded-full border-2 flex items-center justify-center transition-all duration-1000 ${curr.c}`;
+
+        step++;
+        if (step >= 9) {
+          clearInterval(sighInterval);
+          txt.innerText = "COMPLETADO";
+          instr.innerText = "Activación parasimpática finalizada. Siente la reducción en el tono cardíaco.";
+          circle.className = "w-20 h-20 mx-auto rounded-full border-2 border-white bg-white/20 flex items-center justify-center transition-all duration-1000 scale-100";
+          btn.disabled = false;
+          btn.classList.remove('opacity-50');
+        }
+      }, 3000);
+    }
+
+    function showToast(title, msg) {
+      const toast = document.getElementById('modal-toast');
+      document.getElementById('toast-title').innerText = title;
+      document.getElementById('toast-msg').innerText = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        closeToast();
+      }, 4000);
+    }
+
+    function closeToast() {
+      document.getElementById('modal-toast').classList.add('hidden');
+    }
+
+    function showConfirmModal(title, msg, onAccept) {
+      const modal = document.getElementById('custom-confirm-modal');
+      document.getElementById('confirm-modal-title').innerText = title;
+      document.getElementById('confirm-modal-msg').innerText = msg;
+
+      const btnAccept = document.getElementById('confirm-btn-accept');
+      const btnCancel = document.getElementById('confirm-btn-cancel');
+
+      modal.classList.remove('hidden');
+
+      btnAccept.onclick = () => {
+        modal.classList.add('hidden');
+        if (onAccept) onAccept();
+      };
+
+      btnCancel.onclick = () => {
+        modal.classList.add('hidden');
+      };
+    }
+
+    window.onload = function() {
+      applyTheme('stealth');
+      calculateBurnoutRisk();
+    };
+  </script>
+</body>
+</html>
