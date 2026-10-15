@@ -34,7 +34,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper
 .map-wrap canvas{width:150px;height:110px;display:block}
 .map-label{position:absolute;right:0;bottom:-4px;font:8px var(--mono);letter-spacing:.11em;color:#66665f}
 .track-select{appearance:none;display:block;width:min(320px,82vw);margin:0 0 16px;padding:12px 14px;border:2px solid var(--ink);border-radius:0;background:var(--paper);color:var(--ink);font:700 12px var(--mono);letter-spacing:.04em;cursor:pointer}
-.track-description{font:10px/1.6 var(--mono);letter-spacing:.08em;color:#5e5e58;max-width:440px;margin:-16px 0 24px}
+.difficulty-select{appearance:none;display:block;width:min(320px,82vw);margin:-8px 0 18px;padding:12px 14px;border:2px solid var(--ink);border-radius:0;background:var(--paper);color:var(--ink);font:700 12px var(--mono);letter-spacing:.04em;cursor:pointer}.difficulty-description{font:9px/1.5 var(--mono);color:#5e5e58;max-width:420px;margin:-10px 0 20px}.track-description{font:10px/1.6 var(--mono);letter-spacing:.08em;color:#5e5e58;max-width:440px;margin:-16px 0 24px}
 .race-info .position strong{min-width:52px}
 .goal strong{font:700 16px/1 var(--cond);letter-spacing:.04em;white-space:nowrap}
 .race-order{position:absolute;right:30px;top:148px;width:150px;padding:7px 9px;background:rgba(232,231,225,.82);border:1px solid rgba(32,33,31,.28);font:8px/1.5 var(--mono);letter-spacing:.05em}
@@ -65,6 +65,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper
 .pause-overlay-card .overlay-title{font-size:clamp(52px,8vw,88px)}
 .pause-overlay-card .btn-action{min-width:min(300px,78vw)}
 .pause-overlay-card .pause-secondary{font-size:14px;padding:11px 24px;background:transparent;color:var(--ink);box-shadow:none}
+#pause-screen #pause-restart-btn,#pause-screen #main-menu-btn{font-size:11.2px;padding:8.8px 19.2px;min-width:min(240px,62.4vw);}
 .pause-overlay-card .pause-secondary:hover{background:var(--ink);color:var(--paper)}
 @media(max-width:768px){.track-select{font-size:10px}.track-description{font-size:9px}}
 
@@ -215,6 +216,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper
       <option value="3">04 — MOON MUSHROOM MARSH</option>
     </select>
     <p class="track-description" id="track-description">A haunted high-speed course with a double chicane, a cliffside hairpin, and a jump over the old cemetery road.</p>
+    <select class="difficulty-select" id="difficulty-select" aria-label="Choose race difficulty"><option value="easy">DIFFICULTY — EASY</option><option value="normal">DIFFICULTY — NORMAL</option><option value="hard" selected>DIFFICULTY — HARD</option></select>
+    <p class="difficulty-description" id="difficulty-description">HARD · Aggressive rivals, rare mistakes, minimal catch-up. The original challenge.</p>
     <p class="overlay-sub" style="font-size:11px;letter-spacing:1px;line-height:1.8">KEYBOARD: WASD / ARROWS · SPACE: DRIFT · P: PAUSE<br>CONTROLLER: STICK / D-PAD · RT / A: GO · LT / B: BRAKE · X / LB: DRIFT · Y: CAMERA · START: PAUSE</p>
     <button class="btn-action" id="start-btn">PRESS ENTER TO RACE</button>
   </div>
@@ -601,6 +604,12 @@ const TRACKS = [
     knots: [[0,-88],[34,-82],[56,-62],[62,-36],[49,-18],[28,-17],[15,-29],[4,-17],[10,0],[29,12],[47,31],[38,53],[15,66],[-12,61],[-34,47],[-49,25],[-45,4],[-27,-7],[-18,-24],[-28,-43],[-45,-56],[-36,-76],[-16,-88]]
   }
 ];
+const DIFFICULTIES = {
+  easy: { label: 'EASY', aiSpeed: 0.82, aiPressure: 0.35, aiMistake: 0.055, playerAccel: 1.10, recovery: 1.45, catchup: 1.12, description: 'EASY · Relaxed rivals, forgiving lines, more mistakes, faster recovery, and stronger catch-up.' },
+  normal: { label: 'NORMAL', aiSpeed: 0.94, aiPressure: 1.05, aiMistake: 0.025, playerAccel: 1, recovery: 1, catchup: 1.045, description: 'NORMAL · Balanced rivals, occasional mistakes, and subtle catch-up assistance.' },
+  hard: { label: 'HARD', aiSpeed: 1, aiPressure: 1, aiMistake: 0.008, playerAccel: 1, recovery: 1, catchup: 1, description: 'HARD · Aggressive rivals, rare mistakes, minimal catch-up. The original challenge.' }
+};
+let difficulty = 'hard';
 let activeTrackIndex = 0;
 let knots = TRACKS[activeTrackIndex].knots;
 const path = [];
@@ -699,7 +708,14 @@ const AI_PROFILES = [
 const aiRacers = AI_PROFILES.map((r, i) => ({ ...r, progress: 12 + i * 14, speed: r.pace }));
 
 function resetRacers() {
-  aiRacers.forEach((r, i) => { r.progress = 12 + i * 14; r.speed = r.pace; });
+  const cfg = DIFFICULTIES[difficulty];
+  aiRacers.forEach((r, i) => { r.progress = 12 + i * 14; r.speed = r.pace * cfg.aiSpeed; r.mistakeTimer = 0; });
+}
+function selectDifficulty(value) {
+  difficulty = DIFFICULTIES[value] ? value : 'hard';
+  $('difficulty-select').value = difficulty;
+  $('difficulty-description').textContent = DIFFICULTIES[difficulty].description;
+  resetRacers();
 }
 
 function selectTrack(index) {
@@ -1010,9 +1026,15 @@ function update(dt) {
   aiRacers.forEach((r, i) => {
     // Faster rivals vary their pace, then push a little harder when the player is ahead.
     // This keeps the race close without teleporting opponents or making them unbeatable.
-    const pressure = playerProgressForAI > r.progress ? 1.8 : -0.35;
-    const target = r.pace * 1.12 + Math.sin(state.totalTime * 0.72 + r.phase) * 1.35 * 1.5 + Math.sin(r.progress * 0.012) * 1.0 * 1.5 + pressure * 1.5;
-    r.speed += (target - r.speed) * (1 - Math.exp(-2.2 * dt));
+    const cfg = DIFFICULTIES[difficulty];
+    const pressure = playerProgressForAI > r.progress ? 1.8 * cfg.aiPressure : -0.35;
+    if (r.mistakeTimer > 0) r.mistakeTimer = Math.max(0, r.mistakeTimer - dt);
+    else if (Math.random() < cfg.aiMistake * dt) r.mistakeTimer = 0.45 + Math.random() * 0.6;
+    const mistake = r.mistakeTimer > 0 ? 0.72 : 1;
+    const target = r.pace * 1.12 * cfg.aiSpeed + Math.sin(state.totalTime * 0.72 + r.phase) * 1.35 * 1.5 + Math.sin(r.progress * 0.012) * 1.0 * 1.5 + pressure * 1.5;
+    let catchup = 1;
+    if (difficulty !== 'hard' && playerProgressForAI > r.progress) catchup = cfg.catchup;
+    r.speed += (target * mistake * catchup - r.speed) * (1 - Math.exp(-2.2 * dt));
     r.progress += r.speed * dt;
   });
   state.hitCooldown = Math.max(0, state.hitCooldown - dt);
@@ -1025,7 +1047,7 @@ function update(dt) {
   const throttle = input.throttle;
   const brake = input.brake;
 
-  const accelPower = state.boostTimer > 0 ? 32 : 22;
+  const accelPower = (state.boostTimer > 0 ? 32 : 22) * DIFFICULTIES[difficulty].playerAccel;
   const drag = 0.45 + state.speed * 0.012;
 
   if (throttle) {
@@ -1497,6 +1519,43 @@ function drawFinishMarker() {
   ctx.restore();
 }
 
+function isNightTrack() {
+  const theme = TRACKS[activeTrackIndex]?.theme;
+  // These are the deliberately nocturnal worlds in the current four-track set.
+  return theme === 'graveyard' || theme === 'marsh';
+}
+
+function drawNightLighting() {
+  if (!isNightTrack()) return;
+  // A subtle exposure falloff makes the headlamp pools read as actual light,
+  // while preserving enough ambient detail to keep the retro scene legible.
+  ctx.save();
+  ctx.fillStyle = 'rgba(5,9,18,.24)';
+  ctx.fillRect(0, 0, W, H);
+
+  const originX = W * .5;
+  const originY = H * .82;
+  const beam = ctx.createLinearGradient(0, originY, 0, horizon + 8);
+  beam.addColorStop(0, 'rgba(255,239,190,.22)');
+  beam.addColorStop(.35, 'rgba(255,239,190,.13)');
+  beam.addColorStop(1, 'rgba(255,239,190,0)');
+  ctx.fillStyle = beam;
+  ctx.beginPath();
+  ctx.moveTo(originX - W * .035, originY);
+  ctx.lineTo(W * .19, horizon + 5);
+  ctx.lineTo(W * .81, horizon + 5);
+  ctx.lineTo(originX + W * .035, originY);
+  ctx.closePath();
+  ctx.fill();
+
+  const glow = ctx.createRadialGradient(originX, originY - 30, 2, originX, originY - 30, Math.min(W, H) * .45);
+  glow.addColorStop(0, 'rgba(255,239,190,.10)');
+  glow.addColorStop(1, 'rgba(255,239,190,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
 function drawRacers() {
   const cam = { x: state.cameraX, z: state.cameraZ };
   const a = state.cameraHeading;
@@ -1511,6 +1570,24 @@ function drawRacers() {
   }).filter(v => v.p && v.p.depth < 300).sort((a, b) => b.p.depth - a.p.depth);
 
   visible.forEach(({ r, p, q }) => {
+    // Each rival casts a short, perspective-scaled headlamp pool down the track.
+    if (isNightTrack()) {
+      const ahead = sample(r.progress + 7);
+      const aheadP = project({ x: ahead.x + ahead.tz * r.lane, z: ahead.z - ahead.tx * r.lane }, cam, forward, right);
+      if (aheadP) {
+        const spread = clamp(p.scale * 1.5, 2, 24);
+        const lampBeam = ctx.createLinearGradient(p.x, p.y, aheadP.x, aheadP.y);
+        lampBeam.addColorStop(0, 'rgba(255,238,185,.15)');
+        lampBeam.addColorStop(1, 'rgba(255,238,185,0)');
+        ctx.fillStyle = lampBeam;
+        ctx.beginPath();
+        ctx.moveTo(p.x - spread*.35, p.y - spread*.1);
+        ctx.lineTo(aheadP.x - spread, aheadP.y);
+        ctx.lineTo(aheadP.x + spread, aheadP.y);
+        ctx.lineTo(p.x + spread*.35, p.y - spread*.1);
+        ctx.closePath(); ctx.fill();
+      }
+    }
     // Keep perspective growth obvious as rivals approach; the former 35px cap made
     // nearby karts look toy-small and caused an apparent size reversal at close range.
     const w = clamp(p.scale * 1.9, 5, 64);
@@ -1521,11 +1598,33 @@ function drawRacers() {
     ctx.beginPath(); ctx.ellipse(p.x + w * .08, p.y + h * .12, w * .72, h * .25, 0, 0, TAU); ctx.fill();
     ctx.translate(p.x, p.y - h * .32);
     ctx.rotate(Math.atan2(q.tx, q.tz) - state.cameraHeading);
-    ctx.fillStyle = '#252622';
-    ctx.fillRect(-w * .55, -h * .36, w * .22, h * .42);
-    ctx.fillRect(w * .33, -h * .36, w * .22, h * .42);
-    ctx.fillRect(-w * .55, h * .12, w * .22, h * .42);
-    ctx.fillRect(w * .33, h * .12, w * .22, h * .42);
+    // Four clearly readable, rounded rubber wheels echo the player's kart silhouette.
+    const wheelW = w * .23, wheelH = h * .43;
+    for (const [wx, wy] of [[-w*.55,-h*.36],[w*.32,-h*.36],[-w*.55,h*.12],[w*.32,h*.12]]) {
+      ctx.fillStyle = '#171816';
+      ctx.strokeStyle = '#0b0c0b';
+      ctx.lineWidth = Math.max(.6, w * .025);
+      ctx.beginPath();
+      ctx.roundRect(wx, wy, wheelW, wheelH, Math.max(1, w * .055));
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#777870';
+      ctx.fillRect(wx + wheelW*.22, wy + wheelH*.32, wheelW*.56, Math.max(.7, wheelH*.08));
+      ctx.fillStyle = '#aaa99f';
+      ctx.fillRect(wx + wheelW*.22, wy + wheelH*.62, wheelW*.56, Math.max(.7, wheelH*.06));
+    }
+    if (isNightTrack()) {
+      // Tiny warm headlamps and a soft forward spill, scaled with perspective.
+      const lampY = -h * .46;
+      const lampR = Math.max(.8, w * .055);
+      for (const lx of [-w*.25, w*.25]) {
+        const lampGlow = ctx.createRadialGradient(lx, lampY, 0, lx, lampY, lampR*4.5);
+        lampGlow.addColorStop(0, 'rgba(255,244,199,.8)');
+        lampGlow.addColorStop(1, 'rgba(255,225,150,0)');
+        ctx.fillStyle = lampGlow;
+        ctx.beginPath(); ctx.arc(lx, lampY, lampR*4.5, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#fff0bd'; ctx.beginPath(); ctx.arc(lx, lampY, lampR, 0, TAU); ctx.fill();
+      }
+    }
     ctx.fillStyle = r.tone;
     ctx.strokeStyle = '#20211f';
     ctx.lineWidth = Math.max(1, w * .07);
@@ -1633,6 +1732,18 @@ function drawKart() {
   ctx.closePath();
   ctx.fill(); ctx.stroke();
 
+  if (isNightTrack()) {
+    // Warm twin headlamp lenses sit on the front shoulders of the player's kart.
+    for (const lx of [-24, 24]) {
+      const lampGlow = ctx.createRadialGradient(lx, -39, 1, lx, -39, 18);
+      lampGlow.addColorStop(0, 'rgba(255,239,185,.82)');
+      lampGlow.addColorStop(.35, 'rgba(255,226,150,.28)');
+      lampGlow.addColorStop(1, 'rgba(255,226,150,0)');
+      ctx.fillStyle = lampGlow; ctx.beginPath(); ctx.arc(lx, -39, 18, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff1c2'; ctx.beginPath(); ctx.arc(lx, -39, 4.5, 0, TAU); ctx.fill();
+    }
+  }
+
   ctx.fillStyle = '#242522';
   ctx.beginPath();
   ctx.moveTo(-25, -34); ctx.quadraticCurveTo(0, -46, 25, -34);
@@ -1715,6 +1826,7 @@ function draw() {
   drawTrack();
   drawStageScenery();
   drawFinishMarker();
+  drawNightLighting();
   drawRacers();
   drawSpeedLines();
   if (cameraMode !== 2) drawKart(); else drawFirstPersonCockpit();
@@ -1734,6 +1846,7 @@ function frame(now) {
 // Startup
 $('track-select').addEventListener('change', e => selectTrack(Number(e.target.value)));
 $('start-btn').addEventListener('click', startGameSequence);
+$('difficulty-select').addEventListener('change', e => selectDifficulty(e.target.value));
 // Browsers require a user gesture before audio can begin: wake the dreamy title theme here.
 $('start-screen').addEventListener('pointerdown', () => {
   if (gameState !== 'START') return;
@@ -1756,6 +1869,7 @@ $('main-menu-btn').addEventListener('click', returnToMainMenu);
 $('finish-menu-btn').addEventListener('click', returnToMainMenu);
 $('camera-btn').addEventListener('click', () => setCameraMode());
 
+selectDifficulty('hard');
 selectTrack(0);
 resize();
 requestAnimationFrame(frame);
