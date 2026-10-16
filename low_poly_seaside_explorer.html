@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Low-Poly Seaside Explorer - Enhanced Cat Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; background: #0b0f19; font-family: 'Inter', sans-serif; user-select: none; -webkit-user-select: none; }
+        #canvas-container { width: 100%; height: 100%; display: block; position: absolute; top: 0; left: 0; cursor: grab; }
+        #canvas-container:active { cursor: grabbing; }
+        .vignette {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            box-shadow: inset 0 0 120px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        /* UI HUD Styles */
+        .hud-glass {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        /* Virtual Joystick */
+        #virtual-joystick {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            touch-action: none;
+            z-index: 20;
+            display: none; /* Enabled on touch devices or toggled */
+            align-items: center;
+            justify-content: center;
+        }
+        #joystick-knob {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            position: absolute;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: background 0.2s;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+    <div class="vignette"></div>
+
+    <!-- Top HUD: Collectibles & Weather status -->
+    <div class="absolute top-4 left-4 right-4 flex justify-between items-center pointer-events-none z-20">
+        <div class="hud-glass px-4 py-2.5 rounded-2xl flex items-center space-x-3 text-white shadow-xl pointer-events-auto">
+            <div class="w-8 h-8 rounded-full bg-amber-400/20 flex items-center justify-center text-amber-300 font-bold text-lg animate-pulse">✨</div>
+            <div>
+                <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Fireflies Found</div>
+                <div id="firefly-counter" class="text-lg font-extrabold text-amber-200">0 / 5</div>
+            </div>
+        </div>
+
+        <div class="hud-glass px-4 py-2.5 rounded-2xl flex items-center space-x-3 text-white shadow-xl pointer-events-auto">
+            <button id="audio-toggle-btn" class="bg-sky-500/30 hover:bg-sky-500/50 text-sky-200 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-sky-400/30 flex items-center space-x-1.5">
+                <span>🔊</span>
+                <span id="audio-status-text">Enable Audio</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom Instructions / Interaction Prompt -->
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-none z-20 text-center">
+        <div id="interaction-prompt" class="hud-glass px-6 py-2 rounded-2xl text-white text-sm font-medium shadow-2xl opacity-0 transition-opacity duration-300 mb-3 border border-amber-400/30">
+            Press <kbd class="px-2 py-0.5 bg-amber-500/30 rounded text-amber-200 font-bold">E</kbd> or Tap to Interact!
+        </div>
+        <div class="hud-glass px-5 py-2.5 rounded-2xl text-slate-300 text-xs shadow-2xl flex items-center space-x-4">
+            <span>🐾 <b>WASD / Arrow Keys</b> to Walk</span>
+            <span>✨ <b>Shift</b> to Run</span>
+            <span>💤 <b>E / Click</b> Action</span>
+            <span>🐱 <b>M</b> Meow</span>
+        </div>
+    </div>
+
+    <!-- Mobile Virtual Joystick -->
+    <div id="virtual-joystick">
+        <div id="joystick-knob"></div>
+    </div>
+
+    <script>
+        let audioCtx = null;
+        let masterGain = null;
+        let windGain = null;
+        let oceanGain = null;
+        let rainGain = null;
+        let purrGain = null;
+        let purrOsc = null;
+        let isAudioStarted = false;
+        let isPurringActive = false;
+
+        function initAudioSystem() {
+            if (isAudioStarted && audioCtx) {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                return;
+            }
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                masterGain = audioCtx.createGain();
+                masterGain.gain.setValueAtTime(0.7, audioCtx.currentTime);
+                masterGain.connect(audioCtx.destination);
+
+                const bufferSize = audioCtx.sampleRate * 2;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+
+                const windNoise = audioCtx.createBufferSource();
+                windNoise.buffer = noiseBuffer;
+                windNoise.loop = true;
+
+                const windFilter = audioCtx.createBiquadFilter();
+                windFilter.type = 'bandpass';
+                windFilter.frequency.setValueAtTime(320, audioCtx.currentTime);
+                windFilter.Q.setValueAtTime(1.5, audioCtx.currentTime);
+
+                windGain = audioCtx.createGain();
+                windGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+
+                windNoise.connect(windFilter);
+                windFilter.connect(windGain);
+                windGain.connect(masterGain);
+                windNoise.start();
+
+                const oceanNoise = audioCtx.createBufferSource();
+                oceanNoise.buffer = noiseBuffer;
+                oceanNoise.loop = true;
+
+                const oceanFilter = audioCtx.createBiquadFilter();
+                oceanFilter.type = 'lowpass';
+                oceanFilter.frequency.setValueAtTime(450, audioCtx.currentTime);
+
+                const oceanLfo = audioCtx.createOscillator();
+                oceanLfo.frequency.setValueAtTime(0.12, audioCtx.currentTime);
+
+                const oceanLfoGain = audioCtx.createGain();
+                oceanLfoGain.gain.setValueAtTime(300, audioCtx.currentTime);
+
+                oceanLfo.connect(oceanLfoGain);
+                oceanLfoGain.connect(oceanFilter.frequency);
+                oceanLfo.start();
+
+                oceanGain = audioCtx.createGain();
+                oceanGain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+
+                oceanNoise.connect(oceanFilter);
+                oceanFilter.connect(oceanGain);
+                oceanGain.connect(masterGain);
+                oceanNoise.start();
+
+                const rainNoise = audioCtx.createBufferSource();
+                rainNoise.buffer = noiseBuffer;
+                rainNoise.loop = true;
+
+                const rainFilter = audioCtx.createBiquadFilter();
+                rainFilter.type = 'highpass';
+                rainFilter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+
+                rainGain = audioCtx.createGain();
+                rainGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+                rainNoise.connect(rainFilter);
+                rainFilter.connect(rainGain);
+                rainGain.connect(masterGain);
+                rainNoise.start();
+
+                setInterval(() => {
+                    if (!isAudioStarted || !audioCtx) return;
+                    playRealisticSeagullCall();
+                }, 12000 + Math.random() * 18000);
+
+                isAudioStarted = true;
+                const statusText = document.getElementById('audio-status-text');
+                if (statusText) statusText.textContent = 'Audio Active 🔊';
+            } catch (e) {
+                console.warn("Audio context initialization error:", e);
+            }
+        }
+
+        document.getElementById('audio-toggle-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            initAudioSystem();
+        });
+
+        window.addEventListener('pointerdown', () => {
+            if (!isAudioStarted) initAudioSystem();
+        }, { once: true });
+
+        function playRealisticSeagullCall() {
+            try {
+                const now = audioCtx.currentTime;
+                for (let k = 0; k < 2; k++) {
+                    const timeOffset = k * 0.18;
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+
+                    osc.type = 'sawtooth';
+                    const baseFreq = 1200 + Math.random() * 300;
+                    osc.frequency.setValueAtTime(baseFreq, now + timeOffset);
+                    osc.frequency.linearRampToValueAtTime(baseFreq - 350, now + timeOffset + 0.12);
+                    osc.frequency.linearRampToValueAtTime(baseFreq + 200, now + timeOffset + 0.25);
+
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(1800, now + timeOffset);
+                    filter.Q.setValueAtTime(3.0, timeOffset);
+
+                    gain.gain.setValueAtTime(0.0, now + timeOffset);
+                    gain.gain.linearRampToValueAtTime(0.06, now + timeOffset + 0.04);
+                    gain.gain.linearRampToValueAtTime(0.0, now + timeOffset + 0.28);
+
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(masterGain);
+
+                    osc.start(now + timeOffset);
+                    osc.stop(now + timeOffset + 0.28);
+                }
+            } catch (e) {}
+        }
+
+        function playCatMeowSound() {
+            if (!isAudioStarted || !audioCtx) initAudioSystem();
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(450, now);
+                osc.frequency.linearRampToValueAtTime(750, now + 0.15);
+                osc.frequency.linearRampToValueAtTime(620, now + 0.3);
+                osc.frequency.linearRampToValueAtTime(400, now + 0.5);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1200, now);
+
+                gain.gain.setValueAtTime(0.0, now);
+                gain.gain.linearRampToValueAtTime(0.15, now + 0.1);
+                gain.gain.linearRampToValueAtTime(0.0, now + 0.52);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(masterGain);
+
+                osc.start(now);
+                osc.stop(now + 0.52);
+            } catch (e) {}
+        }
+
+        function playCollectibleSound() {
+            if (!isAudioStarted || !audioCtx) initAudioSystem();
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, now); // D5
+                osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.3); // D6
+
+                gain.gain.setValueAtTime(0.0, now);
+                gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+                gain.gain.linearRampToValueAtTime(0.0, now + 0.4);
+
+                osc.connect(gain);
+                gain.connect(masterGain);
+
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } catch (e) {}
+        }
+
+        function triggerOccasionalPurr() {
+            if (!isAudioStarted || !audioCtx || purrOsc || isPurringActive) return;
+            try {
+                isPurringActive = true;
+                const now = audioCtx.currentTime;
+                purrOsc = audioCtx.createOscillator();
+                const lfo = audioCtx.createOscillator();
+                const lfoGain = audioCtx.createGain();
+                purrGain = audioCtx.createGain();
+
+                purrOsc.type = 'sawtooth';
+                purrOsc.frequency.setValueAtTime(28, audioCtx.currentTime);
+
+                lfo.frequency.setValueAtTime(24, audioCtx.currentTime);
+                lfoGain.gain.setValueAtTime(15, audioCtx.currentTime);
+
+                lfo.connect(purrOsc.frequency);
+
+                purrGain.gain.setValueAtTime(0.0, now);
+                purrGain.gain.linearRampToValueAtTime(0.06, now + 0.5);
+
+                purrOsc.connect(purrGain);
+                purrGain.connect(masterGain);
+
+                purrOsc.start();
+                lfo.start();
+
+                const duration = 4000 + Math.random() * 3000;
+                setTimeout(() => {
+                    stopPurring();
+                    setTimeout(() => { isPurringActive = false; }, 15000);
+                }, duration);
+            } catch (e) {
+                isPurringActive = false;
+            }
+        }
+
+        function stopPurring() {
+            if (!purrOsc || !audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                if (purrGain) {
+                    purrGain.gain.linearRampToValueAtTime(0.0, now + 0.5);
+                }
+                setTimeout(() => {
+                    if (purrOsc) {
+                        purrOsc.stop();
+                        purrOsc.disconnect();
+                        purrOsc = null;
+                    }
+                }, 500);
+            } catch (e) {
+                purrOsc = null;
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'm' || e.key === 'M') {
+                playCatMeowSound();
+            }
+        });
+
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        
+        const skyColors = {
+            day: new THREE.Color(0x38bdf8),
+            dusk: new THREE.Color(0x4c1d95),
+            night: new THREE.Color(0x050814),
+            storm: new THREE.Color(0x0f172a)
+        };
+
+        scene.background = new THREE.Color(skyColors.dusk);
+        scene.fog = new THREE.FogExp2(skyColors.dusk.getHex(), 0.0075);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        container.appendChild(renderer.domElement);
+
+        const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x1e293b, 1.2);
+        scene.add(hemiLight);
+
+        const ambientLight = new THREE.AmbientLight(0x1a233a, 0.8);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfff5e6, 2.2);
+        sunLight.position.set(60, 90, 45);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 250;
+        const d = 70;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.bias = -0.0005;
+        scene.add(sunLight);
+
+        const celestialGroup = new THREE.Group();
+        scene.add(celestialGroup);
+
+        const sunGeo = new THREE.SphereGeometry(6, 16, 16);
+        const matSun = new THREE.MeshBasicMaterial({ color: 0xffedd5 });
+        const sunMesh = new THREE.Mesh(sunGeo, matSun);
+        celestialGroup.add(sunMesh);
+
+        const sunGlowGeo = new THREE.SphereGeometry(8.5, 16, 16);
+        const matSunGlow = new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending });
+        const sunGlowMesh = new THREE.Mesh(sunGlowGeo, matSunGlow);
+        sunMesh.add(sunGlowMesh);
+
+        const moonGeo = new THREE.SphereGeometry(4.5, 16, 16);
+        const matMoon = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.8, emissive: 0x94a3b8, emissiveIntensity: 0.2, flatShading: true });
+        const moonMesh = new THREE.Mesh(moonGeo, matMoon);
+        celestialGroup.add(moonMesh);
+
+        const matGround = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.85, flatShading: true });
+        const matCliff = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8, flatShading: true });
+        const matCliffHighlight = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8, flatShading: true });
+        const matSand = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.9, flatShading: true });
+        const matSandDune = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.95, flatShading: true });
+        const matTrack = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7, flatShading: true });
+        const matGuardrail = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.3, roughness: 0.2, flatShading: true });
+        
+        const matPalmTrunk = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9, flatShading: true });
+        const matPalmLeaf = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8, flatShading: true });
+        const matPineTrunk = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9, flatShading: true });
+        const matPineLeaf = new THREE.MeshStandardMaterial({ color: 0x064e3b, roughness: 0.8, flatShading: true });
+        const matBush = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.9, flatShading: true });
+
+        const matWood = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.8, flatShading: true });
+        const matRoof = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.5, flatShading: true });
+        const matWall = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.6, flatShading: true });
+        const matBridge = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.7, flatShading: true });
+
+        const matLighthouseBase = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3, flatShading: true });
+        const matLighthouseStripe = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3, flatShading: true });
+        const matCloud = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.9, flatShading: true, transparent: true, opacity: 0.85 });
+
+        const islandGroup = new THREE.Group();
+        scene.add(islandGroup);
+
+        const baseGeo = new THREE.CylinderGeometry(38, 44, 8, 16);
+        const posB = baseGeo.attributes.position;
+        for (let i = 0; i < posB.count; i++) {
+            let vx = posB.getX(i);
+            let vz = posB.getZ(i);
+            if (vx !== 0 || vz !== 0) {
+                const noise = (Math.sin(i * 123) * 3);
+                posB.setX(i, vx + noise);
+                posB.setZ(i, vz + noise);
+            }
+        }
+        baseGeo.computeVertexNormals();
+        const baseMesh = new THREE.Mesh(baseGeo, matCliff);
+        baseMesh.position.y = -4;
+        baseMesh.receiveShadow = true;
+        baseMesh.castShadow = true;
+        islandGroup.add(baseMesh);
+
+        for (let t = 0; t < 4; t++) {
+            const tierGeo = new THREE.CylinderGeometry(35 - t * 2.5, 37 - t * 2.5, 5, 18);
+            const pos = tierGeo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                let vx = pos.getX(i);
+                let vz = pos.getZ(i);
+                if (vx !== 0 || vz !== 0) {
+                    const noise = (Math.sin(i * 88 + t * 10) * 2.5);
+                    pos.setX(i, vx + noise);
+                    pos.setZ(i, vz + noise);
+                }
+            }
+            tierGeo.computeVertexNormals();
+            const tierMesh = new THREE.Mesh(tierGeo, t % 2 === 0 ? matCliff : matCliffHighlight);
+            tierMesh.position.y = t * 4 - 2;
+            tierMesh.castShadow = true;
+            tierMesh.receiveShadow = true;
+            islandGroup.add(tierMesh);
+        }
+
+        const plateauGeo = new THREE.CylinderGeometry(30, 31, 2.5, 18);
+        const posP = plateauGeo.attributes.position;
+        for (let i = 0; i < posP.count; i++) {
+            let vx = posP.getX(i);
+            let vz = posP.getZ(i);
+            if (vx !== 0 || vz !== 0) {
+                const noise = (Math.cos(i * 45) * 2);
+                posP.setX(i, vx + noise);
+                posP.setZ(i, vz + noise);
+            }
+        }
+        plateauGeo.computeVertexNormals();
+        const plateauMesh = new THREE.Mesh(plateauGeo, matGround);
+        plateauMesh.position.y = 11.5;
+        plateauMesh.receiveShadow = true;
+        plateauMesh.castShadow = true;
+        islandGroup.add(plateauMesh);
+
+        const beachGeo = new THREE.CylinderGeometry(14, 18, 2, 12);
+        const beachMesh = new THREE.Mesh(beachGeo, matSand);
+        beachMesh.position.set(22, 0, 18);
+        beachMesh.rotation.z = -0.1;
+        beachMesh.receiveShadow = true;
+        islandGroup.add(beachMesh);
+
+        for (let d = 0; d < 6; d++) {
+            const duneGeo = new THREE.SphereGeometry(3.5 + Math.random() * 2, 7, 5);
+            duneGeo.scale(1.5, 0.4, 1.0);
+            const duneMesh = new THREE.Mesh(duneGeo, matSandDune);
+            const angDune = (d / 6) * Math.PI * 2;
+            duneMesh.position.set(24 + Math.cos(angDune) * 6, -0.2, 18 + Math.sin(angDune) * 6);
+            duneMesh.rotation.y = Math.random() * Math.PI;
+            duneMesh.receiveShadow = true;
+            islandGroup.add(duneMesh);
+        }
+
+        const worldBoulders = [];
+        const matBoulder = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.85, flatShading: true });
+        for (let b = 0; b < 10; b++) {
+            const radius = 0.8 + Math.random() * 1.2;
+            const boulderGeo = new THREE.DodecahedronGeometry(radius, 1);
+            const boulder = new THREE.Mesh(boulderGeo, matBoulder);
+            const angB = Math.random() * Math.PI * 2;
+            const rB = 28 + Math.random() * 8;
+            const bx = Math.cos(angB) * rB;
+            const bz = Math.sin(angB) * rB;
+            boulder.position.set(bx, 0.5, bz);
+            boulder.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            boulder.castShadow = true;
+            boulder.receiveShadow = true;
+            islandGroup.add(boulder);
+            worldBoulders.push({ x: bx, z: bz, radius: radius * 1.1 });
+        }
+
+        const cottageGroup = new THREE.Group();
+        cottageGroup.position.set(12, 12.8, 8);
+        cottageGroup.rotation.y = -Math.PI / 4;
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(5, 4, 4), matWall);
+        body.position.y = 2;
+        body.castShadow = true;
+        body.receiveShadow = true;
+        cottageGroup.add(body);
+
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(4.2, 3, 4), matRoof);
+        roof.position.y = 5.5;
+        roof.rotation.y = Math.PI / 4;
+        roof.castShadow = true;
+        cottageGroup.add(roof);
+
+        const matWindowGlow = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+        const window1 = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.2), matWindowGlow);
+        window1.position.set(0, 2.2, 2.01);
+        cottageGroup.add(window1);
+
+        const cottageLight = new THREE.PointLight(0xfb923c, 2.5, 15);
+        cottageLight.position.set(0, 2.5, 2.5);
+        cottageGroup.add(cottageLight);
+
+        const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.5, 0.8), matBridge);
+        chimney.position.set(1.5, 5, -0.8);
+        chimney.castShadow = true;
+        cottageGroup.add(chimney);
+        islandGroup.add(cottageGroup);
+
+        const smokeCount = 18;
+        const smokeGeo = new THREE.DodecahedronGeometry(0.3, 0);
+        const matSmoke = new THREE.MeshBasicMaterial({ color: 0xcbd5e1, transparent: true, opacity: 0.35 });
+        const smokeParticles = [];
+        for (let i = 0; i < smokeCount; i++) {
+            const sm = new THREE.Mesh(smokeGeo, matSmoke);
+            sm.position.set(13.5, 19 + i * 0.4, 7.2);
+            sm.userData = { offset: i * 0.5, speed: 0.8 + Math.random() * 0.4 };
+            scene.add(sm);
+            smokeParticles.push(sm);
+        }
+
+        const bridgeGroup = new THREE.Group();
+        bridgeGroup.position.set(-20, 10.5, 8);
+        bridgeGroup.rotation.y = Math.PI / 4;
+        
+        const bridgeDeckGeo = new THREE.BoxGeometry(6, 1.2, 16);
+        const bridgeDeck = new THREE.Mesh(bridgeDeckGeo, matBridge);
+        bridgeDeck.castShadow = true;
+        bridgeDeck.receiveShadow = true;
+        bridgeGroup.add(bridgeDeck);
+
+        const archPillar1 = new THREE.Mesh(new THREE.BoxGeometry(5.8, 12, 3), matBridge);
+        archPillar1.position.set(0, -6, -6);
+        archPillar1.castShadow = true;
+        bridgeGroup.add(archPillar1);
+
+        const archPillar2 = archPillar1.clone();
+        archPillar2.position.set(0, -6, 6);
+        bridgeGroup.add(archPillar2);
+        islandGroup.add(bridgeGroup);
+
+        const fencePosts = [];
+        const guardrailGroup = new THREE.Group();
+        islandGroup.add(guardrailGroup);
+        const railRadius = 26;
+        const railCount = 36;
+        for (let i = 0; i < railCount; i++) {
+            const angle = (i / railCount) * Math.PI * 1.6 - 0.5;
+            const x = Math.cos(angle) * railRadius;
+            const z = Math.sin(angle) * railRadius;
+            const postGeo = new THREE.BoxGeometry(0.4, 1.6, 0.4);
+            const post = new THREE.Mesh(postGeo, matGuardrail);
+            post.position.set(x, 13.8, z);
+            post.castShadow = true;
+            guardrailGroup.add(post);
+            fencePosts.push({ x: x, z: z, radius: 0.8 });
+        }
+
+        const obstacleTrees = [];
+
+        function createPalmTree(x, z, scale = 1, rotY = 0) {
+            const palm = new THREE.Group();
+            const trunkHeight = 7 * scale;
+            const trunkGeo = new THREE.CylinderGeometry(0.35 * scale, 0.6 * scale, trunkHeight, 5);
+            const trunk = new THREE.Mesh(trunkGeo, matPalmTrunk);
+            trunk.position.y = trunkHeight / 2;
+            trunk.rotation.z = 0.18;
+            trunk.castShadow = true;
+            trunk.receiveShadow = true;
+            palm.add(trunk);
+
+            const matCoconut = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9, flatShading: true });
+            for (let c = 0; c < 3; c++) {
+                const coconut = new THREE.Mesh(new THREE.SphereGeometry(0.25 * scale, 5, 5), matCoconut);
+                coconut.position.set(Math.sin(c * 2.1) * 0.4 * scale, trunkHeight - 0.5, Math.cos(c * 2.1) * 0.4 * scale);
+                coconut.castShadow = true;
+                palm.add(coconut);
+            }
+
+            const frondCount = 7;
+            for (let f = 0; f < frondCount; f++) {
+                const frondGeo = new THREE.ConeGeometry(1.5 * scale, 5 * scale, 3);
+                frondGeo.translate(0, -2.5 * scale, 0);
+                const frond = new THREE.Mesh(frondGeo, matPalmLeaf);
+                frond.position.y = trunkHeight;
+                frond.rotation.y = (f / frondCount) * Math.PI * 2;
+                frond.rotation.x = 0.65;
+                frond.castShadow = true;
+                palm.add(frond);
+            }
+            palm.position.set(x, 1.0, z);
+            palm.rotation.y = rotY;
+            islandGroup.add(palm);
+            obstacleTrees.push({ x: x, z: z, r: 0.9 * scale, object: palm });
+        }
+
+        function createPineTree(x, y, z, scale = 1) {
+            const pine = new THREE.Group();
+            const trunkHeight = 4 * scale;
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3 * scale, 0.5 * scale, trunkHeight, 5), matPineTrunk);
+            trunk.position.y = trunkHeight / 2;
+            trunk.castShadow = true;
+            pine.add(trunk);
+
+            for (let i = 0; i < 3; i++) {
+                const cone = new THREE.Mesh(new THREE.ConeGeometry((2.5 - i * 0.6) * scale, (4 - i * 0.5) * scale, 5), matPineLeaf);
+                cone.position.y = trunkHeight + (i * 1.8 * scale);
+                cone.castShadow = true;
+                pine.add(cone);
+            }
+            pine.position.set(x, y, z);
+            islandGroup.add(pine);
+            obstacleTrees.push({ x: x, z: z, r: 0.8 * scale, object: pine });
+        }
+
+        function createBush(x, y, z, scale = 1) {
+            const bushGeo = new THREE.DodecahedronGeometry(1.2 * scale, 1);
+            const bush = new THREE.Mesh(bushGeo, matBush);
+            bush.position.set(x, y, z);
+            bush.castShadow = true;
+            islandGroup.add(bush);
+        }
+
+        createPalmTree(24, 20, 1.2, 0.4);
+        createPalmTree(28, 14, 1.0, 1.2);
+        createPalmTree(18, 22, 1.1, 2.1);
+        createPalmTree(32, 22, 1.3, 0.9);
+        createPalmTree(20, 28, 0.9, 2.7);
+
+        createPineTree(-10, 12.8, -15, 1.3);
+        createPineTree(-16, 12.8, -10, 1.1);
+        createPineTree(-5, 12.8, -20, 1.4);
+        createPineTree(12, 12.8, -18, 1.0);
+        createPineTree(18, 12.8, -12, 1.2);
+
+        for (let b = 0; b < 14; b++) {
+            const angle = Math.random() * Math.PI * 2;
+            const r = 8 + Math.random() * 18;
+            createBush(Math.cos(angle) * r, 13.0, Math.sin(angle) * r, 0.6 + Math.random() * 0.6);
+        }
+
+        const fireflies = [];
+        const fireflyGeo = new THREE.SphereGeometry(0.35, 8, 8);
+        const fireflyMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+        const fireflyPositions = [
+            { x: -8, y: 14, z: -8 },
+            { x: 15, y: 15, z: 12 },
+            { x: -18, y: 13, z: 5 },
+            { x: 5, y: 14, z: -15 },
+            { x: 22, y: 3, z: 18 }
+        ];
+
+        let collectedFirefliesCount = 0;
+
+        fireflyPositions.forEach((pos, idx) => {
+            const group = new THREE.Group();
+            const mesh = new THREE.Mesh(fireflyGeo, fireflyMat);
+            group.add(mesh);
+
+            const light = new THREE.PointLight(0xfde047, 1.8, 8);
+            group.add(light);
+
+            group.position.set(pos.x, pos.y, pos.z);
+            scene.add(group);
+
+            fireflies.push({
+                mesh: group,
+                baseY: pos.y,
+                offset: idx * 1.5,
+                collected: false
+            });
+        });
+
+        const lighthouseGroup = new THREE.Group();
+        lighthouseGroup.position.set(-10, 12.8, -10);
+        islandGroup.add(lighthouseGroup);
+
+        const towerGeo = new THREE.CylinderGeometry(1.6, 2.4, 14, 8);
+        const towerMesh = new THREE.Mesh(towerGeo, matLighthouseBase);
+        towerMesh.position.y = 7;
+        towerMesh.castShadow = true;
+        towerMesh.receiveShadow = true;
+        lighthouseGroup.add(towerMesh);
+
+        const matSecretDoor = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5 });
+        const secretDoorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.6, 0.2), matSecretDoor);
+        secretDoorMesh.position.set(0, 1.5, 1.55);
+        lighthouseGroup.add(secretDoorMesh);
+
+        const matDoorPortal = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
+        const doorPortalGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.4), matDoorPortal);
+        doorPortalGlow.position.set(0, 1.5, 1.67);
+        doorPortalGlow.visible = false; // Hidden initially until revealed or interacted
+        lighthouseGroup.add(doorPortalGlow);
+
+        const stripeGeo = new THREE.CylinderGeometry(1.8, 2.0, 3, 8);
+        const stripeMesh = new THREE.Mesh(stripeGeo, matLighthouseStripe);
+        stripeMesh.position.y = 7;
+        stripeMesh.castShadow = true;
+        lighthouseGroup.add(stripeMesh);
+
+        const galleryGeo = new THREE.CylinderGeometry(2.2, 2.2, 1.0, 8);
+        const galleryMesh = new THREE.Mesh(galleryGeo, matLighthouseBase);
+        galleryMesh.position.y = 14.5;
+        galleryMesh.castShadow = true;
+        lighthouseGroup.add(galleryMesh);
+
+        const lanternGeo = new THREE.CylinderGeometry(1.5, 1.5, 2.5, 8);
+        const matLantern = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+        const lanternMesh = new THREE.Mesh(lanternGeo, matLantern);
+        lanternMesh.position.y = 16.0;
+        lighthouseGroup.add(lanternMesh);
+
+        const lighthouseLight = new THREE.PointLight(0xfef08a, 4.0, 45);
+        lighthouseLight.position.set(0, 16.0, 0);
+        lighthouseGroup.add(lighthouseLight);
+
+        const roofGeo = new THREE.ConeGeometry(2.0, 2.0, 8);
+        const roofMesh = new THREE.Mesh(roofGeo, matLighthouseStripe);
+        roofMesh.position.y = 18.0;
+        roofMesh.castShadow = true;
+        lighthouseGroup.add(roofMesh);
+
+        const beamGeo = new THREE.ConeGeometry(12, 50, 16, 1, true);
+        beamGeo.translate(0, -25, 0);
+        beamGeo.rotateX(-Math.PI / 2);
+        const matBeam = new THREE.MeshBasicMaterial({
+            color: 0xfef08a,
+            transparent: true,
+            opacity: 0.35,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const searchlightBeam = new THREE.Mesh(beamGeo, matBeam);
+        searchlightBeam.position.set(0, 16.0, 0);
+        searchlightBeam.rotation.order = 'YXZ';
+        lighthouseGroup.add(searchlightBeam);
+
+        const oceanGroup = new THREE.Group();
+        scene.add(oceanGroup);
+
+        const oceanGeo = new THREE.PlaneGeometry(400, 400, 80, 80);
+        const matOcean = new THREE.MeshStandardMaterial({
+            color: 0x0284c7,
+            roughness: 0.15,
+            metalness: 0.15,
+            flatShading: true
+        });
+        const oceanMesh = new THREE.Mesh(oceanGeo, matOcean);
+        oceanMesh.rotation.x = -Math.PI / 2;
+        oceanMesh.position.y = -1.5;
+        oceanMesh.receiveShadow = true;
+        oceanGroup.add(oceanMesh);
+
+        const foamGeo = new THREE.RingGeometry(32, 38, 48);
+        const matFoam = new THREE.MeshBasicMaterial({
+            color: 0xf8fafc,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.75
+        });
+        const foamMesh = new THREE.Mesh(foamGeo, matFoam);
+        foamMesh.rotation.x = -Math.PI / 2;
+        foamMesh.position.y = -1.2;
+        oceanGroup.add(foamMesh);
+
+        const cloudsGroup = new THREE.Group();
+        scene.add(cloudsGroup);
+
+        function createProceduralCloud() {
+            const cloud = new THREE.Group();
+            const puffCount = 4 + Math.floor(Math.random() * 4);
+            
+            for (let i = 0; i < puffCount; i++) {
+                const radius = 3.5 + Math.random() * 3.5;
+                const puffGeo = new THREE.DodecahedronGeometry(radius, 1);
+                const pos = puffGeo.attributes.position;
+                for (let j = 0; j < pos.count; j++) {
+                    const vx = pos.getX(j);
+                    const vy = pos.getY(j);
+                    const vz = pos.getZ(j);
+                    pos.setXYZ(j, vx + (Math.random() - 0.5) * 0.6, vy + (Math.random() - 0.5) * 0.6, vz + (Math.random() - 0.5) * 0.6);
+                }
+                puffGeo.computeVertexNormals();
+
+                const puff = new THREE.Mesh(puffGeo, matCloud);
+                puff.position.set(
+                    i * 3.2 - (puffCount * 1.6) + (Math.random() - 0.5),
+                    (Math.random() - 0.5) * 1.2,
+                    (Math.random() - 0.5) * 1.8
+                );
+                puff.castShadow = true;
+                cloud.add(puff);
+            }
+
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 45 + Math.random() * 50;
+            cloud.position.set(Math.cos(angle) * dist, 28 + Math.random() * 12, Math.sin(angle) * dist);
+            cloud.userData = { 
+                speed: 0.015 + Math.random() * 0.025,
+                radius: dist,
+                angle: angle
+            };
+            return cloud;
+        }
+
+        const clouds = [];
+        for (let c = 0; c < 12; c++) {
+            const cloud = createProceduralCloud();
+            cloudsGroup.add(cloud);
+            clouds.push(cloud);
+        }
+
+        const rainCount = 1800;
+        const rainGeo = new THREE.BufferGeometry();
+        const rainPositions = new Float32Array(rainCount * 3);
+        const rainVelocities = new Float32Array(rainCount);
+
+        for (let i = 0; i < rainCount; i++) {
+            rainPositions[i * 3] = (Math.random() - 0.5) * 160;
+            rainPositions[i * 3 + 1] = Math.random() * 80;
+            rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 160;
+            rainVelocities[i] = 0.8 + Math.random() * 1.0;
+        }
+
+        rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+        const matRain = new THREE.PointsMaterial({
+            color: 0x93c5fd,
+            size: 0.45,
+            transparent: true,
+            opacity: 0,
+            blending: THREE.AdditiveBlending
+        });
+        const rainSystem = new THREE.Points(rainGeo, matRain);
+        scene.add(rainSystem);
+
+        const shipsGroup = new THREE.Group();
+        scene.add(shipsGroup);
+        const activeShips = [];
+
+        function createDistantShip() {
+            const ship = new THREE.Group();
+            const isSailboat = Math.random() > 0.4;
+
+            if (isSailboat) {
+                const hullMesh = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.2, 6.0), matWood);
+                hullMesh.position.y = 0.6;
+                hullMesh.castShadow = true;
+                ship.add(hullMesh);
+
+                const mastMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 6, 5), matWood);
+                mastMesh.position.set(0, 3.5, 0.5);
+                ship.add(mastMesh);
+
+                const sailGeo = new THREE.ConeGeometry(2.2, 4.5, 3);
+                sailGeo.rotateY(Math.PI / 2);
+                const sailMesh = new THREE.Mesh(sailGeo, matLighthouseBase);
+                sailMesh.position.set(0, 4.0, 0.2);
+                sailMesh.castShadow = true;
+                ship.add(sailMesh);
+            } else {
+                const cargoHull = new THREE.Mesh(new THREE.BoxGeometry(4.0, 2.2, 12.0), matTrack);
+                cargoHull.position.y = 1.0;
+                cargoHull.castShadow = true;
+                ship.add(cargoHull);
+
+                const cabinMesh = new THREE.Mesh(new THREE.BoxGeometry(3.5, 3.0, 3.0), matLighthouseBase);
+                cabinMesh.position.set(0, 2.5, -3.5);
+                ship.add(cabinMesh);
+
+                const funnelMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 2.0, 6), matLighthouseStripe);
+                funnelMesh.position.set(0, 4.5, -3.5);
+                ship.add(funnelMesh);
+
+                const matContainer1 = new THREE.MeshStandardMaterial({ color: 0xef4444, flatShading: true });
+                const matContainer2 = new THREE.MeshStandardMaterial({ color: 0x3b82f6, flatShading: true });
+                
+                const c1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 3.5), matContainer1);
+                c1.position.set(-0.8, 2.3, 1.5);
+                ship.add(c1);
+
+                const c2 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 3.5), matContainer2);
+                c2.position.set(0.8, 2.3, 1.5);
+                ship.add(c2);
+            }
+
+            const startAngle = Math.random() * Math.PI * 2;
+            const distance = 110 + Math.random() * 40;
+            const tangentAngle = startAngle + (Math.random() > 0.5 ? Math.PI / 2 : -Math.PI / 2);
+            
+            ship.position.set(Math.cos(startAngle) * distance, -0.8, Math.sin(startAngle) * distance);
+            
+            const speed = 3.5 + Math.random() * 4.0;
+            const dir = new THREE.Vector3(Math.cos(tangentAngle), 0, Math.sin(tangentAngle)).normalize();
+            
+            ship.rotation.y = Math.atan2(dir.x, dir.z);
+            ship.userData = { direction: dir, speed: speed, lifespan: 0, maxLifespan: 140 };
+
+            shipsGroup.add(ship);
+            activeShips.push(ship);
+        }
+
+        createDistantShip();
+        let shipSpawnTimer = 0;
+
+        let currentWeather = 'clear';
+        let weatherTimer = 0;
+        let weatherDuration = 25 + Math.random() * 35;
+
+        function updateProceduralWeather(delta) {
+            weatherTimer += delta;
+            if (weatherTimer >= weatherDuration) {
+                weatherTimer = 0;
+                weatherDuration = 30 + Math.random() * 40;
+
+                const rand = Math.random();
+                if (currentWeather === 'clear') {
+                    currentWeather = rand < 0.7 ? 'rain' : 'storm';
+                } else if (currentWeather === 'rain') {
+                    currentWeather = rand < 0.6 ? 'clear' : 'storm';
+                } else {
+                    currentWeather = rand < 0.7 ? 'rain' : 'clear';
+                }
+            }
+
+            if (isAudioStarted && audioCtx) {
+                const now = audioCtx.currentTime;
+                if (currentWeather === 'storm') {
+                    windGain.gain.setTargetAtTime(0.32, now, 2.0);
+                    oceanGain.gain.setTargetAtTime(0.55, now, 2.0);
+                    rainGain.gain.setTargetAtTime(0.28, now, 2.0);
+                } else if (currentWeather === 'rain') {
+                    windGain.gain.setTargetAtTime(0.18, now, 2.0);
+                    oceanGain.gain.setTargetAtTime(0.38, now, 2.0);
+                    rainGain.gain.setTargetAtTime(0.15, now, 2.0);
+                } else {
+                    windGain.gain.setTargetAtTime(0.10, now, 2.0);
+                    oceanGain.gain.setTargetAtTime(0.30, now, 2.0);
+                    rainGain.gain.setTargetAtTime(0.0, now, 2.0);
+                }
+            }
+        }
+
+        const catGroup = new THREE.Group();
+        catGroup.position.set(0, 13.0, 10);
+        scene.add(catGroup);
+
+        const matCatBody = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.6, flatShading: true });
+        const matCatWhite = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.6, flatShading: true });
+        const matCatDark = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5, flatShading: true });
+
+        const catTorso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 1.4), matCatBody);
+        catTorso.position.y = 0.5;
+        catTorso.castShadow = true;
+        catGroup.add(catTorso);
+
+        const catChest = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.5, 0.5), matCatWhite);
+        catChest.position.set(0, 0.45, 0.5);
+        catGroup.add(catChest);
+
+        const headGroup = new THREE.Group();
+        headGroup.position.set(0, 0.85, 0.75);
+        catGroup.add(headGroup);
+
+        const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.75, 0.75), matCatBody);
+        headMesh.castShadow = true;
+        headGroup.add(headMesh);
+
+        const snoutMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.25, 0.3), matCatWhite);
+        snoutMesh.position.set(0, -0.15, 0.4);
+        headGroup.add(snoutMesh);
+
+        const noseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.08), matCatDark);
+        noseMesh.position.set(0, -0.05, 0.55);
+        headGroup.add(noseMesh);
+
+        const earGeo = new THREE.ConeGeometry(0.22, 0.35, 3);
+        const earL = new THREE.Mesh(earGeo, matCatBody);
+        earL.position.set(0.32, 0.52, 0);
+        headGroup.add(earL);
+
+        const earR = earL.clone();
+        earR.position.x = -0.32;
+        headGroup.add(earR);
+
+        const eyeGeo = new THREE.BoxGeometry(0.12, 0.12, 0.08);
+        const eyeL = new THREE.Mesh(eyeGeo, matCatDark);
+        eyeL.position.set(0.25, 0.1, 0.38);
+        headGroup.add(eyeL);
+
+        const eyeR = eyeL.clone();
+        eyeR.position.x = -0.25;
+        headGroup.add(eyeR);
+
+        const tailGroup = new THREE.Group();
+        tailGroup.position.set(0, 0.5, -0.7);
+        catGroup.add(tailGroup);
+
+        const tailSegment1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.5), matCatBody);
+        tailSegment1.position.set(0, 0.2, -0.2);
+        tailSegment1.rotation.x = -0.4;
+        tailSegment1.castShadow = true;
+        tailGroup.add(tailSegment1);
+
+        const tailSegment2 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.5), matCatBody);
+        tailSegment2.position.set(0, 0.45, -0.5);
+        tailSegment2.rotation.x = -0.8;
+        tailSegment2.castShadow = true;
+        tailGroup.add(tailSegment2);
+
+        const createLeg = (x, z) => {
+            const legGroup = new THREE.Group();
+            legGroup.position.set(x, 0.45, z);
+            
+            const upperLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.35, 0.2), matCatBody);
+            upperLeg.position.y = -0.175;
+            upperLeg.castShadow = true;
+            legGroup.add(upperLeg);
+
+            const paw = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.15, 0.28), matCatWhite);
+            paw.position.set(0, -0.38, 0.05);
+            paw.castShadow = true;
+            legGroup.add(paw);
+
+            catGroup.add(legGroup);
+            return legGroup;
+        };
+
+        const legFL = createLeg(0.35, 0.45);
+        const legFR = createLeg(-0.35, 0.45);
+        const legBL = createLeg(0.35, -0.45);
+        const legBR = createLeg(-0.35, -0.45);
+
+        const keys = {};
+        let touchMoveDir = new THREE.Vector2(0, 0);
+
+        const setKey = (code, value) => {
+            if (!code) return;
+            keys[code] = value;
+            keys[code.toLowerCase()] = value;
+            if (code === 'ArrowUp' || code === 'w' || code === 'W') { keys['w'] = value; keys['arrowup'] = value; }
+            if (code === 'ArrowDown' || code === 's' || code === 'S') { keys['s'] = value; keys['arrowdown'] = value; }
+            if (code === 'ArrowLeft' || code === 'a' || code === 'A') { keys['a'] = value; keys['arrowleft'] = value; }
+            if (code === 'ArrowRight' || code === 'd' || code === 'D') { keys['d'] = value; keys['arrowright'] = value; }
+            if (code === ' ') { keys[' '] = value; keys['space'] = value; }
+        };
+
+        window.addEventListener('keydown', (e) => {
+            setKey(e.key, true);
+            if (e.key === 'e' || e.key === 'E') {
+                triggerCatAction();
+            }
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            setKey(e.key, false);
+        });
+        
+        window.addEventListener('blur', () => {
+            Object.keys(keys).forEach(k => keys[k] = false);
+            touchMoveDir.set(0, 0);
+        });
+
+        // Setup Virtual Joystick for touch users
+        const joystickEl = document.getElementById('virtual-joystick');
+        const knobEl = document.getElementById('joystick-knob');
+        let joystickTouchId = null;
+        let joystickCenter = { x: 0, y: 0 };
+
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            joystickEl.style.display = 'flex';
+        }
+
+        joystickEl.addEventListener('touchstart', (e) => {
+            if (joystickTouchId !== null) return;
+            const touch = e.changedTouches[0];
+            joystickTouchId = touch.identifier;
+            const rect = joystickEl.getBoundingClientRect();
+            joystickCenter.x = rect.left + rect.width / 2;
+            joystickCenter.y = rect.top + rect.height / 2;
+            updateJoystick(touch.clientX, touch.clientY);
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (joystickTouchId === null) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === joystickTouchId) {
+                    updateJoystick(touch.clientX, touch.clientY);
+                    break;
+                }
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', (e) => {
+            if (joystickTouchId === null) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === joystickTouchId) {
+                    joystickTouchId = null;
+                    touchMoveDir.set(0, 0);
+                    knobEl.style.transform = `translate(0px, 0px)`;
+                    break;
+                }
+            }
+        }, { passive: true });
+
+        function updateJoystick(clientX, clientY) {
+            const maxDist = 40;
+            let dx = clientX - joystickCenter.x;
+            let dy = clientY - joystickCenter.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > maxDist) {
+                dx = (dx / dist) * maxDist;
+                dy = (dy / dist) * maxDist;
+            }
+
+            knobEl.style.transform = `translate(${dx}px, ${dy}px)`;
+            touchMoveDir.set(dx / maxDist, dy / maxDist);
+        }
+
+        let currentCatAction = 'normal'; // 'normal', 'scratching', 'sleeping', 'pawing'
+        let actionTimer = 0;
+
+        let inDreamcoreLevel = false;
+        const dreamcoreGroup = new THREE.Group();
+        dreamcoreGroup.visible = false;
+        scene.add(dreamcoreGroup);
+
+        const dreamcorePlatforms = [];
+        const dreamcoreHazards = [];
+        const dreamcoreBouncers = [];
+        let dreamcoreCheckpoints = [];
+        let currentCheckpointIdx = 0;
+        let dreamcoreExitPortal = null;
+
+        function buildDreamcoreLevel() {
+            // Dreamcore sky & fog transition values
+            const matDreamWall = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.2, flatShading: true });
+            const matDreamPink = new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.4, flatShading: true });
+            const matDreamGold = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.3, metalness: 0.2 });
+            const matDreamChecker = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.8, flatShading: true });
+            const matDreamHazard = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x7f1d1d, roughness: 0.2 });
+            const matDreamBounce = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x064e3b, roughness: 0.1 });
+
+            // Starting Platform
+            const startPlat = new THREE.Mesh(new THREE.BoxGeometry(8, 1, 8), matDreamWall);
+            startPlat.position.set(0, 0, 0);
+            startPlat.receiveShadow = true;
+            dreamcoreGroup.add(startPlat);
+            dreamcorePlatforms.push(startPlat);
+
+            // Floating surreal corridors & vertical towers (~5 mins challenge path)
+            const pathSegments = [
+                { type: 'box', pos: [0, 3, -12], size: [5, 1, 5], mat: matDreamPink },
+                { type: 'box', pos: [-6, 6, -20], size: [4, 1, 4], mat: matDreamGold },
+                { type: 'box', pos: [-14, 9, -20], size: [3, 1, 8], mat: matDreamChecker },
+                { type: 'bouncer', pos: [-20, 10, -20], size: [3, 0.5, 3] },
+                { type: 'box', pos: [-20, 18, -10], size: [4, 1, 4], mat: matDreamWall },
+                { type: 'moving', pos: [-20, 21, 0], size: [4, 1, 3], range: 6, axis: 'x', mat: matDreamPink },
+                { type: 'box', pos: [-20, 24, 10], size: [5, 1, 5], mat: matDreamGold },
+                // Section 2: Rotating gear obstacles & precision jumping
+                { type: 'box', pos: [-10, 27, 18], size: [4, 1, 4], mat: matDreamChecker },
+                { type: 'hazard', pos: [-5, 27, 18], size: [3, 0.4, 1] },
+                { type: 'box', pos: [0, 30, 18], size: [4, 1, 4], mat: matDreamWall },
+                { type: 'box', pos: [10, 33, 18], size: [3, 1, 3], mat: matDreamPink },
+                { type: 'bouncer', pos: [18, 33, 18], size: [3, 0.5, 3] },
+                { type: 'box', pos: [26, 41, 18], size: [5, 1, 5], mat: matDreamGold },
+                // Section 3: The Endless Cloud Staircase & Labyrinth
+                { type: 'box', pos: [26, 44, 10], size: [3, 1, 3], mat: matDreamChecker },
+                { type: 'box', pos: [26, 47, 2], size: [3, 1, 3], mat: matDreamWall },
+                { type: 'box', pos: [26, 50, -6], size: [3, 1, 3], mat: matDreamPink },
+                { type: 'moving', pos: [16, 53, -12], size: [4, 1, 3], range: 8, axis: 'z', mat: matDreamGold },
+                { type: 'box', pos: [6, 56, -18], size: [4, 1, 4], mat: matDreamChecker },
+                // Section 4: Final Tower Ascent to Exit Portal
+                { type: 'box', pos: [-2, 60, -25], size: [6, 1, 6], mat: matDreamWall },
+                { type: 'box', pos: [-2, 66, -35], size: [4, 1, 8], mat: matDreamPink }
+            ];
+
+            pathSegments.forEach((seg, idx) => {
+                if (seg.type === 'box') {
+                    const m = new THREE.Mesh(new THREE.BoxGeometry(...seg.size), seg.mat);
+                    m.position.set(...seg.pos);
+                    m.receiveShadow = true;
+                    m.castShadow = true;
+                    dreamcoreGroup.add(m);
+                    dreamcorePlatforms.push(m);
+                } else if (seg.type === 'bouncer') {
+                    const b = new THREE.Mesh(new THREE.BoxGeometry(...seg.size), matDreamBounce);
+                    b.position.set(...seg.pos);
+                    b.receiveShadow = true;
+                    dreamcoreGroup.add(b);
+                    dreamcoreBouncers.push(b);
+                } else if (seg.type === 'hazard') {
+                    const h = new THREE.Mesh(new THREE.BoxGeometry(...seg.size), matDreamHazard);
+                    h.position.set(...seg.pos);
+                    dreamcoreGroup.add(h);
+                    dreamcoreHazards.push(h);
+                } else if (seg.type === 'moving') {
+                    const m = new THREE.Mesh(new THREE.BoxGeometry(...seg.size), seg.mat);
+                    m.position.set(...seg.pos);
+                    m.userData = { basePos: new THREE.Vector3(...seg.pos), range: seg.range, axis: seg.axis, speed: 2.5, offset: idx };
+                    dreamcoreGroup.add(m);
+                    dreamcorePlatforms.push(m);
+                }
+            });
+
+            // Exit Portal at the top of the Dreamcore level
+            const portalGeo = new THREE.TorusGeometry(2.2, 0.3, 16, 32);
+            const portalMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+            dreamcoreExitPortal = new THREE.Mesh(portalGeo, portalMat);
+            dreamcoreExitPortal.position.set(-2, 70, -35);
+            dreamcoreGroup.add(dreamcoreExitPortal);
+
+            const portalLight = new THREE.PointLight(0x38bdf8, 3.5, 15);
+            portalLight.position.set(-2, 70, -35);
+            dreamcoreGroup.add(portalLight);
+        }
+
+        buildDreamcoreLevel();
+
+        function triggerCatAction() {
+            if (currentCatAction !== 'normal') {
+                currentCatAction = 'normal';
+                const prompt = document.getElementById('interaction-prompt');
+                if (prompt) prompt.style.opacity = '0';
+                return;
+            }
+
+            const pPos = player.pos;
+            const distCottage = Math.hypot(pPos.x - 12, pPos.z - 8);
+            const distLighthouseDoor = Math.hypot(pPos.x - (-10), pPos.z - (-8.45)); // Near lighthouse door base
+            const distWater = pPos.y < 0.5 || pPos.z > 20;
+
+            if (distLighthouseDoor < 3.5 && !inDreamcoreLevel) {
+                // Enter Dreamcore Level!
+                inDreamcoreLevel = true;
+                player.pos.set(0, 2, 0);
+                player.vel.set(0, 0, 0);
+                scene.background.setHex(0x0f172a);
+                scene.fog.color.setHex(0x0f172a);
+                dreamcoreGroup.visible = true;
+                islandGroup.visible = false;
+                playCollectibleSound();
+                showNotification("✨ Welcome to Dreamcore Level 1: The Surreal Ascent! Reach the portal!");
+            } else if (inDreamcoreLevel && Math.hypot(pPos.x - (-2), pPos.z - (-35)) < 4.0 && pPos.y > 67) {
+                // Exit Dreamcore Level back to Seaside
+                inDreamcoreLevel = false;
+                player.pos.set(-10, 13.0, -6);
+                player.vel.set(0, 0, 0);
+                dreamcoreGroup.visible = false;
+                islandGroup.visible = true;
+                playCollectibleSound();
+                showNotification("🎉 Level Cleared! Welcome back to Seaside Explorer!");
+            } else if (distCottage < 4.0) {
+                currentCatAction = 'sleeping';
+                actionTimer = 5.0;
+                playCatMeowSound();
+            } else if (distWater) {
+                currentCatAction = 'pawing';
+                actionTimer = 3.0;
+            } else {
+                currentCatAction = 'scratching';
+                actionTimer = 3.5;
+            }
+        }
+
+        function showNotification(text) {
+            const prompt = document.getElementById('interaction-prompt');
+            if (prompt) {
+                prompt.innerHTML = text;
+                prompt.style.opacity = '1';
+                setTimeout(() => {
+                    prompt.style.opacity = '0';
+                    setTimeout(() => {
+                        prompt.innerHTML = 'Press <kbd class="px-2 py-0.5 bg-amber-500/30 rounded text-amber-200 font-bold">E</kbd> or Tap to Interact!';
+                    }, 500);
+                }, 4500);
+            }
+        }
+
+        const player = {
+            pos: new THREE.Vector3(0, 13.0, 10),
+            vel: new THREE.Vector3(0, 0, 0),
+            radius: 0.65,
+            isGrounded: true,
+            walkSpeed: 10.0,
+            runSpeed: 18.0,
+            acceleration: 45.0,
+            friction: 24.0,
+            jumpForce: 15.0,
+            gravity: -45.0,
+            verticalVelocity: 0
+        };
+
+        function getTerrainHeight(x, z) {
+            if (inDreamcoreLevel) {
+                // Return height based on dreamcore platforms underneath player pos
+                let highestH = -50;
+                for (let plat of dreamcorePlatforms) {
+                    const boxSize = plat.geometry.parameters;
+                    const pPos = plat.position;
+                    const halfW = boxSize.width / 2 + 0.4;
+                    const halfD = boxSize.depth / 2 + 0.4;
+                    if (Math.abs(x - pPos.x) <= halfW && Math.abs(z - pPos.z) <= halfD) {
+                        const topSurfaceY = pPos.y + boxSize.height / 2;
+                        if (topSurfaceY > highestH && player.pos.y >= topSurfaceY - 1.2) {
+                            highestH = topSurfaceY;
+                        }
+                    }
+                }
+                return highestH > -40 ? highestH : -50; // Fall into void triggers reset
+            }
+
+            const dist = Math.hypot(x, z);
+            if (dist < 25.0) return 13.0;
+
+            const bridgeDist = Math.hypot(x - (-20), z - 8);
+            if (bridgeDist < 4.8) return 10.5;
+
+            const beachDist = Math.hypot(x - 22, z - 18);
+            if (beachDist < 14.5) {
+                return Math.max(-0.8, 11.5 - (beachDist * 0.85));
+            }
+
+            if (dist < 34.0) {
+                const alpha = (dist - 25.0) / 9.0;
+                return 13.0 * (1 - alpha) + (-0.8) * alpha;
+            }
+
+            return -0.8;
+        }
+
+        function resolveCollisions(pos, nextPos) {
+            let finalX = nextPos.x;
+            let finalZ = nextPos.z;
+
+            const dist = Math.hypot(finalX, finalZ);
+            if (dist > 34.5) {
+                const angle = Math.atan2(finalZ, finalX);
+                finalX = Math.cos(angle) * 34.5;
+                finalZ = Math.sin(angle) * 34.5;
+            }
+
+            const angleFromCenter = Math.atan2(finalZ, finalX);
+            if (angleFromCenter > -0.65 && angleFromCenter < 2.15) {
+                if (dist > 25.2 && dist < 26.8) {
+                    const targetDist = dist < 26.0 ? 25.2 : 26.8;
+                    finalX = Math.cos(angleFromCenter) * targetDist;
+                    finalZ = Math.sin(angleFromCenter) * targetDist;
+                }
+            }
+
+            for (let post of fencePosts) {
+                const dx = finalX - post.x;
+                const dz = finalZ - post.z;
+                const d = Math.hypot(dx, dz);
+                const minDist = post.radius + player.radius;
+                if (d < minDist) {
+                    if (d > 0.001) {
+                        finalX = post.x + (dx / d) * minDist;
+                        finalZ = post.z + (dz / d) * minDist;
+                    } else {
+                        finalX += player.radius;
+                    }
+                }
+            }
+
+            const cottageCenter = new THREE.Vector3(12, 12.8, 8);
+            const dxC = finalX - cottageCenter.x;
+            const dzC = finalZ - cottageCenter.z;
+            const cosRot = Math.cos(-Math.PI / 4);
+            const sinRot = Math.sin(-Math.PI / 4);
+            let localX = dxC * cosRot - dzC * sinRot;
+            let localZ = dxC * sinRot + dzC * cosRot;
+            const halfW = 3.2 + player.radius;
+            const halfD = 2.8 + player.radius;
+
+            if (Math.abs(localX) < halfW && Math.abs(localZ) < halfD) {
+                const penX = halfW - Math.abs(localX);
+                const penZ = halfD - Math.abs(localZ);
+                if (penX < penZ) {
+                    localX += (localX > 0 ? 1 : -1) * penX;
+                } else {
+                    localZ += (localZ > 0 ? 1 : -1) * penZ;
+                }
+                const cosRotBack = Math.cos(Math.PI / 4);
+                const sinRotBack = Math.sin(Math.PI / 4);
+                finalX = cottageCenter.x + (localX * cosRotBack - localZ * sinRotBack);
+                finalZ = cottageCenter.z + (localX * sinRotBack + localZ * cosRotBack);
+            }
+
+            const lighthousePos = new THREE.Vector3(-10, 12.8, -10);
+            const dxL = finalX - lighthousePos.x;
+            const dzL = finalZ - lighthousePos.z;
+            const dL = Math.hypot(dxL, dzL);
+            const minDL = 2.6 + player.radius;
+            if (dL < minDL) {
+                if (dL > 0.001) {
+                    finalX = lighthousePos.x + (dxL / dL) * minDL;
+                    finalZ = lighthousePos.z + (dzL / dL) * minDL;
+                } else {
+                    finalX += player.radius;
+                }
+            }
+
+            for (let t of obstacleTrees) {
+                const dxT = finalX - t.x;
+                const dzT = finalZ - t.z;
+                const dT = Math.hypot(dxT, dzT);
+                const minDT = t.r + player.radius;
+                if (dT < minDT) {
+                    if (dT > 0.001) {
+                        finalX = t.x + (dxT / dT) * minDT;
+                        finalZ = t.z + (dzT / dT) * minDT;
+                    } else {
+                        finalX += player.radius;
+                    }
+                }
+            }
+
+            for (let rock of worldBoulders) {
+                const dxR = finalX - rock.x;
+                const dzR = finalZ - rock.z;
+                const dR = Math.hypot(dxR, dzR);
+                const minDR = rock.radius + player.radius;
+                if (dR < minDR) {
+                    if (dR > 0.001) {
+                        finalX = rock.x + (dxR / dR) * minDR;
+                        finalZ = rock.z + (dzR / dR) * minDR;
+                    } else {
+                        finalX += player.radius;
+                    }
+                }
+            }
+
+            const currentH = getTerrainHeight(pos.x, pos.z);
+            const targetH = getTerrainHeight(finalX, finalZ);
+            if ((currentH - targetH) > 2.4) {
+                finalX = pos.x;
+                finalZ = pos.z;
+            }
+
+            return new THREE.Vector3(finalX, nextPos.y, finalZ);
+        }
+
+        let isDragging = false;
+        let previousMouseX = 0;
+        let cameraYaw = 0;
+        let cameraPitch = 0.35;
+        let previousTouchY = 0;
+        let camTouchId = null;
+
+        window.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                isDragging = true;
+                previousMouseX = e.clientX;
+                previousTouchY = e.clientY;
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - previousMouseX;
+                const deltaY = e.clientY - previousTouchY;
+                cameraYaw -= deltaX * 0.005;
+                cameraPitch = Math.max(0.05, Math.min(1.2, cameraPitch + deltaY * 0.005));
+                previousMouseX = e.clientX;
+                previousTouchY = e.clientY;
+            }
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; });
+        
+        window.addEventListener('touchstart', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.clientX > window.innerWidth * 0.35 && camTouchId === null) {
+                    camTouchId = touch.identifier;
+                    isDragging = true;
+                    previousMouseX = touch.clientX;
+                    previousTouchY = touch.clientY;
+                }
+            }
+        }, { passive: true });
+        
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === camTouchId) {
+                    const deltaX = touch.clientX - previousMouseX;
+                    const deltaY = touch.clientY - previousTouchY;
+                    cameraYaw -= deltaX * 0.005;
+                    cameraPitch = Math.max(0.05, Math.min(1.2, cameraPitch + deltaY * 0.005));
+                    previousMouseX = touch.clientX;
+                    previousTouchY = touch.clientY;
+                    break;
+                }
+            }
+        }, { passive: true });
+        
+        window.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === camTouchId) {
+                    camTouchId = null;
+                    isDragging = false;
+                    break;
+                }
+            }
+        }, { passive: true });
+
+        const clock = new THREE.Clock();
+        const targetSkyColor = new THREE.Color();
+        const targetFogColor = new THREE.Color();
+        const targetSunColor = new THREE.Color();
+        const targetAmbientColor = new THREE.Color();
+
+        let catRotation = 0;
+        let currentAnimSpeed = 0;
+        let bodyPitchTilt = 0;
+        let bodyRollTilt = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = Math.min(clock.getDelta(), 0.05);
+            const time = clock.getElapsedTime();
+
+            if (!inDreamcoreLevel) {
+                updateProceduralWeather(delta);
+            } else {
+                // Animate moving dreamcore platforms
+                dreamcorePlatforms.forEach((p) => {
+                    if (p.userData && p.userData.axis) {
+                        const base = p.userData.basePos;
+                        const range = p.userData.range;
+                        const speed = p.userData.speed;
+                        const offset = p.userData.offset;
+                        if (p.userData.axis === 'x') {
+                            p.position.x = base.x + Math.sin(time * speed + offset) * range;
+                        } else if (p.userData.axis === 'z') {
+                            p.position.z = base.z + Math.sin(time * speed + offset) * range;
+                        }
+                    }
+                });
+
+                // Check bouncers & hazards
+                dreamcoreBouncers.forEach((b) => {
+                    const distB = Math.hypot(player.pos.x - b.position.x, player.pos.z - b.position.z);
+                    const topY = b.position.y + 0.5;
+                    if (distB < 1.8 && Math.abs(player.pos.y - topY) < 0.8) {
+                        player.verticalVelocity = player.jumpForce * 1.5;
+                        player.isGrounded = false;
+                        playCollectibleSound();
+                    }
+                });
+
+                dreamcoreHazards.forEach((h) => {
+                    const distH = Math.hypot(player.pos.x - h.position.x, player.pos.z - h.position.z);
+                    const topY = h.position.y + 0.5;
+                    if (distH < 2.2 && Math.abs(player.pos.y - topY) < 1.0) {
+                        // Reset to start or recent platform
+                        player.pos.set(0, 2, 0);
+                        player.vel.set(0, 0, 0);
+                        playCatMeowSound();
+                        showNotification("⚠️ Ouch! Carefull with the dream hazard!");
+                    }
+                });
+
+                if (dreamcoreExitPortal) {
+                    dreamcoreExitPortal.rotation.z = time * 2;
+                    const distPortal = Math.hypot(player.pos.x - dreamcoreExitPortal.position.x, player.pos.z - dreamcoreExitPortal.position.z);
+                    if (distPortal < 2.5 && Math.abs(player.pos.y - dreamcoreExitPortal.position.y) < 3.0) {
+                        showNotification("Press <kbd>E</kbd> to complete Level 1!");
+                    }
+                }
+            }
+
+            let inputX = 0;
+            let inputZ = 0;
+
+            if (keys['w'] || keys['arrowup']) inputZ -= 1;
+            if (keys['s'] || keys['arrowdown']) inputZ += 1;
+            if (keys['a'] || keys['arrowleft']) inputX -= 1;
+            if (keys['d'] || keys['arrowright']) inputX += 1;
+
+            if (touchMoveDir.length() > 0.05) {
+                inputX += touchMoveDir.x;
+                inputZ += touchMoveDir.y;
+            }
+
+            const isMoving = (inputX !== 0 || inputZ !== 0) && currentCatAction === 'normal';
+            const isRunning = keys['shift'];
+            const targetMaxSpeed = isRunning ? player.runSpeed : player.walkSpeed;
+
+            if (isMoving) {
+                const inputAngle = Math.atan2(inputX, inputZ);
+                const targetMoveAngle = inputAngle + cameraYaw;
+
+                let angleDiff = targetMoveAngle - catRotation;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                catRotation += angleDiff * Math.min(1.0, 22.0 * delta);
+                catGroup.rotation.y = catRotation;
+
+                const moveDir = new THREE.Vector3(Math.sin(catRotation), 0, Math.cos(catRotation));
+                player.vel.x += moveDir.x * player.acceleration * delta;
+                player.vel.z += moveDir.z * player.acceleration * delta;
+
+                const currentSpeedXZ = Math.hypot(player.vel.x, player.vel.z);
+                if (currentSpeedXZ > targetMaxSpeed) {
+                    player.vel.x = (player.vel.x / currentSpeedXZ) * targetMaxSpeed;
+                    player.vel.z = (player.vel.z / currentSpeedXZ) * targetMaxSpeed;
+                }
+            } else {
+                const currentSpeedXZ = Math.hypot(player.vel.x, player.vel.z);
+                if (currentSpeedXZ > 0.05) {
+                    const drop = currentSpeedXZ * player.friction * delta;
+                    const newSpeed = Math.max(0, currentSpeedXZ - drop);
+                    player.vel.x = (player.vel.x / currentSpeedXZ) * newSpeed;
+                    player.vel.z = (player.vel.z / currentSpeedXZ) * newSpeed;
+                } else {
+                    player.vel.x = 0;
+                    player.vel.z = 0;
+                }
+            }
+
+            const intendedNextX = player.pos.x + player.vel.x * delta;
+            const intendedNextZ = player.pos.z + player.vel.z * delta;
+            
+            let resolvedPos;
+            if (inDreamcoreLevel) {
+                resolvedPos = new THREE.Vector3(intendedNextX, player.pos.y, intendedNextZ);
+            } else {
+                resolvedPos = resolveCollisions(player.pos, new THREE.Vector3(intendedNextX, player.pos.y, intendedNextZ));
+                if (Math.abs(resolvedPos.x - intendedNextX) > 0.001) player.vel.x = 0;
+                if (Math.abs(resolvedPos.z - intendedNextZ) > 0.001) player.vel.z = 0;
+            }
+            player.pos.x = resolvedPos.x;
+            player.pos.z = resolvedPos.z;
+
+            const currentFloorHeight = getTerrainHeight(player.pos.x, player.pos.z);
+
+            if ((keys[' '] || keys['space']) && player.isGrounded && currentCatAction === 'normal') {
+                player.verticalVelocity = player.jumpForce;
+                player.isGrounded = false;
+                setKey(' ', false);
+                setKey('space', false);
+            }
+
+            if (!player.isGrounded || player.pos.y > currentFloorHeight) {
+                player.verticalVelocity += player.gravity * delta;
+                player.pos.y += player.verticalVelocity * delta;
+
+                if (player.pos.y <= currentFloorHeight) {
+                    player.pos.y = currentFloorHeight;
+                    player.verticalVelocity = 0;
+                    player.isGrounded = true;
+                    bodyPitchTilt = 0.2;
+                } else if (inDreamcoreLevel && player.pos.y < -30) {
+                    // Fall reset in dreamcore
+                    player.pos.set(0, 2, 0);
+                    player.vel.set(0, 0, 0);
+                    player.verticalVelocity = 0;
+                    player.isGrounded = true;
+                    playCatMeowSound();
+                    showNotification("🌌 Fell into the dream void! Respawned at start.");
+                }
+            } else {
+                player.pos.y = currentFloorHeight;
+            }
+
+            catGroup.position.copy(player.pos);
+
+            // Check firefly collection (only in seaside)
+            if (!inDreamcoreLevel) {
+                fireflies.forEach((f) => {
+                    if (!f.collected) {
+                        const distF = Math.hypot(player.pos.x - f.mesh.position.x, player.pos.z - f.mesh.position.z);
+                        if (distF < 1.8 && Math.abs(player.pos.y - f.mesh.position.y) < 2.0) {
+                            f.collected = true;
+                            f.mesh.visible = false;
+                            collectedFirefliesCount++;
+                            playCollectibleSound();
+                            const counter = document.getElementById('firefly-counter');
+                            if (counter) counter.textContent = `${collectedFirefliesCount} / 5`;
+                        }
+                    }
+                });
+            }
+
+            // Update interactive prompt visibility
+            const distCottage = Math.hypot(player.pos.x - 12, player.pos.z - 8);
+            const distLighthouseDoor = Math.hypot(player.pos.x - (-10), player.pos.z - (-8.45));
+            const promptEl = document.getElementById('interaction-prompt');
+            if (promptEl) {
+                if (distLighthouseDoor < 3.5 && !inDreamcoreLevel) {
+                    promptEl.innerHTML = 'Press <kbd class="px-2 py-0.5 bg-amber-500/30 rounded text-amber-200 font-bold">E</kbd> to Enter Dreamcore Level 1!';
+                    promptEl.style.opacity = '1';
+                } else if (inDreamcoreLevel && Math.hypot(player.pos.x - (-2), player.pos.z - (-35)) < 4.0 && player.pos.y > 67) {
+                    promptEl.innerHTML = 'Press <kbd class="px-2 py-0.5 bg-amber-500/30 rounded text-amber-200 font-bold">E</kbd> to Exit Level!';
+                    promptEl.style.opacity = '1';
+                } else if (distCottage < 5.0 || player.pos.y < 1.0) {
+                    promptEl.style.opacity = '1';
+                } else if (currentCatAction === 'normal' && !inDreamcoreLevel) {
+                    promptEl.style.opacity = '0';
+                }
+            }
+
+            // Cat animation handler
+            if (currentCatAction !== 'normal') {
+                actionTimer -= delta;
+                if (actionTimer <= 0) {
+                    currentCatAction = 'normal';
+                } else if (currentCatAction === 'sleeping') {
+                    catTorso.position.y = 0.35;
+                    catGroup.rotation.z = Math.PI / 2;
+                    headGroup.rotation.y = 0.5;
+                } else if (currentCatAction === 'scratching') {
+                    catTorso.position.y = 0.5;
+                    legFL.rotation.x = Math.sin(time * 25) * 0.8;
+                    headGroup.rotation.x = 0.3;
+                } else if (currentCatAction === 'pawing') {
+                    catTorso.position.y = 0.5;
+                    legFL.rotation.z = Math.sin(time * 18) * 0.5;
+                }
+            } else {
+                catGroup.rotation.z = 0;
+                const speedMag = Math.hypot(player.vel.x, player.vel.z);
+                currentAnimSpeed += (speedMag - currentAnimSpeed) * 12.0 * delta;
+
+                if (!player.isGrounded) {
+                    catTorso.position.y = 0.65;
+                    tailGroup.rotation.x = -0.6;
+                    legFL.rotation.x = -0.5;
+                    legFR.rotation.x = -0.5;
+                    legBL.rotation.x = 0.6;
+                    legBR.rotation.x = 0.6;
+                    headGroup.rotation.x = 0.2;
+                } else if (currentAnimSpeed > 0.3) {
+                    const gaitFreq = isRunning ? 20.0 : 13.0;
+                    const cycle = time * gaitFreq;
+                    const bob = Math.abs(Math.sin(cycle)) * 0.14;
+                    catTorso.position.y = 0.5 + bob;
+                    
+                    legFL.rotation.x = Math.sin(cycle) * 0.75;
+                    legBR.rotation.x = Math.sin(cycle) * 0.75;
+                    legFR.rotation.x = -Math.sin(cycle) * 0.75;
+                    legBL.rotation.x = -Math.sin(cycle) * 0.75;
+
+                    tailGroup.rotation.y = Math.sin(cycle * 0.5) * 0.5;
+                    tailGroup.rotation.x = -0.3 + Math.cos(cycle) * 0.15;
+                    bodyRollTilt = Math.sin(cycle * 0.5) * 0.08;
+                    bodyPitchTilt = (speedMag / player.runSpeed) * 0.15;
+                } else {
+                    catTorso.position.y = 0.5 + Math.sin(time * 3.5) * 0.03;
+                    tailGroup.rotation.y = Math.sin(time * 1.5) * 0.25;
+                    tailGroup.rotation.x = -0.4;
+                    legFL.rotation.x *= 0.85;
+                    legFR.rotation.x *= 0.85;
+                    legBL.rotation.x *= 0.85;
+                    legBR.rotation.x *= 0.85;
+                    bodyRollTilt *= 0.85;
+                    bodyPitchTilt *= 0.85;
+                    headGroup.rotation.x = Math.sin(time * 2) * 0.05;
+                }
+                catGroup.rotation.z = bodyRollTilt;
+                catGroup.rotation.x = bodyPitchTilt;
+            }
+
+            // Smooth Camera positioning with Raycasting obstacle prevention
+            const cameraDesiredDistance = 13.0;
+            const targetCamX = player.pos.x + Math.sin(cameraYaw) * Math.cos(cameraPitch) * cameraDesiredDistance;
+            const targetCamZ = player.pos.z + Math.cos(cameraYaw) * Math.cos(cameraPitch) * cameraDesiredDistance;
+            const targetCamY = player.pos.y + Math.sin(cameraPitch) * cameraDesiredDistance + 1.5;
+
+            let finalCamDist = cameraDesiredDistance;
+            const camTargetVec = new THREE.Vector3(player.pos.x, player.pos.y + 1.0, player.pos.z);
+            const idealCamPos = new THREE.Vector3(targetCamX, targetCamY, targetCamZ);
+            const rayDir = new THREE.Vector3().subVectors(idealCamPos, camTargetVec);
+            const rayDist = rayDir.length();
+            rayDir.normalize();
+
+            // Simple distance clamping check against terrain & obstacles
+            if (idealCamPos.y < getTerrainHeight(idealCamPos.x, idealCamPos.z) + 1.0) {
+                idealCamPos.y = getTerrainHeight(idealCamPos.x, idealCamPos.z) + 1.0;
+            }
+
+            camera.position.x += (idealCamPos.x - camera.position.x) * 0.2;
+            camera.position.z += (idealCamPos.z - camera.position.z) * 0.2;
+            camera.position.y += (idealCamPos.y - camera.position.y) * 0.2;
+            camera.lookAt(camTargetVec);
+
+            // Animate Fireflies
+            fireflies.forEach((f, idx) => {
+                if (!f.collected) {
+                    f.mesh.position.y = f.baseY + Math.sin(time * 2.5 + f.offset) * 0.6;
+                    f.mesh.position.x += Math.cos(time * 1.2 + f.offset) * 0.01;
+                }
+            });
+
+            smokeParticles.forEach((sm, idx) => {
+                sm.position.y += sm.userData.speed * delta * 2.5;
+                sm.position.x += Math.sin(time * 2 + sm.userData.offset) * 0.02;
+                sm.scale.setScalar(1 + (sm.position.y - 18) * 0.15);
+                if (sm.position.y > 28) sm.position.y = 18;
+            });
+
+            cottageLight.intensity = 2.2 + Math.sin(time * 12) * 0.4;
+
+            shipSpawnTimer += delta;
+            if (shipSpawnTimer > 20.0) {
+                shipSpawnTimer = 0;
+                if (activeShips.length < 5) createDistantShip();
+            }
+
+            if (!inDreamcoreLevel) {
+                for (let i = activeShips.length - 1; i >= 0; i--) {
+                    const s = activeShips[i];
+                    s.position.x += s.userData.direction.x * s.userData.speed * delta;
+                    s.position.z += s.userData.direction.z * s.userData.speed * delta;
+                    s.position.y = -0.8 + Math.sin(time * 2 + i) * 0.25;
+                    s.rotation.z = Math.sin(time * 1.5 + i) * 0.05;
+
+                    s.userData.lifespan += delta;
+                    if (s.userData.lifespan > s.userData.maxLifespan) {
+                        shipsGroup.remove(s);
+                        activeShips.splice(i, 1);
+                    }
+                }
+            }
+
+            const cycleSpeed = 0.04;
+            const sunAngle = (time * cycleSpeed) % (Math.PI * 2);
+            const sunDist = 120;
+            const sunY = Math.sin(sunAngle) * sunDist;
+            const sunX = Math.cos(sunAngle) * sunDist;
+            sunLight.position.set(sunX, Math.max(sunY, -30), 45);
+
+            sunMesh.position.set(sunX, sunY, 45);
+            moonMesh.position.set(-sunX, -sunY, 45);
+            moonMesh.visible = sunY < 10;
+
+            const normalizedSunY = sunY / sunDist;
+
+            let targetSunIntensity = 2.4;
+            let targetAmbientIntensity = 1.1;
+            let cloudOpacityTarget = 0.85;
+
+            if (inDreamcoreLevel) {
+                targetSkyColor.setHex(0x0f172a);
+                targetFogColor.setHex(0x0f172a);
+                targetSunColor.setHex(0x38bdf8);
+                targetAmbientColor.setHex(0x1e293b);
+                targetSunIntensity = 2.0;
+                targetAmbientIntensity = 1.2;
+            } else if (currentWeather === 'storm') {
+                targetSkyColor.copy(skyColors.storm);
+                targetFogColor.copy(skyColors.storm);
+                targetSunColor.setHex(0x94a3b8);
+                targetAmbientColor.setHex(0x334155);
+                targetSunIntensity = 0.3;
+                targetAmbientIntensity = 0.3;
+                cloudOpacityTarget = 0.95;
+            } else if (normalizedSunY > 0.15) {
+                targetSkyColor.copy(skyColors.day);
+                targetFogColor.copy(skyColors.day);
+                targetSunColor.setHex(0xfffbeb);
+                targetAmbientColor.setHex(currentWeather === 'rain' ? 0x64748b : 0x93c5fd);
+                targetSunIntensity = currentWeather === 'rain' ? 1.3 : 2.4;
+                targetAmbientIntensity = 1.0;
+            } else if (normalizedSunY <= 0.15 && normalizedSunY >= -0.15) {
+                targetSkyColor.copy(skyColors.dusk);
+                targetFogColor.copy(skyColors.dusk);
+                targetSunColor.setHex(0xf43f5e);
+                targetAmbientColor.setHex(0xa855f7);
+                targetSunIntensity = 1.3;
+                targetAmbientIntensity = 0.7;
+            } else {
+                targetSkyColor.copy(skyColors.night);
+                targetFogColor.copy(skyColors.night);
+                targetSunColor.setHex(0x3b82f6);
+                targetAmbientColor.setHex(0x1e3a8a);
+                targetSunIntensity = 0.3;
+                targetAmbientIntensity = 0.4;
+            }
+
+            const lerpFactor = 0.03;
+            scene.background.lerp(targetSkyColor, lerpFactor);
+            scene.fog.color.lerp(targetFogColor, lerpFactor);
+            sunLight.color.lerp(targetSunColor, lerpFactor);
+            ambientLight.color.lerp(targetAmbientColor, lerpFactor);
+            sunLight.intensity += (targetSunIntensity - sunLight.intensity) * lerpFactor;
+            ambientLight.intensity += (targetAmbientIntensity - ambientLight.intensity) * lerpFactor;
+
+            const isNightOrDusk = normalizedSunY <= 0.15 || currentWeather === 'storm';
+            searchlightBeam.visible = isNightOrDusk && !inDreamcoreLevel;
+            if (isNightOrDusk && !inDreamcoreLevel) {
+                searchlightBeam.rotation.y = time * 0.9;
+                searchlightBeam.rotation.z = Math.sin(time * 0.5) * 0.15;
+            }
+
+            const waveMultiplier = currentWeather === 'storm' ? 2.5 : (currentWeather === 'rain' ? 1.5 : 1.0);
+            const posAttr = oceanGeo.attributes.position;
+            for (let i = 0; i < posAttr.count; i++) {
+                const u = posAttr.getX(i);
+                const v = posAttr.getY(i);
+                const distFromCenter = Math.sqrt(u * u + v * v);
+                if (distFromCenter > 28) {
+                    const z = Math.sin(u * 0.12 + time * (2 * waveMultiplier)) * Math.cos(v * 0.12 + time * (2 * waveMultiplier)) * (1.1 * waveMultiplier);
+                    posAttr.setZ(i, z);
+                }
+            }
+            posAttr.needsUpdate = true;
+
+            foamMesh.scale.setScalar(1 + Math.sin(time * 3) * 0.03 * waveMultiplier);
+            matFoam.opacity = 0.55 + Math.sin(time * 4) * 0.2;
+
+            clouds.forEach((cloud) => {
+                cloud.userData.angle += cloud.userData.speed * delta * (currentWeather === 'storm' ? 2.5 : 1.0);
+                cloud.position.x = Math.cos(cloud.userData.angle) * cloud.userData.radius;
+                cloud.position.z = Math.sin(cloud.userData.angle) * cloud.userData.radius;
+                cloud.rotation.y = cloud.userData.angle;
+            });
+            matCloud.opacity += (cloudOpacityTarget - matCloud.opacity) * lerpFactor;
+            matCloud.color.lerp(currentWeather === 'storm' ? skyColors.storm : skyColors.day, lerpFactor);
+
+            const targetRainOpacity = inDreamcoreLevel ? 0 : (currentWeather === 'clear' ? 0 : (currentWeather === 'rain' ? 0.6 : 0.95));
+            matRain.opacity += (targetRainOpacity - matRain.opacity) * lerpFactor;
+
+            if (matRain.opacity > 0.01) {
+                const positions = rainSystem.geometry.attributes.position.array;
+                const speedMult = currentWeather === 'storm' ? 2.5 : 1.2;
+                for (let i = 0; i < rainCount; i++) {
+                    positions[i * 3 + 1] -= rainVelocities[i] * speedMult;
+                    if (currentWeather === 'storm') positions[i * 3] -= 0.3;
+                    if (positions[i * 3 + 1] < 0) {
+                        positions[i * 3 + 1] = 80;
+                        positions[i * 3] = (Math.random() - 0.5) * 160;
+                        positions[i * 3 + 2] = (Math.random() - 0.5) * 160;
+                    }
+                }
+                rainSystem.geometry.attributes.position.needsUpdate = true;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
