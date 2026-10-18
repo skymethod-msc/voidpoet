@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e8e7e1">
 <title>Mono Kart Pro</title>
+<!-- MONO KART PRO continuation baseline: four worlds, 3 difficulty modes, gamepad menus, spline-following night headlights. Keep CSS/JS inline for easy iteration. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;0,900;1,800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -34,7 +35,13 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper
 .map-wrap canvas{width:150px;height:110px;display:block}
 .map-label{position:absolute;right:0;bottom:-4px;font:8px var(--mono);letter-spacing:.11em;color:#66665f}
 .track-select{appearance:none;display:block;width:min(320px,82vw);margin:0 0 16px;padding:12px 14px;border:2px solid var(--ink);border-radius:0;background:var(--paper);color:var(--ink);font:700 12px var(--mono);letter-spacing:.04em;cursor:pointer}
-.difficulty-select{appearance:none;display:block;width:min(320px,82vw);margin:-8px 0 18px;padding:12px 14px;border:2px solid var(--ink);border-radius:0;background:var(--paper);color:var(--ink);font:700 12px var(--mono);letter-spacing:.04em;cursor:pointer}.difficulty-description{font:9px/1.5 var(--mono);color:#5e5e58;max-width:420px;margin:-10px 0 20px}.track-description{font:10px/1.6 var(--mono);letter-spacing:.08em;color:#5e5e58;max-width:440px;margin:-16px 0 24px}
+ .difficulty-select{display:none}.difficulty-description{font:9px/1.5 var(--mono);color:#5e5e58;max-width:620px;margin:8px 0 15px}.track-description{font:10px/1.6 var(--mono);letter-spacing:.08em;color:#5e5e58;max-width:440px;margin:-16px 0 24px}
+.difficulty-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:min(620px,92vw);margin:-3px 0 8px}
+.difficulty-card{appearance:none;min-width:0;min-height:88px;padding:10px 12px;text-align:left;border:2px solid rgba(32,33,31,.38);background:rgba(255,255,255,.3);color:var(--ink);cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;gap:8px;transition:background .12s,border-color .12s,transform .12s,box-shadow .12s}
+.difficulty-card strong{font:900 22px/.95 var(--cond);letter-spacing:.04em}.difficulty-card span{font:8px/1.45 var(--mono);color:#5e5e58}.difficulty-card[aria-pressed="true"]{border-color:var(--ink);background:var(--paper);box-shadow:4px 4px 0 var(--ink);transform:translate(-2px,-2px)}
+.difficulty-card:focus-visible,.difficulty-card.menu-selected{outline:3px solid #77786f;outline-offset:3px;border-color:var(--ink)}
+@media(max-height:760px){.screen-overlay{padding:10px}.overlay-title{font-size:52px}.overlay-sub{margin-bottom:15px}.difficulty-card{min-height:72px}.difficulty-description{margin:5px 0 9px}}
+@media(max-width:560px){.difficulty-cards{gap:6px;width:94vw}.difficulty-card{padding:8px 7px;min-height:84px}.difficulty-card strong{font-size:18px}.difficulty-card span{font-size:7px}.difficulty-description{font-size:8px}.track-select{margin-bottom:13px}.track-description{margin-top:-12px;margin-bottom:16px}}
 .race-info .position strong{min-width:52px}
 .goal strong{font:700 16px/1 var(--cond);letter-spacing:.04em;white-space:nowrap}
 .race-order{position:absolute;right:30px;top:148px;width:150px;padding:7px 9px;background:rgba(232,231,225,.82);border:1px solid rgba(32,33,31,.28);font:8px/1.5 var(--mono);letter-spacing:.05em}
@@ -69,6 +76,33 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper
 .pause-overlay-card .pause-secondary:hover{background:var(--ink);color:var(--paper)}
 @media(max-width:768px){.track-select{font-size:10px}.track-description{font-size:9px}}
 
+.character-screen{gap:8px;overflow-y:auto;justify-content:center}
+.character-screen .overlay-title{font-size:clamp(38px,6vw,66px);margin:0 0 2px}
+.character-kicker{font:9px var(--mono);letter-spacing:.24em;color:#686860;margin:0 0 6px}
+.character-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:min(940px,94vw);margin:6px 0 5px}
+.character-card{--char:#d6d2c8;appearance:none;min-width:0;padding:0;border:2px solid rgba(32,33,31,.36);background:rgba(255,255,255,.32);color:var(--ink);text-align:left;cursor:pointer;display:flex;flex-direction:column;transition:transform .12s,border-color .12s,background .12s;overflow:hidden}
+.character-card[aria-pressed="true"]{border-color:var(--ink);background:var(--paper);box-shadow:4px 4px 0 var(--ink);transform:translate(-2px,-2px)}
+.character-art{height:86px;background:var(--char);position:relative;display:grid;place-items:center;overflow:hidden;border-bottom:2px solid var(--ink)}
+.character-art:before{content:"";position:absolute;width:116px;height:116px;border:1px solid rgba(25,25,25,.28);border-radius:50%;left:calc(50% - 58px);top:18px}
+.character-glyph{font:900 48px/.9 var(--cond);color:#20211f;text-shadow:3px 3px 0 rgba(255,255,255,.28);z-index:1;transform:rotate(-7deg)}
+.character-index{position:absolute;left:8px;top:7px;font:8px var(--mono);letter-spacing:.12em}
+.character-name{font:900 24px/.95 var(--cond);letter-spacing:.04em;margin:10px 10px 3px}
+.character-tag{font:8px/1.35 var(--mono);letter-spacing:.04em;color:#686860;margin:0 10px 8px;min-height:22px}
+.character-ability{margin:0 10px 8px;font:700 9px/1.35 var(--mono);min-height:25px}
+.character-stats{padding:0 10px 11px;display:grid;gap:5px;margin-top:auto}
+.character-stat{display:grid;grid-template-columns:42px 1fr 14px;gap:5px;align-items:center;font:7px var(--mono);color:#66665e}
+.character-stat i{height:4px;background:rgba(32,33,31,.13);display:block;overflow:hidden}
+.character-stat i b{display:block;height:100%;background:var(--ink)}
+.character-stat em{font-style:normal;text-align:right;color:var(--ink)}
+.character-footer{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:5px}
+.character-summary{font:9px/1.5 var(--mono);color:#5e5e58;max-width:650px;min-height:14px;margin:0}
+.character-footer .btn-action{margin:0}
+.btn-secondary{font:700 10px var(--mono);letter-spacing:.1em;padding:11px 17px;border:2px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
+.btn-secondary:hover{background:var(--ink);color:var(--paper)}
+@media(max-width:700px){.character-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-width:500px}.character-art{height:54px}.character-glyph{font-size:34px}.character-name{font-size:19px;margin:7px 7px 2px}.character-tag,.character-ability{margin-left:7px;margin-right:7px}.character-stats{padding:0 7px 8px}.character-stat{grid-template-columns:38px 1fr 12px}.character-screen{padding:10px}.character-screen .overlay-sub{margin-bottom:3px}}
+@media(max-height:690px){.character-screen{justify-content:flex-start}.character-art{height:52px}.character-grid{gap:6px;margin:2px 0}.character-name{font-size:19px;margin-top:6px}.character-tag{margin-bottom:4px}.character-ability{margin-bottom:4px}.character-stats{gap:3px;padding-bottom:6px}.character-screen .overlay-title{font-size:38px}}
+
+
 .speed-panel{position:absolute;z-index:2;left:30px;bottom:26px;width:240px;pointer-events:none}
 .speed-read{display:flex;align-items:baseline;gap:8px}
 .speed-read strong{font:800 75px/.82 var(--cond);letter-spacing:-.055em;font-variant-numeric:tabular-nums}
@@ -79,7 +113,12 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper
 .speed-track i:nth-of-type(2){left:25%}.speed-track i:nth-of-type(3){left:37.5%}.speed-track i:nth-of-type(4){left:50%}.speed-track i:nth-of-type(5){left:62.5%}.speed-track i:nth-of-type(6){left:75%}.speed-track i:nth-of-type(7){left:87.5%}
 .speed-foot{display:flex;justify-content:space-between;margin-top:7px;font:9px var(--mono);letter-spacing:.1em;color:#5e5e58}
 
-.drift-tag{position:absolute;z-index:2;right:30px;bottom:32px;display:flex;align-items:center;gap:8px;font:10px var(--mono);letter-spacing:.15em;border-bottom:2px solid var(--line);padding:0 0 6px 4px;min-width:115px;pointer-events:none}
+.combat-touch{position:absolute;z-index:4;right:16px;bottom:78px;display:flex;gap:8px;pointer-events:auto}.combat-touch button{width:54px;height:54px;border:2px solid #20211f;border-radius:50%;background:rgba(232,231,225,.78);color:#20211f;font:900 13px monospace;box-shadow:2px 2px 0 #20211f}.combat-touch small{font-size:7px;letter-spacing:.1em}
+.combat-hud{position:absolute;z-index:3;left:30px;top:142px;width:190px;pointer-events:none;font:9px var(--mono);letter-spacing:.08em}
+.hp-card{display:grid;grid-template-columns:30px 1fr 28px;align-items:center;gap:7px;margin-bottom:7px;padding:6px 7px;background:rgba(232,231,225,.86);border:1px solid rgba(32,33,31,.3)}
+.hp-card b{text-align:right}.hp-track{height:7px;background:#777870;border:1px solid #20211f;overflow:hidden}.hp-track i{display:block;height:100%;width:100%;background:#d8d0c5;transition:width .12s linear}
+.combat-cooldowns{display:flex;gap:10px;flex-wrap:wrap;color:#343530;font-size:8px}.combat-cooldowns span{background:rgba(232,231,225,.72);padding:3px 4px}.combat-cooldowns b{font-weight:900}
+.drfit-tag{position:absolute;z-index:2;right:30px;bottom:32px;display:flex;align-items:center;gap:8px;font:10px var(--mono);letter-spacing:.15em;border-bottom:2px solid var(--line);padding:0 0 6px 4px;min-width:115px;pointer-events:none}
 .drift-icon{font:23px/15px var(--cond);transform:rotate(-18deg);transition:transform .1s}
 .drift-tag.active{font-weight:700;border-bottom-color:var(--ink)}
 .drift-tag.active .drift-icon{transform:rotate(-28deg) scale(1.2)}
@@ -128,6 +167,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper
   .map-wrap{display:none}
   .race-info .timer{display:none}
   .speed-panel{left:16px;bottom:16px;width:150px}
+  .combat-hud{left:16px;top:128px;width:164px}
+  .controls-hint{display:none}
   .speed-read strong{font-size:52px}
   .drift-tag{right:16px;bottom:20px;min-width:90px;font-size:8px}
   .controls-hint{display:none}
@@ -178,6 +219,10 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper
     <div class="speed-foot"><span id="gear">GEAR 1</span><span id="engine-note">IDLE</span></div>
   </div>
 
+  <div class="combat-hud" aria-label="Combat status">
+    <div class="hp-card player-hp"><span id="player-hp-card-label">WAVE</span><div class="hp-track"><i id="player-hp-fill"></i></div><b id="player-hp-text">100</b></div>
+    <div class="combat-cooldowns"><span id="fire-cooldown">X ABILITY <b>READY</b></span><span id="jump-cooldown">R1 JUMP <b>READY</b></span></div>
+  </div>
   <div class="drift-tag" id="drift-tag"><span class="drift-icon">↗</span><span id="drive-state">GRIP</span></div>
   <div class="air-tag" id="air-tag">AIRBORNE</div>
   <div class="countdown" id="countdown">3</div>
@@ -187,7 +232,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper
     <kbd>W</kbd> / <kbd>↑</kbd><span>GO</span>
     <kbd>S</kbd> / <kbd>↓</kbd><span>BRAKE</span>
     <kbd>A</kbd><kbd>D</kbd><span>STEER</span>
-    <kbd class="space-key">SPACE</kbd><span>DRIFT & BOOST</span>
+    <kbd class="space-key">SPACE</kbd><span>DRIFT</span><kbd>X</kbd><span>ABILITY</span><kbd>R1</kbd><span>JUMP</span>
   </div>
 
   <!-- MOBILE TOUCH CONTROLS -->
@@ -216,10 +261,30 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper
       <option value="3">04 — MOON MUSHROOM MARSH</option>
     </select>
     <p class="track-description" id="track-description">A haunted high-speed course with a double chicane, a cliffside hairpin, and a jump over the old cemetery road.</p>
-    <select class="difficulty-select" id="difficulty-select" aria-label="Choose race difficulty"><option value="easy">DIFFICULTY — EASY</option><option value="normal">DIFFICULTY — NORMAL</option><option value="hard" selected>DIFFICULTY — HARD</option></select>
-    <p class="difficulty-description" id="difficulty-description">HARD · Aggressive rivals, rare mistakes, minimal catch-up. The original challenge.</p>
-    <p class="overlay-sub" style="font-size:11px;letter-spacing:1px;line-height:1.8">KEYBOARD: WASD / ARROWS · SPACE: DRIFT · P: PAUSE<br>CONTROLLER: STICK / D-PAD · RT / A: GO · LT / B: BRAKE · X / LB: DRIFT · Y: CAMERA · START: PAUSE</p>
-    <button class="btn-action" id="start-btn">PRESS ENTER TO RACE</button>
+    <div class="difficulty-cards" id="difficulty-cards" role="group" aria-label="Choose race difficulty">
+      <button class="difficulty-card" type="button" data-difficulty="easy" aria-pressed="false"><strong>EASY</strong><span>RELAXED RIVALS<br>MORE FORGIVING</span></button>
+      <button class="difficulty-card" type="button" data-difficulty="normal" aria-pressed="true"><strong>NORMAL</strong><span>FAIR COMPETITION<br>BALANCED ASSIST</span></button>
+      <button class="difficulty-card" type="button" data-difficulty="hard" aria-pressed="false"><strong>HARD</strong><span>AGGRESSIVE RIVALS<br>ORIGINAL CHALLENGE</span></button>
+    </div>
+    <p class="difficulty-description" id="difficulty-description">NORMAL · Fair competition, active rivals, and balanced assistance.</p>
+    <p class="overlay-sub" style="font-size:11px;letter-spacing:1px;line-height:1.8">KEYBOARD: WASD / ARROWS · SPACE: DRIFT · P: PAUSE<br>CONTROLLER: STICK / D-PAD · RT / A: GO · LT / B: BRAKE · X: ABILITY · LB: DRIFT · R1: JUMP · Y: CAMERA · START: PAUSE</p>
+    <button class="btn-action" id="start-btn">CHOOSE YOUR RACER →</button>
+  </div>
+
+  <!-- CHARACTER SELECT: appears after circuit and difficulty are confirmed -->
+  <div class="screen-overlay character-screen hidden" id="character-screen" aria-label="Choose your racer">
+    <p class="character-kicker">MONO KART PRO / DRIVER ROSTER</p>
+    <h1 class="overlay-title">CHOOSE YOUR RACER</h1>
+    <p class="overlay-sub" style="font-size:10px;margin:0 0 2px">FOUR PERSONALITIES. FOUR SIGNATURE ABILITIES.</p>
+    <div class="character-grid" id="character-grid" role="group" aria-label="Choose a character">
+      <button class="character-card" type="button" data-character="wyde" aria-pressed="true" style="--char:#d8d0c5"><div class="character-art"><span class="character-index">01 / WAVE</span><b class="character-glyph">W</b></div><strong class="character-name">WAVE</strong><span class="character-tag">THE SKY CRUSHER</span><span class="character-ability">ABILITY · SKY GLIDE</span><div class="character-stats"><div class="character-stat"><span>SPEED</span><i><b style="width:70%"></b></i><em>7</em></div><div class="character-stat"><span>GRIP</span><i><b style="width:80%"></b></i><em>8</em></div><div class="character-stat"><span>TRICK</span><i><b style="width:90%"></b></i><em>9</em></div></div></button>
+      <button class="character-card" type="button" data-character="hex" aria-pressed="false" style="--char:#c4b4dc"><div class="character-art"><span class="character-index">02 / HEX</span><b class="character-glyph">✳</b></div><strong class="character-name">HEX</strong><span class="character-tag">THE CHAOS ALCHEMIST</span><span class="character-ability">ABILITY · FIREBALL</span><div class="character-stats"><div class="character-stat"><span>SPEED</span><i><b style="width:70%"></b></i><em>7</em></div><div class="character-stat"><span>GRIP</span><i><b style="width:70%"></b></i><em>7</em></div><div class="character-stat"><span>TRICK</span><i><b style="width:90%"></b></i><em>9</em></div></div></button>
+      <button class="character-card" type="button" data-character="grim" aria-pressed="false" style="--char:#c4c8c1"><div class="character-art"><span class="character-index">03 / GRIM</span><b class="character-glyph">↯</b></div><strong class="character-name">GRIM</strong><span class="character-tag">THE IRON WRECKER</span><span class="character-ability">ABILITY · SIDESWIPE</span><div class="character-stats"><div class="character-stat"><span>SPEED</span><i><b style="width:70%"></b></i><em>7</em></div><div class="character-stat"><span>GRIP</span><i><b style="width:70%"></b></i><em>7</em></div><div class="character-stat"><span>TRICK</span><i><b style="width:70%"></b></i><em>7</em></div></div></button>
+      <button class="character-card" type="button" data-character="moth" aria-pressed="false" style="--char:#b8d2cc"><div class="character-art"><span class="character-index">04 / MOTH</span><b class="character-glyph">◈</b></div><strong class="character-name">MOTH</strong><span class="character-tag">THE PHANTOM DRIFTER</span><span class="character-ability">ABILITY · VEIL</span><div class="character-stats"><div class="character-stat"><span>SPEED</span><i><b style="width:60%"></b></i><em>6</em></div><div class="character-stat"><span>GRIP</span><i><b style="width:90%"></b></i><em>9</em></div><div class="character-stat"><span>TRICK</span><i><b style="width:80%"></b></i><em>8</em></div></div></button>
+    </div>
+    <p class="character-summary" id="character-summary">WAVE · Sky Glide: X on the ground arms the visible wings without jumping or starting the glide timer. Jump with R1 or use a ramp to glide at the apex. In the air, X queues a glide while rising or starts it immediately while falling; press X again to cancel.</p>
+    <div class="character-footer"><button class="btn-secondary" id="character-back-btn" type="button">← BACK</button><button class="btn-action" id="character-confirm-btn" type="button">RACE AS WAVE →</button></div>
+    <p class="overlay-sub" style="font-size:8px;margin:3px 0 0">ARROWS / D-PAD TO BROWSE · ENTER / A TO CONFIRM</p>
   </div>
 
   <!-- PAUSE OVERLAY -->
@@ -493,6 +558,11 @@ class SoundEngine {
     }
   }
 
+  stopEngine() {
+    if (!this.ctx || !this.engineGain) return;
+    this.engineGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.045);
+  }
+
   updateEngine(speedRatio, isAccelerating) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
@@ -582,34 +652,35 @@ const TRACKS = [
   {
     name: 'GRAVEYARD SPRINT', short: 'GRAVEYARD SPRINT • 01', theme: 'graveyard', sky: ['#171a25','#596071','#b8b7ae'], hills: '#333543', farHills: '#252936', road: '#55545a', shoulder: '#aaa6a3', accent: '#d8d0c5',
     description: 'A much longer haunted circuit with flowing sweepers, broad hairpins, and a gentle jump over the old cemetery road.',
-    jump: .39, boosts: [.12, .56, .82],
+    jump: .39, terrain: [[.08,2.2,.035],[.22,-2.0,.028],[.385,5.2,.018],[.43,-2.7,.035],[.62,2.6,.045],[.79,-1.8,.03]], boosts: [.12, .56, .82],
     knots: [[0,-82],[26,-80],[39,-68],[35,-54],[49,-43],[63,-24],[60,-7],[43,-1],[39,15],[54,31],[49,49],[31,62],[12,58],[5,43],[-7,34],[-26,43],[-46,37],[-57,20],[-45,4],[-53,-14],[-43,-35],[-25,-48],[-35,-65],[-23,-81]]
   },
   {
     name: 'CANDY-CANE CANYON', short: 'CANDY-CANE CANYON • 02', theme: 'canyon', sky: ['#f2b7a5','#df9d86','#f0d0a4'], hills: '#b96955', farHills: '#d88c6e', road: '#a66f62', shoulder: '#f2d6c2', accent: '#fff0dc',
     description: 'A long canyon cruise with an extended launch straight, wide flowing bends, and a readable S-turn through the gates.',
-    jump: .27, boosts: [.08, .44, .72],
+    jump: .27, terrain: [[.07,1.8,.04],[.17,4.8,.055],[.27,5.7,.018],[.34,-5.2,.045],[.52,-2.4,.04],[.7,2.5,.035],[.86,-1.8,.04]], boosts: [.08, .44, .72],
     knots: [[0,-92],[28,-90],[56,-78],[66,-57],[60,-37],[42,-30],[28,-40],[16,-28],[27,-8],[49,7],[61,30],[48,54],[25,67],[0,63],[-16,48],[-40,52],[-62,39],[-68,16],[-54,-2],[-34,-8],[-24,-28],[-38,-47],[-32,-69],[-18,-86]]
   },
   {
     name: 'CLOCKWORK RUINS', short: 'CLOCKWORK RUINS • 03', theme: 'clockwork', sky: ['#202b2c','#53645e','#a2a18c'], hills: '#35433f', farHills: '#293633', road: '#62645b', shoulder: '#b6a875', accent: '#e3c978',
     description: 'A mechanical circuit with long approach lines, rounded corners, a broad central loop, and a final hairpin you can see coming.',
-    jump: .61, boosts: [.19, .49, .9],
+    jump: .61, terrain: [[.09,2.2,.025],[.2,-2.8,.022],[.33,4.0,.026],[.42,-3.8,.023],[.61,4.7,.017],[.66,-3.6,.025],[.82,2.8,.022],[.92,-2.2,.02]], boosts: [.19, .49, .9],
     knots: [[-4,-78],[22,-78],[43,-64],[43,-45],[25,-40],[12,-51],[-3,-43],[-4,-22],[15,-12],[39,-20],[57,-7],[57,17],[40,31],[17,24],[7,9],[-10,8],[-23,25],[-44,27],[-58,12],[-53,-8],[-36,-18],[-38,-39],[-55,-50],[-47,-69],[-25,-80]]
   },
   {
     name: 'MOON MUSHROOM MARSH', short: 'MOON MUSHROOM MARSH • 04', theme: 'marsh', sky: ['#111b2a','#344456','#8c9a9a'], hills: '#263d43', farHills: '#1c3037', road: '#4f5c5c', shoulder: '#9bb2ad', accent: '#c9e8cf',
     description: 'A spooky swamp run with a sweeping crescent bend, a clear middle crossing, and a flowing final slalom.',
-    jump: .48, boosts: [.1, .35, .76],
+    jump: .48, terrain: [[.06,1.7,.04],[.19,-2.6,.035],[.32,2.8,.04],[.48,4.6,.019],[.54,-3.5,.035],[.72,2.1,.04],[.88,-2.1,.03]], boosts: [.1, .35, .76],
     knots: [[0,-88],[34,-82],[56,-62],[62,-36],[49,-18],[28,-17],[15,-29],[4,-17],[10,0],[29,12],[47,31],[38,53],[15,66],[-12,61],[-34,47],[-49,25],[-45,4],[-27,-7],[-18,-24],[-28,-43],[-45,-56],[-36,-76],[-16,-88]]
   }
 ];
 const DIFFICULTIES = {
   easy: { label: 'EASY', aiSpeed: 0.82, aiPressure: 0.35, aiMistake: 0.055, playerAccel: 1.10, recovery: 1.45, catchup: 1.12, description: 'EASY · Relaxed rivals, forgiving lines, more mistakes, faster recovery, and stronger catch-up.' },
   normal: { label: 'NORMAL', aiSpeed: 0.94, aiPressure: 1.05, aiMistake: 0.025, playerAccel: 1, recovery: 1, catchup: 1.045, description: 'NORMAL · Balanced rivals, occasional mistakes, and subtle catch-up assistance.' },
-  hard: { label: 'HARD', aiSpeed: 1, aiPressure: 1, aiMistake: 0.008, playerAccel: 1, recovery: 1, catchup: 1, description: 'HARD · Aggressive rivals, rare mistakes, minimal catch-up. The original challenge.' }
+  hard: { label: 'HARD', aiSpeed: 1, aiPressure: 1, aiMistake: 0.008, playerAccel: 1, recovery: 1, catchup: 1, description: 'NORMAL · Fair competition, active rivals, and balanced assistance.' }
 };
-let difficulty = 'hard';
+let difficulty = 'normal';
+let finalRacePlace = null;
 let activeTrackIndex = 0;
 let knots = TRACKS[activeTrackIndex].knots;
 const path = [];
@@ -648,6 +719,42 @@ let total = path.lengthTotal;
 let jumpAt = total * TRACKS[activeTrackIndex].jump;
 let boostPadsS = TRACKS[activeTrackIndex].boosts.map(v => total * v);
 
+function terrainHeightAt(s) {
+  const track = TRACKS[activeTrackIndex];
+  const wrapped = ((s % total) + total) % total;
+  const u = wrapped / total;
+  // Low rolling base plus authored, circular Gaussian rises. Circular distance keeps
+  // the elevation profile seamless where the circuit crosses the start/finish line.
+  let h = 0.75 * Math.sin(TAU * (u * 2.0 + 0.13)) + 0.38 * Math.sin(TAU * (u * 5.0 + 0.31));
+  for (const feature of (track.terrain || [])) {
+    const [center, amplitude, width] = feature;
+    let du = Math.abs(u - center);
+    du = Math.min(du, 1 - du);
+    const x = du / width;
+    if (x < 3.5) h += amplitude * Math.exp(-0.5 * x * x);
+  }
+  // Shape each jump into the road: a gradual approach ramp, rounded crest at
+  // the launch point, then a longer, smooth landing slope. Circular distance
+  // makes this feature safe even when its profile crosses the start/finish seam.
+  const jumpDelta = ((s - jumpAt + total * 0.5) % total + total) % total - total * 0.5;
+  const rampStart = -34, crest = 0, landingEnd = 48;
+  const rampHeight = [3.0, 3.8, 2.8, 3.3][activeTrackIndex] || 3.0;
+  if (jumpDelta >= rampStart && jumpDelta <= crest) {
+    const t = (jumpDelta - rampStart) / (crest - rampStart);
+    const smooth = t * t * (3 - 2 * t);
+    h += rampHeight * smooth;
+  } else if (jumpDelta > crest && jumpDelta <= landingEnd) {
+    const t = (jumpDelta - crest) / (landingEnd - crest);
+    const smooth = t * t * (3 - 2 * t);
+    h += rampHeight * (1 - smooth);
+  }
+  return h;
+}
+function terrainSlopeAt(s) {
+  const delta = 2.5;
+  return (terrainHeightAt(s + delta) - terrainHeightAt(s - delta)) / (2 * delta);
+}
+
 function sample(s) {
   s = ((s % total) + total) % total;
   let lo = 0, hi = path.length - 1;
@@ -662,7 +769,8 @@ function sample(s) {
   const z = a.z + (b.z - a.z) * t;
   let tx = b.x - a.x, tz = b.z - a.z, n = Math.hypot(tx, tz) || 1;
   tx /= n; tz /= n;
-  return { x, z, tx, tz, angle: Math.atan2(tx, tz) };
+  const height = terrainHeightAt(s);
+  return { x, z, tx, tz, height, slope: terrainSlopeAt(s), angle: Math.atan2(tx, tz) };
 }
 
 function projectToTrack(x, z, hint) {
@@ -682,10 +790,26 @@ function projectToTrack(x, z, hint) {
   return { s: bestS, lateral: bestLateral };
 }
 
-let startPos = sample(0);
+let startPos = sample(-48);
 
 // Core Racing State
 let gameState = 'START';
+let selectedCharacter = 'wyde';
+let playerInvisibleTimer = 0;
+let characterPowerJumpTimer = 0;
+let waveGlideTimer = 0;
+let waveGlideRequested = false;
+let waveWingsArmed = false;
+let cpuSkillRollSummary = '';
+let mothPhaseBoostCooldown = 0;
+const CHARACTERS = {
+  wyde:{id:'wyde',name:'WAVE',title:'THE SKY CRUSHER',ability:'SKY GLIDE',color:'#d8d0c5',summary:'WAVE · Sky Glide: X on the ground arms the visible wings without jumping or starting the glide timer. Jump with R1 or use a ramp to glide at the apex. In the air, X queues a glide while rising or starts it immediately while falling; press X again to cancel.',cooldown:4.6,maxSpeed:48,accel:1.0,grip:1.0},
+  hex:{id:'hex',name:'HEX',title:'THE CHAOS ALCHEMIST',ability:'FIREBALL',color:'#c4b4dc',summary:'HEX · Fireball: a quick ember deals 30 damage and briefly slows a hit rival. Incoming shots are telegraphed to you with a directional warning.',cooldown:2.7,maxSpeed:48.5,accel:.99,grip:.97},
+  grim:{id:'grim',name:'GRIM',title:'THE IRON WRECKER',ability:'SIDESWIPE',color:'#c4c8c1',summary:'GRIM · Sideswipe: a controlled forward burst knocks nearby rivals sideways for 24 damage. Balanced top speed, lower grip, and a longer cooldown.',cooldown:7.5,maxSpeed:48.2,accel:.98,grip:.91},
+  moth:{id:'moth',name:'MOTH',title:'THE PHANTOM DRIFTER',ability:'VEIL',color:'#b8d2cc',summary:'MOTH · Veil: phases through rivals and attacks for 5.25 seconds. Successful phasing grants a drift-style boost; excellent grip balances lower top speed.',cooldown:15.5,maxSpeed:46.5,accel:1.0,grip:1.08}
+};
+const regularJumpImpulse = () => selectedCharacter==='wyde' ? 10.1 : 8.08;
+const aiJumpImpulse = (racerId) => racerId==='wyde' ? 10.1 : 8.08;
 const state = {
   s: 0, x: startPos.x, z: startPos.z,
   lateral: 0, speed: 0, maxSpeed: 48,
@@ -693,28 +817,75 @@ const state = {
   cameraHeading: startPos.angle,
   cameraX: startPos.x - Math.sin(startPos.angle) * CAMERA_BACK,
   cameraZ: startPos.z - Math.cos(startPos.angle) * CAMERA_BACK,
+  cameraElevation: startPos.height + CAMERA_HEIGHT, terrainHeight: startPos.height, terrainSlope: 0,
   air: 0, airVel: 0, bump: 0, shake: 0,
   lap: 1, lapTime: 0, bestLap: Infinity, totalTime: 0,
   drifting: false, driftDir: 0, driftCharge: 0, driftTier: 0,
   boostTimer: 0, maxSpeedStat: 0,
-  impact: 0, hitCooldown: 0, collisionCooldown: 0
+  impact: 0, hitCooldown: 0, collisionCooldown: 0, slowTimer: 0, hp: 100, respawnTimer: 0, invulnerable: 0, fireCooldown: 0, jumpCooldown: 0, stompAnim: 0, stompBounce: 0
 };
+const fireballs = [];
+let aiFireTimer = 2.8;
+const FIRE_COOLDOWN = 1.15, JUMP_COOLDOWN = 0.85, RESPAWN_SECONDS = 3.0;
+const DAMAGE_IFRAMES = 2.0, MOTH_VEIL_SECONDS = 5.25, WAVE_GLIDE_SECONDS = 2.2;
 
 const AI_PROFILES = [
-  { name: 'HEX', number: '02', lane: -2.35, pace: 44.0, phase: 0.4, tone: '#b9b8b0' },
-  { name: 'MOTH', number: '03', lane: 2.25, pace: 42.5, phase: 1.7, tone: '#777870' },
-  { name: 'GRIM', number: '04', lane: 0.3, pace: 41.0, phase: 2.8, tone: '#c9c8c0' }
+  { id:'wyde', name:'WAVE', number:'01', lane:-1.2, pace:42.5, phase:0.1, tone:'#d8d0c5' },
+  { id:'hex', name:'HEX', number:'02', lane:-2.35, pace:42.7, phase:0.4, tone:'#c4b4dc' },
+  { id:'moth', name:'MOTH', number:'03', lane:2.25, pace:41.8, phase:1.7, tone:'#b8d2cc' },
+  { id:'grim', name:'GRIM', number:'04', lane:0.3, pace:42.6, phase:2.8, tone:'#c4c8c1' }
 ];
-const aiRacers = AI_PROFILES.map((r, i) => ({ ...r, progress: 12 + i * 14, speed: r.pace }));
+let aiRacers = [];
+function rebuildRacers() {
+  aiRacers = AI_PROFILES.filter(r => r.id !== selectedCharacter).map((r, i) => ({ ...r, baseLane:r.lane, targetLane:r.lane, laneVelocity:0, progress:12+i*14, speed:r.pace, hp:100, fireCooldown:1.5+i*.8, respawnTimer:0, invulnerable:0, stompAnim:0, explodeFlash:0, stompCooldown:1.1+i*.45, jumpAnim:0, air:0, airVel:0, abilityCooldown:(CHARACTERS[r.id]||{cooldown:5}).cooldown, invisibleTimer:0, abilityUsedFlash:0, glideTimer:0, glideRequested:false, wingsArmed:false, slowTimer:0, phaseContactCooldown:0, driftTimer:0, driftCooldown:1+i*.7, driftCharge:0, boostTimer:0, weirdMoveTimer:0, weirdLaneOffset:0, skillRoll:.985+Math.random()*.03, personality:Math.random() }));
+  resetRacers();
+}
 
 function resetRacers() {
   const cfg = DIFFICULTIES[difficulty];
-  aiRacers.forEach((r, i) => { r.progress = 12 + i * 14; r.speed = r.pace * cfg.aiSpeed; r.mistakeTimer = 0; });
+  aiRacers.forEach((r, i) => { r.progress = -36 + i * 12; r.speed = r.pace * cfg.aiSpeed; r.lane=r.baseLane; r.targetLane=r.baseLane; r.laneVelocity=0; r.mistakeTimer = 0; r.hp = 100; r.respawnTimer = 0; r.invulnerable = 0; r.stompAnim = 0; r.explodeFlash = 0; r.fireCooldown = 2.0 + i * .75; r.stompCooldown=1.1+i*.45; r.jumpAnim=0; r.air=0; r.airVel=0; r.invisibleTimer=0; r.abilityUsedFlash=0; r.glideTimer=0; r.glideRequested=false; r.wingsArmed=false; r.slowTimer=0; r.phaseContactCooldown=0; r.abilityCooldown=(CHARACTERS[r.id]||{cooldown:5}).cooldown; r.driftTimer=0; r.driftCooldown=.8+i*.6; r.driftCharge=0; r.boostTimer=0; r.weirdMoveTimer=0; r.weirdLaneOffset=0; r.skillRoll=.985+Math.random()*.03; r.personality=Math.random(); });
+  // A pre-race dice roll gives each rival a distinct but competitive skill profile.
+  cpuSkillRollSummary = aiRacers.map(r => `${r.name} ${r.personality<.28?'WILD':r.personality>.72?'SHARP':'STEADY'}`).join(' · ');
+  fireballs.length = 0; aiFireTimer = 2.4;
+  finalRacePlace = null;
 }
+function selectCharacter(id) {
+  if (!CHARACTERS[id]) id='wyde';
+  selectedCharacter=id;
+  if (state) state.maxSpeed=CHARACTERS[id].maxSpeed;
+  document.querySelectorAll('[data-character]').forEach(card=>card.setAttribute('aria-pressed',String(card.dataset.character===id)));
+  const c=CHARACTERS[id];
+  $('character-summary').textContent=c.summary;
+  $('character-confirm-btn').textContent='RACE AS '+c.name+' →';
+  document.querySelectorAll('.character-card').forEach((card,i)=>card.classList.toggle('menu-selected',card.dataset.character===id));
+  rebuildRacers();
+}
+function openCharacterSelect() {
+  if(gameState!=='START') return;
+  gameState='CHARACTER_SELECT';
+  ui.startScreen.classList.add('hidden');
+  $('character-screen').classList.remove('hidden');
+  selectCharacter(selectedCharacter);
+  menuFocusIndex=Array.from(document.querySelectorAll('[data-character]')).findIndex(c=>c.dataset.character===selectedCharacter);
+  updateMenuFocus();
+}
+function backToSetup() {
+  gameState='START';
+  $('character-screen').classList.add('hidden');
+  ui.startScreen.classList.remove('hidden');
+  menuFocusIndex=0;
+}
+function confirmCharacterSelection() {
+  if(gameState!=='CHARACTER_SELECT') return;
+  $('character-screen').classList.add('hidden');
+  startGameSequence();
+}
+
 function selectDifficulty(value) {
-  difficulty = DIFFICULTIES[value] ? value : 'hard';
-  $('difficulty-select').value = difficulty;
+  difficulty = DIFFICULTIES[value] ? value : 'normal';
+  const select = $('difficulty-select'); if (select) select.value = difficulty;
   $('difficulty-description').textContent = DIFFICULTIES[difficulty].description;
+  document.querySelectorAll('[data-difficulty]').forEach(card => { const active = card.dataset.difficulty === difficulty; card.setAttribute('aria-pressed', String(active)); card.classList.toggle('menu-selected', active && gameState === 'START'); });
   resetRacers();
 }
 
@@ -726,12 +897,13 @@ function selectTrack(index) {
   total = path.lengthTotal;
   jumpAt = total * track.jump;
   boostPadsS = track.boosts.map(v => total * v);
-  startPos = sample(0);
-  state.s = 0; state.x = startPos.x; state.z = startPos.z; state.lateral = 0;
+  startPos = sample(-48);
+  state.s = -48; state.x = startPos.x; state.z = startPos.z; state.lateral = 0;
   state.speed = 0; state.heading = startPos.angle; state.steerAngle = 0;
   state.cameraHeading = startPos.angle;
   state.cameraX = startPos.x - Math.sin(startPos.angle) * CAMERA_BACK;
   state.cameraZ = startPos.z - Math.cos(startPos.angle) * CAMERA_BACK;
+  state.terrainHeight = startPos.height; state.terrainSlope = 0; state.cameraElevation = startPos.height + CAMERA_HEIGHT;
   CAMERA_HEIGHT = (H * .815 + 54 - horizon) * CAMERA_BACK / (focal || 1);
   state.lap = 1; state.lapTime = 0; state.totalTime = 0; state.bestLap = Infinity;
   state.air = 0; state.airVel = 0; state.bump = 0; state.shake = 0;
@@ -756,7 +928,13 @@ function resize() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   focal = H * 1.84;
   horizon = H * (W < 700 ? .34 : .32);
-  CAMERA_HEIGHT = (H * .815 + 54 - horizon) * CAMERA_BACK / focal;
+  CAMERA_HEIGHT = (H * .815 + 54 - horizon) * CAMERA_BACK / (focal || 1);
+  // Keep the camera's world-space height calibrated after resizes and camera-mode changes.
+  if (typeof state !== 'undefined' && state) {
+    const cameraGround = terrainHeightAt(state.s - CAMERA_BACK * 0.45);
+    const targetElevation = cameraGround + CAMERA_HEIGHT;
+    state.cameraElevation = targetElevation;
+  }
   drawMap();
 }
 addEventListener('resize', resize);
@@ -789,6 +967,7 @@ function drawMap() {
   mctx.stroke();
 
   // Boost Pads on Map
+
   boostPadsS.forEach(bs => {
     const bp = sample(bs);
     mctx.fillStyle = '#000';
@@ -820,6 +999,7 @@ function drawMap() {
 
 // Input Handling
 function getActiveMenuButtons() {
+  if (gameState === 'CHARACTER_SELECT') return [...document.querySelectorAll('[data-character]'), $('character-back-btn'), $('character-confirm-btn')];
   if (gameState === 'PAUSED') return [$('resume-btn'), $('pause-restart-btn'), $('main-menu-btn')];
   if (gameState === 'FINISHED') return [$('restart-btn'), $('finish-menu-btn')];
   return [];
@@ -844,17 +1024,35 @@ function pollGamepad() {
   gamepadState.steer = Math.abs(axis) > .16 ? Math.sign(axis) * Math.min(1, (Math.abs(axis) - .12) / .72) : dpad;
   gamepadState.throttle = Math.max(b[7] ? b[7].value : 0, down(0) ? 1 : 0);
   gamepadState.brake = Math.max(b[6] ? b[6].value : 0, down(1) ? 1 : 0);
-  gamepadState.drift = down(2) || down(4);
+  gamepadState.drift = down(4);
+  if ((gameState === 'RACING') && edge(2)) usePlayerAbility();
+  if ((gameState === 'RACING') && edge(5)) triggerPlayerJump();
   const menuNow = performance.now();
   const menuUp = down(12) || (pad.axes && pad.axes.length > 1 && pad.axes[1] < -.65);
   const menuDown = down(13) || (pad.axes && pad.axes.length > 1 && pad.axes[1] > .65);
   if (gameState === 'START') {
-    if (edge(12) || edge(14) || (edge(13) || edge(15))) {
-      const dir = (edge(13)||edge(15)) ? 1 : -1;
-      const select=$('track-select'); select.selectedIndex=(select.selectedIndex+dir+select.options.length)%select.options.length; selectTrack(Number(select.value));
+    const axisX = pad.axes && pad.axes.length ? pad.axes[0] : 0;
+    const menuLeft = edge(14) || (axisX < -.65 && menuNow-lastGamepadMenuMove>180);
+    const menuRight = edge(15) || (axisX > .65 && menuNow-lastGamepadMenuMove>180);
+    if (edge(12) || edge(13)) {
+      const select=$('track-select'); const dir=edge(13) ? 1 : -1;
+      select.selectedIndex=(select.selectedIndex+dir+select.options.length)%select.options.length; selectTrack(Number(select.value));
+      lastGamepadMenuMove=menuNow;
+    } else if (menuLeft || menuRight) {
+      const order=['easy','normal','hard']; const idx=order.indexOf(difficulty);
+      selectDifficulty(order[(idx + (menuRight ? 1 : -1) + order.length) % order.length]);
+      lastGamepadMenuMove=menuNow;
     }
-    if (edge(0) || edge(7) || edge(9)) startGameSequence();
+    if (edge(0) || edge(7) || edge(9)) openCharacterSelect();
     if (edge(1)) { const select=$('track-select'); select.selectedIndex=(select.selectedIndex-1+select.options.length)%select.options.length; selectTrack(Number(select.value)); }
+  } else if (gameState === 'CHARACTER_SELECT') {
+    const cards=Array.from(document.querySelectorAll('[data-character]'));
+    if ((edge(14)||edge(15)||edge(12)||edge(13)) && menuNow-lastGamepadMenuMove>150) {
+      const delta=(edge(14)||edge(12))?-1:1; const idx=cards.findIndex(c=>c.dataset.character===selectedCharacter);
+      selectCharacter(cards[(idx+delta+cards.length)%cards.length].dataset.character); lastGamepadMenuMove=menuNow;
+    }
+    if(edge(0)||edge(7)||edge(9)) confirmCharacterSelection();
+    if(edge(1)) backToSetup();
   } else if (gameState === 'RACING' || gameState === 'COUNTDOWN') {
     if (edge(9)) togglePause();
     if (edge(3)) setCameraMode();
@@ -890,9 +1088,21 @@ addEventListener('keydown', e => {
     e.preventDefault(); togglePause(); return;
   }
   if ((gameState === 'PAUSED' || gameState === 'FINISHED') && (k === 'ArrowDown' || k === 'ArrowUp')) { const buttons=getActiveMenuButtons(); if(buttons.length){ menuFocusIndex=(menuFocusIndex+(k==='ArrowDown'?1:-1)+buttons.length)%buttons.length; updateMenuFocus(); } return; }
+  if (gameState === 'CHARACTER_SELECT' && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(k)) {
+    e.preventDefault(); const cards=Array.from(document.querySelectorAll('[data-character]')); const idx=cards.findIndex(c=>c.dataset.character===selectedCharacter); const delta=(k==='ArrowLeft'||k==='ArrowUp')?-1:1; selectCharacter(cards[(idx+delta+cards.length)%cards.length].dataset.character); return;
+  }
+  if (gameState === 'CHARACTER_SELECT' && (k==='Escape'||k==='Backspace')) { backToSetup(); return; }
+  if (gameState === 'START' && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(k)) {
+    if (k === 'ArrowLeft' || k === 'ArrowRight') { const order=['easy','normal','hard']; const idx=order.indexOf(difficulty); selectDifficulty(order[(idx+(k==='ArrowRight'?1:-1)+order.length)%order.length]); }
+    else { const select=$('track-select'); select.selectedIndex=(select.selectedIndex+(k==='ArrowDown'?1:-1)+select.options.length)%select.options.length; selectTrack(Number(select.value)); }
+    return;
+  }
+  if (gameState === 'RACING' && (k === 'x')) { usePlayerAbility(); return; }
+  if (gameState === 'RACING' && (k === 'r')) { triggerPlayerJump(); return; }
   if ((k === 'c' || k === 'C') && (gameState === 'RACING' || gameState === 'PAUSED')) { setCameraMode(); return; }
   keys.add(k);
-  if (gameState === 'START' && (k === 'Enter' || k === ' ')) startGameSequence();
+  if (gameState === 'START' && (k === 'Enter' || k === ' ')) { openCharacterSelect(); return; }
+  if (gameState === 'CHARACTER_SELECT' && (k === 'Enter' || k === ' ')) { confirmCharacterSelection(); return; }
   const until = performance.now() + 90;
   if (k === 'ArrowLeft' || k === 'a') tapUntil.left = until;
   if (k === 'ArrowRight' || k === 'd') tapUntil.right = until;
@@ -956,10 +1166,10 @@ function returnToMainMenu() {
   gameState = 'START';
   keys.clear(); for (const k in touch) touch[k] = false;
   gamepadState.steer = 0; gamepadState.throttle = 0; gamepadState.brake = 0; gamepadState.drift = false;
-  ui.startScreen.classList.remove('hidden'); ui.pauseScreen.classList.add('hidden'); ui.finishScreen.classList.add('hidden');
+  ui.startScreen.classList.remove('hidden'); $('character-screen').classList.add('hidden'); ui.pauseScreen.classList.add('hidden'); ui.finishScreen.classList.add('hidden');
   ui.pauseBtn.hidden = true; $('camera-btn').hidden = true;
   $('music-btn').hidden = false;
-  sounds.setMusicMode('title'); sounds.setMusicPlaying(true);
+  sounds.setMusicMode('title'); sounds.setMusicPlaying(true); sounds.stopEngine();
   selectTrack(activeTrackIndex);
 }
 
@@ -974,9 +1184,10 @@ function startGameSequence() {
   sounds.setMusicMode('race');
   sounds.setMusicPlaying(true);
   ui.pauseBtn.textContent = 'PAUSE!';
-  state.collisionCooldown = 0;
+  state.collisionCooldown = 0; state.slowTimer=0; state.hp=100; state.respawnTimer=0; state.invulnerable=0; state.fireCooldown=0; state.jumpCooldown=0; state.stompBounce=0; playerInvisibleTimer=0; characterPowerJumpTimer=0; waveGlideTimer=0; waveGlideRequested=false; waveWingsArmed=false; fireballs.length=0; aiFireTimer=2.4;
+  finalRacePlace = null;
   
-  state.s = 0; state.x = startPos.x; state.z = startPos.z;
+  state.s = -48; state.x = startPos.x; state.z = startPos.z;
   state.speed = 0; state.lateral = 0; state.heading = startPos.angle;
   state.cameraHeading = startPos.angle; state.lap = 1;
   state.cameraX = startPos.x - Math.sin(startPos.angle) * CAMERA_BACK; state.cameraZ = startPos.z - Math.cos(startPos.angle) * CAMERA_BACK;
@@ -986,11 +1197,13 @@ function startGameSequence() {
   state.air = 0; state.airVel = 0; state.bump = 0; state.shake = 0;
   state.cameraX = startPos.x - Math.sin(startPos.angle) * CAMERA_BACK;
   state.cameraZ = startPos.z - Math.cos(startPos.angle) * CAMERA_BACK;
+  state.terrainHeight = startPos.height; state.terrainSlope = 0; state.cameraElevation = startPos.height + CAMERA_HEIGHT;
   resetRacers();
 
   gameState = 'COUNTDOWN';
   let count = 3;
   ui.countdown.textContent = '3';
+  ui.countdown.title = 'CPU skill roll: ' + (cpuSkillRollSummary || 'rivals ready');
   ui.countdown.classList.add('show');
   sounds.playBeep(440, 'sine', 0.2);
 
@@ -1001,6 +1214,7 @@ function startGameSequence() {
       sounds.playBeep(440, 'sine', 0.2);
     } else if (count === 0) {
       ui.countdown.textContent = 'GO!';
+      ui.countdown.title = 'CPU skill roll: ' + (cpuSkillRollSummary || 'rivals ready');
       sounds.playBeep(880, 'triangle', 0.4);
       gameState = 'RACING';
     } else {
@@ -1010,31 +1224,296 @@ function startGameSequence() {
   }, 1000);
 }
 
+function firePlayerBall() {
+  if (gameState !== 'RACING' || selectedCharacter!=='hex' || state.respawnTimer>0 || state.fireCooldown>0) return;
+  state.fireCooldown=CHARACTERS.hex.cooldown;
+  fireballs.push({owner:'player',s:state.s+5,lane:state.lateral,laneTarget:state.lateral,laneHoming:0,speed:61,life:1.65,damage:30,wobble:0,x:state.x+Math.sin(state.heading)*2.5,z:state.z+Math.cos(state.heading)*2.5});
+  sounds.playBeep(740,'triangle',.12); state.shake=Math.max(state.shake,.08);
+}
+function triggerPlayerJump() {
+  if (gameState!=='RACING' || state.respawnTimer>0 || state.jumpCooldown>0) return;
+  state.jumpCooldown=.85;
+  if(state.air<=.08){state.airVel=regularJumpImpulse();state.air=Math.max(.02,state.air);}
+  state.stompBounce=.22; sounds.playBeep(520,'triangle',.10);
+}
+function usePlayerAbility() {
+  if(gameState!=='RACING'||state.respawnTimer>0)return;
+  // Wave can always cancel an active/queued glide with a second X press, even during cooldown.
+  if(selectedCharacter==='wyde' && (waveGlideTimer>0 || waveGlideRequested)){
+    waveGlideTimer=0;waveGlideRequested=false;waveWingsArmed=false;state.stompBounce=.12;sounds.playBeep(420,'triangle',.08);return;
+  }
+  if(state.fireCooldown>0)return;
+  const c=CHARACTERS[selectedCharacter];
+  if(selectedCharacter==='hex'){firePlayerBall();return;}
+  if(selectedCharacter==='wyde'){
+    if(state.air<=.12){
+      // Ground X only unfolds/arms the wings. It never launches Wave; use R1 or a track ramp to jump.
+      waveWingsArmed=true;waveGlideRequested=true;waveGlideTimer=0;state.stompBounce=.08;
+    } else {
+      waveWingsArmed=true;
+      if(waveGlideTimer>0){waveGlideTimer=0;waveGlideRequested=false;waveWingsArmed=false;}
+      else {waveGlideRequested=state.airVel>0.35;if(!waveGlideRequested){waveGlideTimer=WAVE_GLIDE_SECONDS;state.speed=Math.min(state.maxSpeed+2.5,state.speed+1.8);state.airVel=Math.max(state.airVel,.15);}}
+      state.stompBounce=.18;
+    }
+    state.fireCooldown=c.cooldown;
+    sounds.playBeep(620,'triangle',.16);
+  } else if(selectedCharacter==='grim'){
+    state.fireCooldown=c.cooldown;
+    state.boostTimer=Math.max(state.boostTimer,.72);state.speed=Math.min(state.maxSpeed+6,state.speed+4.5);state.shake=Math.max(state.shake,.2);sounds.playBeep(180,'square',.18);
+    let hit=0;
+    for(const r of aiRacers){if(r.respawnTimer>0||r.invisibleTimer>0)continue;let d=r.progress-state.s;d-=Math.round(d/total)*total;const sideGap=Math.abs(r.lane-state.lateral);if(Math.abs(d)<4.8&&sideGap<4.4){damageRacer(r,24);r.targetLane=clamp(r.lane+(r.lane>=state.lateral?1:-1)*2.7,-4.8,4.8);r.lane=r.targetLane;r.stompAnim=.4;hit++;}}
+    if(hit===0)state.speed=Math.min(state.maxSpeed+6,state.speed+1.5);
+  } else if(selectedCharacter==='moth'){
+    state.fireCooldown=c.cooldown;
+    playerInvisibleTimer=MOTH_VEIL_SECONDS;state.invulnerable=Math.max(state.invulnerable,MOTH_VEIL_SECONDS);sounds.playBeep(880,'sine',.22);state.shake=Math.max(state.shake,.04);
+  }
+}
+
+function damagePlayer(amount, impulse=0) {
+  if (state.invulnerable>0 || playerInvisibleTimer>0 || state.respawnTimer>0) return;
+  state.hp=Math.max(0,state.hp-amount); state.invulnerable=DAMAGE_IFRAMES; state.bump=.55; state.shake=Math.max(state.shake,.5); flashTime=.13;
+  state.speed=Math.max(8,state.speed-impulse); sounds.playBeep(110,'sawtooth',.18);
+  if(state.hp<=0){ state.respawnTimer=RESPAWN_SECONDS; state.speed=0; state.air=0; state.airVel=0; state.drifting=false; }
+}
+function damageRacer(r, amount) {
+  if(r.invulnerable>0 || r.respawnTimer>0 || r.invisibleTimer>0) return;
+  r.hp=Math.max(0,r.hp-amount); r.invulnerable=DAMAGE_IFRAMES; r.stompAnim=.28; r.explodeFlash=.18;
+  if(r.hp<=0){r.respawnTimer=RESPAWN_SECONDS;r.speed=0;}
+}
+function updateCombat(dt, wasS) {
+  state.fireCooldown=Math.max(0,state.fireCooldown-dt); state.jumpCooldown=Math.max(0,state.jumpCooldown-dt);
+  state.invulnerable=Math.max(0,state.invulnerable-dt); state.slowTimer=Math.max(0,state.slowTimer-dt); mothPhaseBoostCooldown=Math.max(0,mothPhaseBoostCooldown-dt); playerInvisibleTimer=Math.max(0,playerInvisibleTimer-dt); waveGlideTimer=Math.max(0,waveGlideTimer-dt); if(waveGlideTimer<=0 && state.air>0 && !waveGlideRequested)waveWingsArmed=false; if(waveGlideTimer<=0 && state.air<=0 && state.airVel<=0){waveGlideRequested=false;waveWingsArmed=false;} characterPowerJumpTimer=Math.max(0,characterPowerJumpTimer-dt); state.stompBounce=Math.max(0,state.stompBounce-dt*2.8);
+  for(const r of aiRacers){r.fireCooldown=Math.max(0,r.fireCooldown-dt);r.slowTimer=Math.max(0,(r.slowTimer||0)-dt);r.phaseContactCooldown=Math.max(0,(r.phaseContactCooldown||0)-dt);r.invulnerable=Math.max(0,r.invulnerable-dt);r.invisibleTimer=Math.max(0,(r.invisibleTimer||0)-dt);r.abilityUsedFlash=Math.max(0,(r.abilityUsedFlash||0)-dt);r.stompAnim=Math.max(0,r.stompAnim-dt);r.explodeFlash=Math.max(0,r.explodeFlash-dt);r.jumpAnim=Math.max(0,(r.jumpAnim||0)-dt);r.stompCooldown=Math.max(0,(r.stompCooldown||0)-dt);}
+  if(state.respawnTimer>0){
+    state.respawnTimer=Math.max(0,state.respawnTimer-dt);
+    if(state.respawnTimer===0){state.hp=100;state.invulnerable=2.0;state.speed=20;state.s=Math.max(0,state.s);const q=sample(state.s);state.x=q.x+q.tz*state.lateral;state.z=q.z-q.tx*state.lateral;state.heading=q.angle;state.air=0;state.airVel=0;state.bump=0;}
+  }
+
+  const cfg=DIFFICULTIES[difficulty];
+  // Rivals read the player's recent lateral movement and aim ahead rather than firing
+  // blindly at the player's current lane. Higher difficulties lead the target more.
+  const lateralVelocity=state._combatLateral===undefined?0:(state.lateral-state._combatLateral)/Math.max(dt,.001);
+  state._combatLateral=state.lateral;
+  aiFireTimer-=dt;
+  if(aiFireTimer<=0 && state.respawnTimer<=0 && gameState==='RACING'){
+    const shooters=aiRacers.filter(r=>r.id==='hex' && r.respawnTimer<=0 && r.fireCooldown<=0);
+    const shooter=shooters.sort((a,b)=>Math.abs(a.progress-state.s)-Math.abs(b.progress-state.s))[0];
+    if(shooter){
+      // Only fire when there's a plausible forward target. Hex may attack the player
+      // or punish a rival; it avoids wasting shots on protected/invisible targets.
+      const candidates=[];
+      let pd=state.s-shooter.progress;pd-=Math.round(pd/total)*total;
+      if(pd>2 && pd<38 && state.respawnTimer<=0 && playerInvisibleTimer<=0 && state.invulnerable<=0 && Math.abs(state.lateral-shooter.lane)<5.2)
+        candidates.push({id:'player',s:state.s,lane:state.lateral,d:pd,score:pd+Math.abs(state.lateral-shooter.lane)*2.2});
+      for(const target of aiRacers){
+        if(target===shooter||target.respawnTimer>0||target.invisibleTimer>0||target.invulnerable>0)continue;
+        let d=target.progress-shooter.progress;d-=Math.round(d/total)*total;
+        if(d>2&&d<34&&Math.abs(target.lane-shooter.lane)<5.2)
+          candidates.push({id:target.id,s:target.progress,lane:target.lane,d,score:d+Math.abs(target.lane-shooter.lane)*2.4+(target.hp<45?-2:0)});
+      }
+      // Usually choose the cleanest shot, but occasionally make a human-like tactical
+      // choice to pressure a rival rather than always tunnelling the player.
+      candidates.sort((a,b)=>a.score-b.score);
+      let target=candidates[0];
+      if(candidates.length>1 && Math.random()<.28){const rivalShots=candidates.filter(c=>c.id!=='player');if(rivalShots.length)target=rivalShots[Math.floor(Math.random()*Math.min(2,rivalShots.length))];}
+      if(target){
+        const lead=difficulty==='easy'?.06:(difficulty==='normal'?.20:.38);
+        const predictedLane=target.id==='player'?clamp(state.lateral+lateralVelocity*lead,-4.8,4.8):target.lane;
+        const targetRacer=target.id==='player'?null:aiRacers.find(r=>r.id===target.id);
+        const predictedProgress=target.id==='player'?state.s+Math.max(0,state.speed)*lead:(targetRacer?targetRacer.progress+targetRacer.speed*lead:target.s);
+        const d=predictedProgress-shooter.progress;
+        const targetLane=clamp(predictedLane+(d<0?Math.sign(predictedLane-shooter.lane)*.3:0),-4.8,4.8);
+        fireballs.push({owner:shooter.name,ownerId:shooter.id,targetId:target.id,s:shooter.progress+4,lane:shooter.lane,laneTarget:targetLane,laneHoming:difficulty==='easy'?.25:(difficulty==='normal'?.48:.72),speed:55+cfg.aiPressure*1.2,life:1.65,damage:20,wobble:0});
+        shooter.fireCooldown=(difficulty==='easy'?6.2:(difficulty==='normal'?4.8:4.0))+Math.random()*1.0;
+      }
+    }
+    aiFireTimer=(difficulty==='easy'?2.9:(difficulty==='normal'?2.3:1.8))+Math.random()*(difficulty==='easy'?1.4:1.0);
+  }
+
+  // Evasive driving: opponents dodge incoming fireballs and avoid the player's
+  // landing zone, then smoothly return toward their preferred racing line.
+  for(const r of aiRacers){
+    if(r.respawnTimer>0)continue;
+    let desired=r.baseLane;
+    if((r.weirdMoveTimer||0)>0) desired += (r.weirdLaneOffset||0);
+    let danger=0;
+    for(const f of fireballs){
+      if(f.owner==='player'){
+        let ds=f.s-r.progress; ds-=Math.round(ds/total)*total;
+        if(ds>-1.5 && ds<13 && Math.abs(f.lane-r.lane)<4.3){
+          const side=(r.lane-f.lane)>=0?1:-1;
+          const strength=(1-Math.abs(ds-5.5)/7)*cfg.aiPressure;
+          desired+=side*Math.max(0,strength)*3.0; danger=Math.max(danger,Math.max(0,strength));
+        }
+      }
+    }
+    let dp=state.s-r.progress;dp-=Math.round(dp/total)*total;
+    // If player is airborne and approaching, move sideways to deny an easy stomp.
+    if(state.air>.3 && Math.abs(dp)<10 && Math.abs(state.lateral-r.lane)<4.5){
+      const side=(r.lane-state.lateral)>=0?1:-1;
+      desired+=side*(difficulty==='easy'?1.2:(difficulty==='normal'?2.2:3.2))*cfg.aiPressure;
+      danger=Math.max(danger,.8);
+    }
+    // Do not bunch into another rival while dodging.
+    for(const other of aiRacers){if(other===r||other.respawnTimer>0)continue;let od=other.progress-r.progress;od-=Math.round(od/total)*total;if(Math.abs(od)<5 && Math.abs(other.lane-r.lane)<2.8)desired+=(r.lane>=other.lane?1:-1)*1.1;}
+    r.targetLane=clamp(desired,-4.8,4.8);
+    const response=1-Math.exp(-(danger>0?4.8:1.35)*dt);
+    r.lane += (r.targetLane-r.lane)*response;
+    r.laneVelocity=(r.laneVelocity||0)+(r.lane-(r._lastLane===undefined?r.lane:r._lastLane))/Math.max(dt,.001);
+    r._lastLane=r.lane;
+  }
+
+  for(let i=fireballs.length-1;i>=0;i--){
+    const f=fireballs[i];f.life-=dt;f.s+=f.speed*dt;f.wobble+=dt*12;
+    if(f.owner==='player'){
+      for(const r of aiRacers){if(r.respawnTimer>0)continue;let d=r.progress-f.s;d-=Math.round(d/total)*total;
+        if(Math.abs(d)<2.6 && Math.abs(r.lane-f.lane)<2.7){
+          if(r.id==='moth' && r.invisibleTimer>0){r.speed=Math.min(r.pace*1.35,r.speed+8);r.boostTimer=.85;r.abilityUsedFlash=.25;fireballs.splice(i,1);break;}
+          if(r.invisibleTimer>0)continue;
+          if(r.id==='moth'&&r.abilityCooldown<=0){r.invisibleTimer=MOTH_VEIL_SECONDS;r.abilityCooldown=15.5;r.abilityUsedFlash=.4;fireballs.splice(i,1);break;}
+          if(r.invulnerable<=0){damageRacer(r,f.damage);r.slowTimer=Math.max(r.slowTimer||0,1.25);r.speed=Math.max(r.pace*.55,r.speed-5.5);}
+          fireballs.splice(i,1);break;}}
+    }else{
+      if(f.laneTarget!==undefined)f.lane+=(f.laneTarget-f.lane)*(1-Math.exp(-(f.laneHoming||1)*dt));
+      if(f.targetId && f.targetId!=='player'){
+        const target=aiRacers.find(r=>r.id===f.targetId);
+        if(target && target.respawnTimer<=0){let d=target.progress-f.s;d-=Math.round(d/total)*total;
+          if(Math.abs(d)<2.8 && Math.abs(target.lane-f.lane)<2.8){
+            if(target.id==='moth'&&target.invisibleTimer>0){if((target.phaseContactCooldown||0)<=0){target.boostTimer=Math.max(target.boostTimer||0,.75);target.speed=Math.min(target.pace*1.28,target.speed+5);target.phaseContactCooldown=.8;}fireballs.splice(i,1);continue;}
+            if(target.invulnerable<=0&&target.invisibleTimer<=0){damageRacer(target,f.damage);target.slowTimer=Math.max(target.slowTimer||0,1.0);target.speed=Math.max(target.pace*.6,target.speed-3.8);}
+            fireballs.splice(i,1);continue;
+          }
+        }
+      } else {
+        let d=state.s-f.s;d-=Math.round(d/total)*total;
+        if(Math.abs(d)<2.8 && Math.abs(state.lateral-f.lane)<2.8){
+          if(playerInvisibleTimer>0 && selectedCharacter==='moth'){
+            if(mothPhaseBoostCooldown<=0){state.boostTimer=Math.max(state.boostTimer,.9);state.speed=Math.min(state.maxSpeed+7,state.speed+5.5);mothPhaseBoostCooldown=.7;sounds.playBoost();}
+            fireballs.splice(i,1);continue;
+          }
+          if(playerInvisibleTimer<=0){if(state.invulnerable<=0){damagePlayer(f.damage,5);state.slowTimer=Math.max(state.slowTimer||0,1.25);state.speed=Math.max(8,state.speed-4.5);}fireballs.splice(i,1);continue;}
+        }
+      }
+    }
+    if(f.life<=0)fireballs.splice(i,1);
+  }
+
+  // Player stomp: only trigger while descending and within a tight landing window.
+  if(state.air>0.65 && state.airVel<1.8){for(const r of aiRacers){let d=r.progress-state.s;d-=Math.round(d/total)*total;if(r.respawnTimer<=0 && Math.abs(d)<2.3 && Math.abs(r.lane-state.lateral)<2.5){damageRacer(r,characterPowerJumpTimer>0?52:42);r.stompAnim=.5;characterPowerJumpTimer=0;state.airVel=7.2;state.air=.22;state.stompBounce=.65;state.speed=Math.min(state.maxSpeed+7,state.speed+3.5);sounds.playBeep(260,'square',.12);break;}}}
+
+  // CPU racers use the same ballistic jump arc as the player's current regular jump.
+  // Their attacks have a visible airborne phase and can be dodged by jumping or veiling.
+  for(const r of aiRacers){
+    if(r.respawnTimer>0)continue;
+    r.abilityCooldown=Math.max(0,(r.abilityCooldown||0)-dt);
+    r.glideTimer=Math.max(0,(r.glideTimer||0)-dt);if(r.glideTimer<=0&&r.air>0&&!r.glideRequested)r.wingsArmed=false;
+    if(r.air>0 || r.airVel>0){r.air+=r.airVel*dt;if(r.id==='wyde'&&r.glideRequested&&r.airVel<=.35){r.glideRequested=false;r.wingsArmed=true;r.speed=Math.min(r.pace*1.18,r.speed+1.5);r.airVel=Math.max(r.airVel,.15);}r.airVel-=(r.id==='wyde'&&r.glideTimer>0?1.05:17)*dt;if(r.air<=0&&r.airVel<0){r.air=0;r.airVel=0;r.jumpAnim=0;if(r.id==='wyde'&&r.glideTimer<=0)r.wingsArmed=r.glideRequested;}}
+    else {r.air=0;r.airVel=0;}
+    r.jumpAnim=r.air>0?Math.min(1,r.air/2.3):0;
+    let d=state.s-r.progress;d-=Math.round(d/total)*total;
+    const close=Math.abs(d)<8.0 && Math.abs(r.lane-state.lateral)<3.6;
+    const closeCpuTarget=aiRacers.some(other=>{if(other===r||other.respawnTimer>0||other.invisibleTimer>0)return false;let od=other.progress-r.progress;od-=Math.round(od/total)*total;return Math.abs(od)<6.0&&Math.abs(other.lane-r.lane)<4.2;});
+    // Character signature abilities are active, not cosmetic AI flags.
+    if(r.abilityCooldown<=0 && (close||closeCpuTarget) && state.respawnTimer<=0){
+      if(r.id==='wyde'){if(r.air>.12){if(r.glideTimer>0){r.glideTimer=0;r.glideRequested=false;r.wingsArmed=false;}else{r.glideRequested=r.airVel>0.35;if(!r.glideRequested)r.glideTimer=WAVE_GLIDE_SECONDS;r.wingsArmed=true;}}else{r.wingsArmed=true;r.glideRequested=true;}r.abilityCooldown=4.6;r.abilityUsedFlash=.35;}
+      else if(r.id==='grim'){
+        const targets=[];
+        if(Math.abs(d)<4.6&&Math.abs(r.lane-state.lateral)<4.7&&state.respawnTimer<=0&&playerInvisibleTimer<=0)targets.push({id:'player',d,lane:state.lateral,score:Math.abs(d)+Math.abs(r.lane-state.lateral)*.7});
+        for(const other of aiRacers){if(other===r||other.respawnTimer>0||other.invisibleTimer>0||other.invulnerable>0)continue;let od=other.progress-r.progress;od-=Math.round(od/total)*total;if(Math.abs(od)<4.6&&Math.abs(other.lane-r.lane)<4.7)targets.push({id:other.id,d:od,lane:other.lane,score:Math.abs(od)+Math.abs(other.lane-r.lane)*.7});}
+        targets.sort((a,b)=>a.score-b.score);
+        if(targets.length){const t=targets[0];r.speed=Math.min(r.pace*1.12,r.speed+3.2);r.progress+=.35;
+          if(t.id==='player'){if(state.invulnerable<=0&&playerInvisibleTimer<=0){damagePlayer(18,4);state.lateral=clamp(state.lateral+(r.lane>=state.lateral?-1:1)*.45,-4.8,4.8);}}
+          else {const victim=aiRacers.find(v=>v.id===t.id);if(victim){damageRacer(victim,18);victim.targetLane=clamp(victim.lane+(victim.lane>=r.lane?1:-1)*1.8,-4.8,4.8);victim.lane=victim.targetLane;victim.stompAnim=.35;}}
+        }
+        r.abilityCooldown=7.5;r.abilityUsedFlash=.45;
+      }
+    }
+    // Moth veils when a player projectile is about to connect or when in close combat.
+    if(r.id==='moth' && r.abilityCooldown<=0){
+      const threatened=fireballs.some(f=>((f.owner==='player') || f.targetId===r.id) && Math.abs((f.s-r.progress)-Math.round((f.s-r.progress)/total)*total)<8 && Math.abs(f.lane-r.lane)<3.2);
+      if(threatened || (close && Math.abs(d)<3.5)){r.invisibleTimer=MOTH_VEIL_SECONDS;r.abilityCooldown=15.5;r.abilityUsedFlash=.4;}
+    }
+    // All CPU karts can jump-stomp. Wave's signature jump uses the same grounded impulse as the player's character.
+    if((close||closeCpuTarget) && r.stompCooldown<=0 && r.air<=.05 && !(r.id==='wyde'&&r.abilityUsedFlash>0)){ 
+      const stompTargets=[];
+      if(close&&state.air<=.25&&playerInvisibleTimer<=0)stompTargets.push({id:'player',d,lane:state.lateral,score:Math.abs(d)+Math.abs(state.lateral-r.lane)*.8});
+      for(const other of aiRacers){if(other===r||other.respawnTimer>0||other.invisibleTimer>0||other.invulnerable>0)continue;let od=other.progress-r.progress;od-=Math.round(od/total)*total;if(Math.abs(od)<5.0&&Math.abs(other.lane-r.lane)<3.8)stompTargets.push({id:other.id,d:od,lane:other.lane,score:Math.abs(od)+Math.abs(other.lane-r.lane)*.8});}
+      stompTargets.sort((a,b)=>a.score-b.score);
+      if(stompTargets.length){r.stompTargetId=stompTargets[0].id;r.airVel=aiJumpImpulse(r.id);r.air=.02;r.stompAnim=.42;r.stompCooldown=difficulty==='easy'?4.5:(difficulty==='normal'?3.25:2.7);r.stompPending=1;}
+    }
+    if(r.stompPending && r.air>0.35 && r.airVel<0){
+      const targetId=r.stompTargetId||'player';
+      if(targetId==='player'){
+        let landing=state.s-r.progress;landing-=Math.round(landing/total)*total;
+        if(state.respawnTimer<=0&&playerInvisibleTimer<=0&&state.air<=.25&&Math.abs(landing)<2.4&&Math.abs(state.lateral-r.lane)<2.2){damagePlayer(22,6);r.stompAnim=.5;}
+      } else {
+        const victim=aiRacers.find(v=>v.id===targetId);
+        if(victim&&victim.respawnTimer<=0&&victim.invisibleTimer<=0&&victim.air<=.25){let landing=victim.progress-r.progress;landing-=Math.round(landing/total)*total;if(Math.abs(landing)<2.4&&Math.abs(victim.lane-r.lane)<2.2){damageRacer(victim,22);victim.stompAnim=.5;}}
+      }
+      r.stompPending=0;r.stompTargetId=null;
+    }
+  }
+
+}
+function drawCombatFX(){
+  const cam={x:state.cameraX,z:state.cameraZ},a=state.cameraHeading,forward={x:Math.sin(a),z:Math.cos(a)},right={x:Math.cos(a),z:-Math.sin(a)};
+  for(const f of fireballs){const q=sample(f.s);const x=q.x+q.tz*f.lane,z=q.z-q.tx*f.lane;const p=project({x,z,y:q.height+1.3+Math.sin(f.wobble)*.25},cam,forward,right);if(!p)continue;const rad=clamp(p.scale*.65,3,22);ctx.save();ctx.globalAlpha=.9;const g=ctx.createRadialGradient(p.x,p.y,1,p.x,p.y,rad*2.2);g.addColorStop(0,f.owner==='player'?'#fff4bd':'#ff8a4d');g.addColorStop(.35,f.owner==='player'?'#ff8a32':'#e83e35');g.addColorStop(1,'rgba(220,40,20,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,rad*2.2,0,TAU);ctx.fill();ctx.fillStyle='#fff0b0';ctx.beginPath();ctx.arc(p.x,p.y,rad*.65,0,TAU);ctx.fill();ctx.restore();}
+  // Only the human player gets a clear directional warning for approaching enemy fireballs.
+  const incoming=fireballs.filter(f=>f.owner!=='player').map(f=>{let d=f.s-state.s;d-=Math.round(d/total)*total;return {f,d};}).filter(v=>Math.abs(v.d)<20 && Math.abs(v.f.lane-state.lateral)<5.2).sort((a,b)=>Math.abs(a.d)-Math.abs(b.d))[0];
+  if(incoming && gameState==='RACING' && playerInvisibleTimer<=0){
+    const side=incoming.f.lane-state.lateral;const x=W*.5+clamp(side*18,-W*.22,W*.22);const y=H*.17;ctx.save();ctx.globalAlpha=.85+.15*Math.sin(state.totalTime*16);ctx.fillStyle='#ffb14d';ctx.strokeStyle='#211b17';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,y+13);ctx.lineTo(x-10,y-3);ctx.lineTo(x-3,y-3);ctx.lineTo(x-3,y-13);ctx.lineTo(x+3,y-13);ctx.lineTo(x+3,y-3);ctx.lineTo(x+10,y-3);ctx.closePath();ctx.fill();ctx.stroke();ctx.font='800 10px monospace';ctx.textAlign='center';ctx.fillStyle='#fff1d0';ctx.fillText('INCOMING',x,y+27);ctx.restore();
+  }
+  if(state.respawnTimer>0){ctx.save();ctx.globalAlpha=.72;ctx.fillStyle='#171816';ctx.beginPath();ctx.arc(W*.5,H*.53,Math.min(W,H)*(.08+state.respawnTimer*.018),0,TAU);ctx.fill();ctx.fillStyle='#f1f0e9';ctx.textAlign='center';ctx.font='900 24px monospace';ctx.fillText('KABOOM!',W*.5,H*.53);ctx.font='700 13px monospace';ctx.fillText('RESPAWN '+state.respawnTimer.toFixed(1),W*.5,H*.53+30);ctx.restore();}
+}
+
 function update(dt) {
   if (gameState !== 'RACING') {
-    sounds.updateEngine(0, false);
+    // Keep the familiar low idle on the pause overlay, but silence the motor on all menus/results.
+    if (gameState === 'PAUSED') sounds.updateEngine(0, false);
+    else sounds.stopEngine();
     return;
   }
 
   getInputs();
   const wasS = state.s;
+  updateCombat(dt, wasS);
+  if(state.respawnTimer>0){state.speed=0;state.bump=Math.max(0,state.bump-dt*2);state.invulnerable=0;uiClock-=dt;if(uiClock<=0){uiClock=.05;renderUI();}return;}
   const wasLateral = state.lateral;
 
   state.totalTime += dt;
   state.lapTime += dt;
-  const playerProgressForAI = (state.lap - 1) * total + (state.s % total);
+  const playerProgressForAI = state.s;
   aiRacers.forEach((r, i) => {
+    if(r.respawnTimer>0){r.respawnTimer=Math.max(0,r.respawnTimer-dt);if(r.respawnTimer===0){r.hp=100;r.invulnerable=2.0;r.speed=r.pace*.7;r.progress+=8;r.lane=r.baseLane;r.targetLane=r.baseLane;r.laneVelocity=0;r.stompPending=0;}return;}
     // Faster rivals vary their pace, then push a little harder when the player is ahead.
     // This keeps the race close without teleporting opponents or making them unbeatable.
     const cfg = DIFFICULTIES[difficulty];
     const pressure = playerProgressForAI > r.progress ? 1.8 * cfg.aiPressure : -0.35;
     if (r.mistakeTimer > 0) r.mistakeTimer = Math.max(0, r.mistakeTimer - dt);
-    else if (Math.random() < cfg.aiMistake * dt) r.mistakeTimer = 0.45 + Math.random() * 0.6;
-    const mistake = r.mistakeTimer > 0 ? 0.72 : 1;
+    else if (Math.random() < cfg.aiMistake * dt / Math.max(.85,r.skillRoll)) r.mistakeTimer = 0.28 + Math.random() * (r.personality>.72?.55:.30);
+    const mistake = r.mistakeTimer > 0 ? 0.84 : 1;
+    // Human-like rival profiles: each race rolls a small skill modifier, plus a temperament.
+    // No rival is disabled; weaker rolls make recoverable errors, stronger rolls choose cleaner lines.
+    r.driftCooldown=Math.max(0,(r.driftCooldown||0)-dt);
+    const wasDriftingAI=(r.driftTimer||0)>0; r.driftTimer=Math.max(0,(r.driftTimer||0)-dt); r.boostTimer=Math.max(0,(r.boostTimer||0)-dt);
+    if(wasDriftingAI && r.driftTimer<=0 && (r.driftCharge||0)>.62){r.boostTimer=.72+(r.personality>.55?.2:0);r.speed=Math.min(r.pace*1.22,r.speed+2.0);r.driftCharge=0;}
+    r.weirdMoveTimer=Math.max(0,(r.weirdMoveTimer||0)-dt);
+    if(r.weirdMoveTimer<=0 && Math.random()<dt*(r.personality>.68?.075:.035)){r.weirdMoveTimer=.55+Math.random()*.65;r.weirdLaneOffset=(Math.random()<.5?-1:1)*(.8+Math.random()*1.1);}
     const target = r.pace * 1.12 * cfg.aiSpeed + Math.sin(state.totalTime * 0.72 + r.phase) * 1.35 * 1.5 + Math.sin(r.progress * 0.012) * 1.0 * 1.5 + pressure * 1.5;
     let catchup = 1;
     if (difficulty !== 'hard' && playerProgressForAI > r.progress) catchup = cfg.catchup;
-    r.speed += (target * mistake * catchup - r.speed) * (1 - Math.exp(-2.2 * dt));
+    const slowedTarget = (r.slowTimer||0)>0 ? target*.78 : target;
+    // Drift on curving sections, with personality-driven occasional cheeky drifts on straights.
+    const here=sample(r.progress), ahead=sample(r.progress+2.2);
+    let curve=Math.atan2(Math.sin(ahead.angle-here.angle),Math.cos(ahead.angle-here.angle));
+    if(r.driftTimer<=0 && r.driftCooldown<=0 && r.speed>25 && (Math.abs(curve)>.045 || Math.random()<dt*(.08+r.personality*.16))){
+      r.driftTimer=.55+r.personality*.42;r.driftCharge=0;r.driftDir=Math.sign(curve)|| (Math.random()<.5?-1:1);r.driftCooldown=2.8+Math.random()*2.2;
+    }
+    let driftMultiplier=1;
+    if(r.driftTimer>0){r.driftCharge=(r.driftCharge||0)+dt;driftMultiplier=1.012;}
+    const boostMultiplier=r.boostTimer>0?1.035:1;
+    r.speed += (slowedTarget * mistake * catchup * driftMultiplier * boostMultiplier - r.speed) * (1 - Math.exp(-2.2 * dt));
+    // Lane targets are chosen by the tactical avoidance/personality layer above.
     r.progress += r.speed * dt;
   });
   state.hitCooldown = Math.max(0, state.hitCooldown - dt);
@@ -1043,22 +1522,29 @@ function update(dt) {
     state.boostTimer -= dt;
   }
 
-  const effectiveMaxSpeed = state.boostTimer > 0 ? 64 : state.maxSpeed;
+  const effectiveMaxSpeed = state.boostTimer > 0 ? state.maxSpeed+7 : (selectedCharacter==='wyde' && waveGlideTimer>0) ? state.maxSpeed+2.5 : state.slowTimer>0 ? state.maxSpeed*.82 : state.maxSpeed;
   const throttle = input.throttle;
   const brake = input.brake;
 
-  const accelPower = (state.boostTimer > 0 ? 32 : 22) * DIFFICULTIES[difficulty].playerAccel;
+  const accelPower = (state.boostTimer > 0 ? 32 : 22) * DIFFICULTIES[difficulty].playerAccel * CHARACTERS[selectedCharacter].accel;
   const drag = 0.45 + state.speed * 0.012;
 
   if (throttle) {
     state.speed += (accelPower * (1 - state.speed / effectiveMaxSpeed * 0.35) - drag) * dt;
   } else {
-    state.speed = Math.max(0, state.speed - (drag + 3.5) * dt);
+    state.speed = Math.max(0, state.speed - ((selectedCharacter==='wyde' && waveGlideTimer>0) ? 1.05 : drag + 3.5) * dt);
   }
 
   if (brake) {
     state.speed = Math.max(0, state.speed - 32 * dt);
   }
+
+  // Gentle grade physics: climbs borrow a little momentum, descents return it.
+  // Keep the effect bounded so elevation changes never make steering unpredictable.
+  const terrainNow = sample(state.s);
+  state.terrainHeight = terrainNow.height;
+  state.terrainSlope = terrainNow.slope;
+  state.speed += clamp(-terrainNow.slope * 15, -2.2, 2.2) * dt;
 
   state.speed = clamp(state.speed, 0, effectiveMaxSpeed);
   if (state.speed > state.maxSpeedStat) state.maxSpeedStat = Math.round(state.speed * 3.05);
@@ -1099,7 +1585,7 @@ function update(dt) {
   const steerResponse = 1 - Math.exp(-18 * dt);
   state.steerAngle += (steerInput - state.steerAngle) * steerResponse;
 
-  let turnRate = state.steerAngle * (0.64 - state.speed / effectiveMaxSpeed * 0.16);
+  let turnRate = state.steerAngle * (0.64 - state.speed / effectiveMaxSpeed * 0.16) * CHARACTERS[selectedCharacter].grip;
   if (state.drifting) {
     turnRate = (state.driftDir * 0.68 + steerInput * 0.30) * 0.68;
   }
@@ -1133,7 +1619,7 @@ function update(dt) {
 
   // Kart-to-kart collisions use track-relative distance, so they remain reliable
   // even when the road bends or the camera swings around a corner.
-  if (state.collisionCooldown <= 0 && state.air <= 0) {
+  if (state.collisionCooldown <= 0 && state.air <= 0 && playerInvisibleTimer <= 0) {
     const playerS = state.s;
     for (const rival of aiRacers) {
       let along = rival.progress - playerS;
@@ -1158,6 +1644,19 @@ function update(dt) {
     }
   }
 
+  // Moth's Veil phases through karts and attacks, but does not protect against off-road penalties.
+  // Passing through a rival during Veil grants a short drift-style boost, with a contact cooldown.
+  if (selectedCharacter==='moth' && playerInvisibleTimer>0) {
+    const phasedThroughRival=aiRacers.some(r=>{
+      if(r.respawnTimer>0)return false;
+      let along=r.progress-state.s;along-=Math.round(along/total)*total;
+      return Math.abs(along)<3.8 && Math.abs(state.lateral-r.lane)<3.2;
+    });
+    if(phasedThroughRival && mothPhaseBoostCooldown<=0){
+      state.boostTimer=Math.max(state.boostTimer,.9);state.speed=Math.min(state.maxSpeed+7,state.speed+5.5);mothPhaseBoostCooldown=.7;state.shake=Math.max(state.shake,.12);sounds.playBoost();
+    }
+  }
+
   boostPadsS.forEach(bs => {
     const delta = (bs - wasS + total) % total;
     if (delta > 0 && delta < state.speed * dt + 2.5 && Math.abs(state.lateral) < 3.8) {
@@ -1171,7 +1670,7 @@ function update(dt) {
 
   const jumpDelta = (jumpAt - wasS + total) % total;
   if (jumpDelta > 0 && jumpDelta < state.speed * dt + 1.5 && state.speed > 14 && state.air <= 0) {
-    state.airVel = 7.2 + state.speed * 0.04;
+    state.airVel = 7.0 + state.speed * 0.045;
     state.air = 0.01;
     if (state.drifting) { state.drifting = false; state.driftCharge = 0; state.driftTier = 0; sounds.setDrift(false); }
     sounds.playBeep(600, 'triangle', 0.25);
@@ -1179,17 +1678,22 @@ function update(dt) {
 
   if (state.air > 0 || state.airVel > 0) {
     state.air += state.airVel * dt;
-    state.airVel -= 17 * dt;
+    // A queued Wave glide deploys at the apex; the wings then hold altitude longer with gentle lift.
+    if(selectedCharacter==='wyde' && waveGlideRequested && state.airVel<=0.35){
+      waveGlideRequested=false;waveWingsArmed=true;waveGlideTimer=WAVE_GLIDE_SECONDS;state.speed=Math.min(state.maxSpeed+2.5,state.speed+1.8);state.airVel=Math.max(state.airVel,0.15);
+    }
+    state.airVel -= (selectedCharacter==='wyde' && waveGlideTimer>0 ? 1.05 : 17) * dt;
     if (state.air <= 0 && state.airVel < 0) {
       state.air = 0;
       state.airVel = 0;
+      if(selectedCharacter==='wyde' && waveGlideTimer<=0) waveWingsArmed=waveGlideRequested;
       state.bump = 0.3;
       state.shake = Math.max(state.shake, 0.22);
       sounds.playBeep(180, 'square', 0.15);
     }
   }
 
-  if (state.s > wasS && Math.floor(state.s / total) > Math.floor(wasS / total)) {
+  if (state.s > wasS && wasS >= 0 && Math.floor(state.s / total) > Math.floor(wasS / total)) {
     if (state.lapTime < state.bestLap) state.bestLap = state.lapTime;
     if (state.lap >= 3) {
       gameState = 'FINISHED';
@@ -1216,6 +1720,8 @@ function update(dt) {
   const targetCamZ = state.z - Math.cos(state.cameraHeading) * CAMERA_BACK;
   state.cameraX += (targetCamX - state.cameraX) * (1 - Math.exp(-20 * dt));
   state.cameraZ += (targetCamZ - state.cameraZ) * (1 - Math.exp(-20 * dt));
+  const cameraTerrainTarget = sample(state.s - CAMERA_BACK * 0.45).height + CAMERA_HEIGHT;
+  state.cameraElevation += (cameraTerrainTarget - state.cameraElevation) * (1 - Math.exp(-3.8 * dt));
 
   sounds.updateEngine(state.speed / state.maxSpeed, throttle > 0);
 
@@ -1249,18 +1755,23 @@ function renderUI() {
   const gear = state.speed < 8 ? 1 : Math.min(6, Math.floor(state.speed / 8.5) + 1);
   ui.gear.textContent = 'GEAR ' + gear;
   
+  $('player-hp-fill').style.width = state.hp + '%'; $('player-hp-fill').style.background = state.hp <= 30 ? '#b94735' : state.hp <= 60 ? '#b99a42' : '#d8d0c5'; $('player-hp-text').textContent = String(Math.ceil(state.hp));
+  $('touch-ability-label') && ($('touch-ability-label').textContent=CHARACTERS[selectedCharacter].ability);
+  $('fire-cooldown').innerHTML = 'X ' + CHARACTERS[selectedCharacter].ability + ' <b>' + (state.fireCooldown<=0?'READY':state.fireCooldown.toFixed(1)+'s') + '</b>';
+  $('player-hp-card-label') && ($('player-hp-card-label').textContent=CHARACTERS[selectedCharacter].name);
+  $('jump-cooldown').innerHTML = 'R1 JUMP <b>' + (state.jumpCooldown<=0?'READY':state.jumpCooldown.toFixed(1)+'s') + '</b>';
   $('engine-note').textContent = state.boostTimer > 0 ? 'TURBO BOOST' : state.drifting ? 'DRIFT CHARGE' : state.air > 0 ? 'AIRBORNE' : state.speed > 40 ? 'REDLINE' : state.speed > 4 ? 'ROLLING' : 'IDLE';
   
   ui.lap.innerHTML = String(state.lap).padStart(2, '0') + ' <i>/ 03</i>';
   ui.timer.textContent = formatTime(state.lapTime);
-  const playerProgress = (state.lap - 1) * total + (state.s % total);
+  const playerProgress = state.s;
   const racersForOrder = [
-    { name: 'YOU', progress: playerProgress, player: true },
+    { name: CHARACTERS[selectedCharacter].name, progress: playerProgress, player: true },
     ...aiRacers.map(r => ({ name: r.name, progress: r.progress, player: false }))
   ].sort((a, b) => b.progress - a.progress);
-  const place = racersForOrder.findIndex(r => r.player) + 1;
+  const place = gameState === 'FINISHED' && finalRacePlace !== null ? finalRacePlace : racersForOrder.findIndex(r => r.player) + 1;
   $('position').innerHTML = String(place).padStart(2, '0') + '<span>/04</span>';
-  const finishDistance = total - (((state.s % total) + total) % total);
+  const finishDistance = state.s < 0 ? -state.s : total - (state.s % total);
   $('goal-distance').textContent = finishDistance < 1 ? 'NOW' : Math.round(finishDistance) + ' m';
   $('race-order').innerHTML = racersForOrder.map((r, i) => {
     const gap = i === 0 ? 'LEAD' : '−' + Math.round(Math.max(0, racersForOrder[0].progress - r.progress)) + 'm';
@@ -1268,7 +1779,7 @@ function renderUI() {
   }).join('');
 
   const isOffRoad = Math.abs(state.lateral) > 7.0;
-  ui.drive.textContent = isOffRoad ? 'OFF TRACK' : state.boostTimer > 0 ? 'BOOST!' : state.driftTier === 2 ? 'SPARKS MAX' : state.driftTier === 1 ? 'SPARKS T1' : state.drifting ? 'DRIFT' : 'GRIP';
+  ui.drive.textContent = isOffRoad ? 'OFF TRACK' : state.boostTimer > 0 ? 'BOOST!' : state.driftTier === 2 ? 'SPARKS MAX' : state.driftTier === 1 ? 'SPARKS T1' : state.drifting ? 'DRIFT' : state.terrainSlope > 0.012 ? 'CLIMBING' : state.terrainSlope < -0.012 ? 'DESCENDING' : 'GRIP';
   
   ui.drift.classList.toggle('active', state.drifting || state.boostTimer > 0 || isOffRoad);
   ui.drift.classList.toggle('boost1', state.driftTier === 1);
@@ -1279,11 +1790,14 @@ function renderUI() {
 }
 
 function getPlayerPlace() {
-  const playerProgress = (state.lap - 1) * total + (state.s % total);
-  return [{name:'YOU', progress:playerProgress, player:true}, ...aiRacers.map(r=>({name:r.name,progress:r.progress,player:false}))].sort((a,b)=>b.progress-a.progress).findIndex(r=>r.player)+1;
+  if (finalRacePlace !== null) return finalRacePlace;
+  const playerProgress = state.s;
+  return [{name:CHARACTERS[selectedCharacter].name, progress:playerProgress, player:true}, ...aiRacers.map(r=>({name:r.name,progress:r.progress,player:false}))].sort((a,b)=>b.progress-a.progress).findIndex(r=>r.player)+1;
 }
 function ordinal(n) { return n===1?'1ST':n===2?'2ND':n===3?'3RD':n+'TH'; }
 function showVictoryScreen() {
+  // Capture the official classification once; post-finish UI must not drift as frames advance.
+  finalRacePlace = [{name:CHARACTERS[selectedCharacter].name, progress:state.s, player:true}, ...aiRacers.map(r=>({name:r.name,progress:r.progress,player:false}))].sort((a,b)=>b.progress-a.progress).findIndex(r=>r.player)+1;
   ui.pauseBtn.hidden = true; $('camera-btn').hidden = true;
   ui.pauseScreen.classList.add('hidden');
   ui.finishScreen.classList.remove('hidden');
@@ -1304,7 +1818,9 @@ function project(point, cam, forward, right) {
   const lateral = dx * right.x + dz * right.z;
   if (depth < 2.5) return null;
   const scale = focal / depth;
-  return { x: W / 2 + lateral * scale, y: horizon + CAMERA_HEIGHT * scale, scale, depth };
+  const pointHeight = Number.isFinite(point.y) ? point.y : Number.isFinite(point.height) ? point.height : 0;
+  const cameraElevation = Number.isFinite(state.cameraElevation) ? state.cameraElevation : CAMERA_HEIGHT;
+  return { x: W / 2 + lateral * scale, y: horizon + (cameraElevation - pointHeight) * scale, scale, depth };
 }
 
 function polygon(points, fill) {
@@ -1384,7 +1900,7 @@ function drawStageScenery() {
     const q=sample(state.s+d), pulse=Math.floor((d+activeTrackIndex*13)/17);
     for (const side of [-1,1]) {
       const lat=side*(10.5+((pulse+activeTrackIndex)%3)*2.3);
-      const p=project({x:q.x+q.tz*lat,z:q.z-q.tx*lat},cam,forward,right);
+      const p=project({x:q.x+q.tz*lat,z:q.z-q.tx*lat,y:q.height},cam,forward,right);
       if(!p || p.depth>260) continue;
       const sc=clamp(p.scale, .08, 2.2), x=p.x, y=p.y, h=clamp(sc*(theme.theme==='clockwork'?17:14),2,85);
       ctx.save(); ctx.translate(x,y); ctx.globalAlpha=clamp(1-p.depth/320,.15,.95);
@@ -1418,8 +1934,8 @@ function drawTrack() {
     const q = sample(state.s + d);
     chunks.push({
       d,
-      l: project({ x: q.x + q.tz * 7.2, z: q.z - q.tx * 7.2 }, cam, forward, right),
-      r: project({ x: q.x - q.tz * 7.2, z: q.z + q.tx * 7.2 }, cam, forward, right),
+      l: project({ x: q.x + q.tz * 7.2, z: q.z - q.tx * 7.2, y: q.height }, cam, forward, right),
+      r: project({ x: q.x - q.tz * 7.2, z: q.z + q.tx * 7.2, y: q.height }, cam, forward, right),
       q
     });
   }
@@ -1431,10 +1947,10 @@ function drawTrack() {
     polygon([near.l, near.r, far.r, far.l], i % 2 ? TRACKS[activeTrackIndex].road : TRACKS[activeTrackIndex].shoulder);
 
     const qn = near.q, qf = far.q;
-    const nl = project({ x: qn.x + qn.tz * 6.15, z: qn.z - qn.tx * 6.15 }, cam, forward, right);
-    const nr = project({ x: qn.x - qn.tz * 6.15, z: qn.z + qn.tx * 6.15 }, cam, forward, right);
-    const fl = project({ x: qf.x + qf.tz * 6.15, z: qf.z - qf.tx * 6.15 }, cam, forward, right);
-    const fr = project({ x: qf.x - qf.tz * 6.15, z: qf.z + qf.tx * 6.15 }, cam, forward, right);
+    const nl = project({ x: qn.x + qn.tz * 6.15, z: qn.z - qn.tx * 6.15, y: qn.height }, cam, forward, right);
+    const nr = project({ x: qn.x - qn.tz * 6.15, z: qn.z + qn.tx * 6.15, y: qn.height }, cam, forward, right);
+    const fl = project({ x: qf.x + qf.tz * 6.15, z: qf.z - qf.tx * 6.15, y: qf.height }, cam, forward, right);
+    const fr = project({ x: qf.x - qf.tz * 6.15, z: qf.z + qf.tx * 6.15, y: qf.height }, cam, forward, right);
 
     const seg = Math.floor(near.d / 6) % 2 === 0;
     polygon([nl, near.l, far.l, fl], seg ? TRACKS[activeTrackIndex].shoulder : TRACKS[activeTrackIndex].accent);
@@ -1451,14 +1967,14 @@ function drawTrack() {
       }
     }
 
-    boostPadsS.forEach(bs => {
+  boostPadsS.forEach(bs => {
       const padDelta = (bs - state.s + total) % total;
       if (padDelta > far.d && padDelta <= near.d + 2.2) {
         const bp = sample(state.s + padDelta);
-        const bpl = project({ x: bp.x + bp.tz * 3.5, z: bp.z - bp.tx * 3.5 }, cam, forward, right);
-        const bpr = project({ x: bp.x - bp.tz * 3.5, z: bp.z + bp.tx * 3.5 }, cam, forward, right);
-        const bpfl = project({ x: bp.x + bp.tz * 3.5 + bp.tx * 4, z: bp.z - bp.tx * 3.5 + bp.tz * 4 }, cam, forward, right);
-        const bpfr = project({ x: bp.x - bp.tz * 3.5 + bp.tx * 4, z: bp.z + bp.tz * 3.5 + bp.tz * 4 }, cam, forward, right);
+        const bpl = project({ x: bp.x + bp.tz * 3.5, z: bp.z - bp.tx * 3.5, y: bp.height }, cam, forward, right);
+        const bpr = project({ x: bp.x - bp.tz * 3.5, z: bp.z + bp.tx * 3.5, y: bp.height }, cam, forward, right);
+        const bpfl = project({ x: bp.x + bp.tz * 3.5 + bp.tx * 4, z: bp.z - bp.tx * 3.5 + bp.tz * 4, y: terrainHeightAt(state.s + padDelta + 4) }, cam, forward, right);
+        const bpfr = project({ x: bp.x - bp.tz * 3.5 + bp.tx * 4, z: bp.z + bp.tx * 3.5 + bp.tz * 4, y: terrainHeightAt(state.s + padDelta + 4) }, cam, forward, right);
         polygon([bpl, bpr, bpfr, bpfl], '#ffffff');
       }
     });
@@ -1467,13 +1983,13 @@ function drawTrack() {
     if (jumpD > far.d && jumpD <= near.d + 2.2) {
       for (let stripe = 0; stripe < 4; stripe++) {
         const qq = sample(state.s + jumpD - 3 - stripe * 1.5);
-        const ll = { x: qq.x + qq.tz * 5.8, z: qq.z - qq.tx * 5.8 };
-        const rr = { x: qq.x - qq.tz * 5.8, z: qq.z + qq.tx * 5.8 };
+        const ll = { x: qq.x + qq.tz * 5.8, z: qq.z - qq.tx * 5.8, y: qq.height };
+        const rr = { x: qq.x - qq.tz * 5.8, z: qq.z + qq.tx * 5.8, y: qq.height };
         polygon([
           project(ll, cam, forward, right),
           project(rr, cam, forward, right),
-          project({ x: rr.x + qq.tx * 0.6, z: rr.z + qq.tz * 0.6 }, cam, forward, right),
-          project({ x: ll.x + qq.tx * 0.6, z: ll.z + qq.tz * 0.6 }, cam, forward, right)
+          project({ x: rr.x + qq.tx * 0.6, z: rr.z + qq.tz * 0.6, y: qq.height }, cam, forward, right),
+          project({ x: ll.x + qq.tx * 0.6, z: ll.z + qq.tz * 0.6, y: qq.height }, cam, forward, right)
         ], stripe % 2 ? '#222' : '#eee');
       }
     }
@@ -1494,12 +2010,12 @@ function drawFinishMarker() {
   const tiles = 12;
   for (let i = 0; i < tiles; i++) {
     const l1 = -6.15 + (12.3 * i / tiles), l2 = -6.15 + (12.3 * (i + 1) / tiles);
-    const at = (lat, along) => ({ x: q.x + q.tz * lat + q.tx * along, z: q.z - q.tx * lat + q.tz * along });
+    const at = (lat, along) => ({ x: q.x + q.tz * lat + q.tx * along, z: q.z - q.tx * lat + q.tz * along, y: q.height });
     const quad = [at(l1, -0.8), at(l2, -0.8), at(l2, 0.8), at(l1, 0.8)].map(p => project(p, cam, forward, right));
     polygon(quad, i % 2 ? '#e8e7e1' : '#171816');
   }
-  const left = project({ x: q.x + q.tz * 6.3, z: q.z - q.tx * 6.3 }, cam, forward, right);
-  const rightP = project({ x: q.x - q.tz * 6.3, z: q.z + q.tx * 6.3 }, cam, forward, right);
+  const left = project({ x: q.x + q.tz * 6.3, z: q.z - q.tx * 6.3, y: q.height }, cam, forward, right);
+  const rightP = project({ x: q.x - q.tz * 6.3, z: q.z + q.tx * 6.3, y: q.height }, cam, forward, right);
   if (!left || !rightP) return;
   const scale = (left.scale + rightP.scale) * 0.5;
   const postH = clamp(scale * 3.8, 4, 150);
@@ -1525,34 +2041,63 @@ function isNightTrack() {
   return theme === 'graveyard' || theme === 'marsh';
 }
 
+function drawHeadlightPool(progress, lateralOffset, strength = 1, vehicle = null) {
+  // Headlamps cast a straight beam along the vehicle's actual facing direction.
+  // The track can curve underneath it; the light itself never bends with the spline.
+  const q = vehicle || sample(progress);
+  const heading = vehicle ? vehicle.heading : q.angle;
+  const fx = Math.sin(heading), fz = Math.cos(heading);
+  const rx = Math.cos(heading), rz = -Math.sin(heading);
+  const cam = { x: state.cameraX, z: state.cameraZ };
+  const a = state.cameraHeading;
+  const forward = { x: Math.sin(a), z: Math.cos(a) };
+  const right = { x: Math.cos(a), z: -Math.sin(a) };
+  const originX = vehicle ? vehicle.x : q.x + q.tz * lateralOffset;
+  const originZ = vehicle ? vehicle.z : q.z - q.tx * lateralOffset;
+  const originY = vehicle ? (terrainHeightAt(progress) + Math.max(0, state.air) * 0.35 + 0.25) : q.height + 0.18;
+  const stations = [3, 6, 10, 15, 21, 28, 36, 45, 55];
+  const leftEdge = [], rightEdge = [];
+  for (const d of stations) {
+    const spread = 0.75 + d * 0.105;
+    const cx = originX + fx * d, cz = originZ + fz * d;
+    leftEdge.push(project({ x: cx - rx * spread, z: cz - rz * spread, y: terrainHeightAt(progress + d) + 0.08 }, cam, forward, right));
+    rightEdge.push(project({ x: cx + rx * spread, z: cz + rz * spread, y: terrainHeightAt(progress + d) + 0.08 }, cam, forward, right));
+  }
+  if (leftEdge.some(p => !p) || rightEdge.some(p => !p)) return;
+  const near = leftEdge[0], far = leftEdge[leftEdge.length - 1];
+  const beam = ctx.createLinearGradient(near.x, near.y, far.x, far.y);
+  beam.addColorStop(0, `rgba(255,239,190,${0.25 * strength})`);
+  beam.addColorStop(.24, `rgba(255,232,166,${0.19 * strength})`);
+  beam.addColorStop(.7, `rgba(255,225,153,${0.075 * strength})`);
+  beam.addColorStop(1, 'rgba(255,225,153,0)');
+  polygon(leftEdge.concat(rightEdge.reverse()), beam);
+  const center = stations.map(d => project({x:originX+fx*d,z:originZ+fz*d,y:terrainHeightAt(progress+d)+0.08},cam,forward,right));
+  if (center.every(Boolean)) {
+    ctx.save(); ctx.strokeStyle = `rgba(255,244,207,${0.12 * strength})`;
+    ctx.lineWidth = Math.max(1, (near.scale || 1) * 1.2);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+    center.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.stroke(); ctx.restore();
+  }
+}
+
 function drawNightLighting() {
   if (!isNightTrack()) return;
-  // A subtle exposure falloff makes the headlamp pools read as actual light,
-  // while preserving enough ambient detail to keep the retro scene legible.
   ctx.save();
-  ctx.fillStyle = 'rgba(5,9,18,.24)';
+  // Keep ambient night exposure restrained; pools of light now come from each kart.
+  ctx.fillStyle = 'rgba(5,9,18,.29)';
   ctx.fillRect(0, 0, W, H);
-
-  const originX = W * .5;
-  const originY = H * .82;
-  const beam = ctx.createLinearGradient(0, originY, 0, horizon + 8);
-  beam.addColorStop(0, 'rgba(255,239,190,.22)');
-  beam.addColorStop(.35, 'rgba(255,239,190,.13)');
-  beam.addColorStop(1, 'rgba(255,239,190,0)');
-  ctx.fillStyle = beam;
-  ctx.beginPath();
-  ctx.moveTo(originX - W * .035, originY);
-  ctx.lineTo(W * .19, horizon + 5);
-  ctx.lineTo(W * .81, horizon + 5);
-  ctx.lineTo(originX + W * .035, originY);
-  ctx.closePath();
-  ctx.fill();
-
-  const glow = ctx.createRadialGradient(originX, originY - 30, 2, originX, originY - 30, Math.min(W, H) * .45);
-  glow.addColorStop(0, 'rgba(255,239,190,.10)');
-  glow.addColorStop(1, 'rgba(255,239,190,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
+  // Render rival beams behind the karts, each aligned to its own progress on the spline.
+  aiRacers.slice().sort((a,b) => b.progress - a.progress).forEach(r => {
+    const rq = sample(r.progress);
+    drawHeadlightPool(r.progress, r.lane, 0.58, {x:rq.x + rq.tz*r.lane, z:rq.z-rq.tx*r.lane, heading:rq.angle});
+  });
+  // Player's beams follow the upcoming road curvature and current lateral position.
+  drawHeadlightPool(state.s, state.lateral, 1.0, {x:state.x, z:state.z, heading:state.heading});
+  // Low, broad moonlight keeps distant shapes readable without flattening the scene.
+  const ambient = ctx.createRadialGradient(W*.5, horizon+12, 2, W*.5, horizon+12, Math.min(W,H)*.55);
+  ambient.addColorStop(0, 'rgba(160,190,205,.055)');
+  ambient.addColorStop(1, 'rgba(160,190,205,0)');
+  ctx.fillStyle = ambient; ctx.fillRect(0,0,W,H);
   ctx.restore();
 }
 
@@ -1565,29 +2110,11 @@ function drawRacers() {
     const q = sample(r.progress);
     const x = q.x + q.tz * r.lane;
     const z = q.z - q.tx * r.lane;
-    const p = project({ x, z }, cam, forward, right);
+    const p = project({ x, z, y: q.height }, cam, forward, right);
     return { r, p, q };
   }).filter(v => v.p && v.p.depth < 300).sort((a, b) => b.p.depth - a.p.depth);
 
   visible.forEach(({ r, p, q }) => {
-    // Each rival casts a short, perspective-scaled headlamp pool down the track.
-    if (isNightTrack()) {
-      const ahead = sample(r.progress + 7);
-      const aheadP = project({ x: ahead.x + ahead.tz * r.lane, z: ahead.z - ahead.tx * r.lane }, cam, forward, right);
-      if (aheadP) {
-        const spread = clamp(p.scale * 1.5, 2, 24);
-        const lampBeam = ctx.createLinearGradient(p.x, p.y, aheadP.x, aheadP.y);
-        lampBeam.addColorStop(0, 'rgba(255,238,185,.15)');
-        lampBeam.addColorStop(1, 'rgba(255,238,185,0)');
-        ctx.fillStyle = lampBeam;
-        ctx.beginPath();
-        ctx.moveTo(p.x - spread*.35, p.y - spread*.1);
-        ctx.lineTo(aheadP.x - spread, aheadP.y);
-        ctx.lineTo(aheadP.x + spread, aheadP.y);
-        ctx.lineTo(p.x + spread*.35, p.y - spread*.1);
-        ctx.closePath(); ctx.fill();
-      }
-    }
     // Keep perspective growth obvious as rivals approach; the former 35px cap made
     // nearby karts look toy-small and caused an apparent size reversal at close range.
     const w = clamp(p.scale * 1.9, 5, 64);
@@ -1596,7 +2123,10 @@ function drawRacers() {
     ctx.globalAlpha = clamp(1.08 - p.depth / 520, .72, 1);
     ctx.fillStyle = 'rgba(10,10,9,.32)';
     ctx.beginPath(); ctx.ellipse(p.x + w * .08, p.y + h * .12, w * .72, h * .25, 0, 0, TAU); ctx.fill();
-    ctx.translate(p.x, p.y - h * .32);
+    if(r.respawnTimer>0){ctx.globalAlpha=.65;ctx.fillStyle='#171816';ctx.beginPath();ctx.arc(p.x,p.y-h*.2,w*.8,0,TAU);ctx.fill();ctx.restore();return;}
+    if(r.invisibleTimer>0)ctx.globalAlpha*=.22+Math.sin(state.totalTime*24)*.12; else if(r.invulnerable>0 && Math.floor(state.totalTime*14)%2===0)ctx.globalAlpha*=.35;
+    ctx.fillStyle='rgba(20,21,19,.7)';ctx.fillRect(p.x-w*.48,p.y-h*.9,w*.96,Math.max(3,w*.12));ctx.fillStyle='#d8d0c5';ctx.fillRect(p.x-w*.48,p.y-h*.9,w*.96*(r.hp/100),Math.max(3,w*.12));
+    ctx.translate(p.x, p.y - h * .32 - (r.air>0?Math.min(h*.9,r.air*h*.32):0) + (r.stompAnim>0?Math.sin(clamp((.5-r.stompAnim)/.5,0,1)*Math.PI)*h*.13:0));
     ctx.rotate(Math.atan2(q.tx, q.tz) - state.cameraHeading);
     // Four clearly readable, rounded rubber wheels echo the player's kart silhouette.
     const wheelW = w * .23, wheelH = h * .43;
@@ -1634,6 +2164,10 @@ function drawRacers() {
     ctx.lineTo(w * .58, -h * .12); ctx.lineTo(w * .48, h * .38);
     ctx.quadraticCurveTo(0, h * .58, -w * .48, h * .38);
     ctx.closePath(); ctx.fill(); ctx.stroke();
+    if(r.id==='wyde' && (r.glideTimer>0 || r.wingsArmed)){
+      const flap=Math.sin(state.totalTime*17+r.phase)*w*.10;ctx.save();ctx.lineWidth=Math.max(.7,w*.055);ctx.strokeStyle='#20211f';ctx.fillStyle='#f0eee4';
+      for(const side of [-1,1]){ctx.save();ctx.translate(side*w*.42,-h*.08);ctx.rotate(side*(.12+flap*.012));ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(side*w*.28,-h*.30-flap,side*w*.58,-h*.18-flap*.45);ctx.lineTo(side*w*.47,h*.04);ctx.lineTo(side*w*.18,h*.10);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}ctx.restore();
+    }
     ctx.fillStyle = '#353631';
     ctx.fillRect(-w * .28, -h * .4, w * .56, h * .2);
     if (w > 12) {
@@ -1684,10 +2218,16 @@ function drawKart() {
   const carSide = dx * rightX + dz * rightZ;
 
   const screenX = W / 2 + carSide * scale;
-  const contactY = horizon + CAMERA_HEIGHT * scale;
+  // Anchor the kart and its shadow to the same projected terrain surface as the road.
+  // This keeps crests, dips, and camera elevation changes from making the player float.
+  const groundPoint = project({ x: state.x, z: state.z, y: terrainHeightAt(state.s) },
+    { x: state.cameraX, z: state.cameraZ },
+    { x: forwardX, z: forwardZ }, { x: rightX, z: rightZ });
+  const contactY = groundPoint ? groundPoint.y : horizon + (state.cameraElevation - state.terrainHeight) * scale;
   const py = contactY - 54;
   const heightPx = state.air > 0 ? state.air * 45 : state.bump * 20;
 
+  if(state.respawnTimer>0)return;
   ctx.save();
 
   const shadowScale = Math.max(0.25, 1 - state.air * 0.35);
@@ -1698,7 +2238,9 @@ function drawKart() {
 
   const shakeX = (Math.random() - 0.5) * state.shake * 14;
   const shakeY = (Math.random() - 0.5) * state.shake * 10;
-  ctx.translate(screenX + shakeX, py - heightPx + shakeY);
+  if(playerInvisibleTimer>0)ctx.globalAlpha=.22+Math.sin(state.totalTime*24)*.12; else if(state.invulnerable>0 && Math.floor(state.totalTime*14)%2===0)ctx.globalAlpha=.38;
+  ctx.translate(screenX + shakeX, py - heightPx + shakeY + (state.stompBounce>0?Math.sin(state.stompBounce*12)*5:0));
+  if(state.stompBounce>.35)ctx.scale(1.18,.78);
 
   const steerVisual = Math.atan2(Math.sin(state.heading - state.cameraHeading), Math.cos(state.heading - state.cameraHeading)) + input.steer * 0.12;
   ctx.rotate(steerVisual + Math.sin(state.totalTime * 14) * state.bump * 0.04);
@@ -1718,7 +2260,7 @@ function drawKart() {
     ctx.restore();
   }
 
-  ctx.fillStyle = '#f1f0e9';
+  ctx.fillStyle = CHARACTERS[selectedCharacter].color;
   ctx.strokeStyle = '#171816';
   ctx.lineWidth = 4;
   ctx.beginPath();
@@ -1731,6 +2273,17 @@ function drawKart() {
   ctx.quadraticCurveTo(0, 55, -31, 45);
   ctx.closePath();
   ctx.fill(); ctx.stroke();
+
+  if (selectedCharacter==='wyde' && (waveGlideTimer>0 || waveWingsArmed)) {
+    // Fold-out air wings stay visibly armed on the ground, then catch the air during a glide: animated feathered panels visibly catch the air while gliding.
+    const flap=Math.sin(state.totalTime*17)*7;
+    ctx.save();ctx.lineWidth=3.5;ctx.strokeStyle='#171816';ctx.fillStyle='#f0eee4';
+    for(const side of [-1,1]){
+      ctx.save();ctx.translate(side*27,-5);ctx.rotate(side*(.12+flap*.009));
+      ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(side*18,-22-flap,side*39,-13-flap*.55);ctx.lineTo(side*31,4);ctx.lineTo(side*12,10);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#777a74';ctx.lineWidth=1.7;ctx.beginPath();ctx.moveTo(side*5,2);ctx.lineTo(side*33,-10-flap*.55);ctx.moveTo(side*9,5);ctx.lineTo(side*28,0);ctx.stroke();ctx.strokeStyle='#171816';ctx.lineWidth=3;ctx.restore();
+    }ctx.restore();
+  }
 
   if (isNightTrack()) {
     // Warm twin headlamp lenses sit on the front shoulders of the player's kart.
@@ -1761,7 +2314,7 @@ function drawKart() {
   ctx.fillStyle = '#262724';
   ctx.font = '700 10px "DM Mono",monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('01', 0, 37);
+  ctx.fillText(CHARACTERS[selectedCharacter].name.slice(0,2), 0, 37);
 
   if (state.drifting) {
     const sparkColor = state.driftTier === 2 ? '#000000' : state.driftTier === 1 ? '#555555' : '#888888';
@@ -1828,6 +2381,7 @@ function draw() {
   drawFinishMarker();
   drawNightLighting();
   drawRacers();
+  drawCombatFX();
   drawSpeedLines();
   if (cameraMode !== 2) drawKart(); else drawFirstPersonCockpit();
   drawVignette();
@@ -1845,13 +2399,26 @@ function frame(now) {
 
 // Startup
 $('track-select').addEventListener('change', e => selectTrack(Number(e.target.value)));
-$('start-btn').addEventListener('click', startGameSequence);
-$('difficulty-select').addEventListener('change', e => selectDifficulty(e.target.value));
-// Browsers require a user gesture before audio can begin: wake the dreamy title theme here.
-$('start-screen').addEventListener('pointerdown', () => {
+$('start-btn').addEventListener('click', openCharacterSelect);
+document.querySelectorAll('[data-character]').forEach(card=>card.addEventListener('click',()=>selectCharacter(card.dataset.character)));
+$('character-back-btn').addEventListener('click',backToSetup);
+$('character-confirm-btn').addEventListener('click',confirmCharacterSelection);
+document.querySelectorAll('[data-difficulty]').forEach(card => card.addEventListener('click', () => selectDifficulty(card.dataset.difficulty)));
+document.querySelectorAll('[data-difficulty]').forEach(card => card.addEventListener('focus', () => { if (gameState === 'START') { document.querySelectorAll('.difficulty-card').forEach(c=>c.classList.remove('menu-selected')); card.classList.add('menu-selected'); } }));
+// Start the title theme as soon as the page initializes. Browsers may suspend autoplay;
+// the first user gesture resumes the same context and starts the theme without requiring a button click.
+sounds.init();
+sounds.setMusicMode('title');
+sounds.setMusicPlaying(true);
+const unlockTitleAudio = () => {
   if (gameState !== 'START') return;
-  sounds.init(); sounds.setMusicMode('title'); sounds.setMusicPlaying(true);
-}, { passive: true });
+  sounds.init();
+  if (sounds.ctx && sounds.ctx.state === 'suspended') sounds.ctx.resume().catch(() => {});
+  sounds.setMusicMode('title');
+  sounds.setMusicPlaying(true);
+};
+document.addEventListener('pointerdown', unlockTitleAudio, { passive: true });
+document.addEventListener('keydown', unlockTitleAudio);
 $('restart-btn').addEventListener('click', startGameSequence);
 $('pause-btn').addEventListener('click', () => togglePause());
 $('music-btn').addEventListener('click', () => {
@@ -1868,8 +2435,12 @@ $('pause-restart-btn').addEventListener('click', () => startGameSequence());
 $('main-menu-btn').addEventListener('click', returnToMainMenu);
 $('finish-menu-btn').addEventListener('click', returnToMainMenu);
 $('camera-btn').addEventListener('click', () => setCameraMode());
+// Keep combat actions accessible on touch screens.
+const combatTouch = document.createElement('div'); combatTouch.className='combat-touch'; combatTouch.innerHTML='<button type="button" id="touch-fire">X<br><small id="touch-ability-label">SKY</small></button><button type="button" id="touch-jump">R1<br><small>JUMP</small></button>'; document.querySelector('.game').appendChild(combatTouch);
+$('touch-fire').addEventListener('pointerdown',e=>{e.preventDefault();usePlayerAbility();}); $('touch-jump').addEventListener('pointerdown',e=>{e.preventDefault();triggerPlayerJump();});
 
-selectDifficulty('hard');
+selectDifficulty('normal');
+selectCharacter('wyde');
 selectTrack(0);
 resize();
 requestAnimationFrame(frame);
