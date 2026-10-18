@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>RIPTIDE — Wave Riot (10 Zones, Day/Night & Arcade Enemies)</title>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<style>
+:root{--cyan:#70f6ff;--pink:#ff4fa3;--ink:#071522}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#061523;color:#fff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;user-select:none}#game{position:fixed;inset:0}canvas{display:block;width:100%;height:100%}
+.hud{position:fixed;inset:0;pointer-events:none;text-shadow:0 2px 12px #00131dcc}.top{position:absolute;top:22px;left:24px;right:24px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.brand{font-weight:1000;letter-spacing:.16em;font-size:clamp(15px,2vw,23px)}.brand span{color:var(--cyan)}.sub{font-size:10px;letter-spacing:.24em;color:#b9e8ee;margin-top:4px}
+.lives{display:flex;gap:6px;margin-top:8px;font-size:18px}.life-heart{color:var(--pink);text-shadow:0 0 8px var(--pink)}.life-heart.lost{color:#375368;text-shadow:none}
+.score{text-align:right}.scoreNum{font-size:clamp(25px,4vw,43px);font-weight:950;line-height:1;color:white}.scoreLabel{font-size:10px;letter-spacing:.24em;color:var(--cyan);margin-top:5px}.bottom{position:absolute;left:24px;right:24px;bottom:22px;display:flex;align-items:end;justify-content:space-between;gap:16px}.meterBlock{width:min(260px,40vw)}.meterTitle{font-size:10px;letter-spacing:.2em;color:#d7f6fa;margin-bottom:7px}.meter{height:8px;background:#071b2bbd;border:1px solid #b1f8ff44;overflow:hidden;transform:skewX(-15deg)}.fill{height:100%;width:100%;background:linear-gradient(90deg,#44f3db,#8bffbc,#fff07a);transition:width .1s}.combo{font-weight:900;color:#fff;font-size:18px;margin-top:8px}.combo em{font-style:normal;color:var(--pink)}.help{font-size:11px;color:#e0f6ffb8;line-height:1.7;text-align:right}.key{display:inline-block;border:1px solid #d6f8ff65;border-radius:4px;padding:1px 5px;color:white;background:#0c304b99;font-size:10px}
+.audioControl{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:10px;color:#b9e8ee;pointer-events:auto}.audioControl input{cursor:pointer;accent-color:var(--cyan);height:4px}
+#gamepadStatus{font-size:10px;letter-spacing:.15em;color:#67e8f9;margin-top:4px;display:none}
+#toast{position:absolute;left:50%;top:24%;transform:translate(-50%,-10px);opacity:0;text-align:center;font-size:clamp(22px,4vw,42px);font-weight:1000;letter-spacing:.08em;color:#fff;transition:opacity .2s,transform .2s;white-space:nowrap}#toast.show{opacity:1;transform:translate(-50%,0)}#toast small{display:block;font-size:11px;letter-spacing:.22em;color:var(--cyan);margin-top:7px}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(110deg,#031321d9,#061a2c66 65%,#06132199);z-index:5;padding:22px;transition:opacity .3s}.overlay.hidden{opacity:0;pointer-events:none}.panel{width:min(640px,94vw);padding:clamp(22px,5vw,48px);border:1px solid #a6f8ff45;background:linear-gradient(135deg,#08243bdc,#071521e8);box-shadow:0 25px 100px #0008;backdrop-filter:blur(12px);position:relative;overflow:hidden}.panel:after{content:"";position:absolute;width:220px;height:220px;border:1px solid #70f6ff22;border-radius:50%;right:-90px;top:-100px;box-shadow:0 0 0 20px #70f6ff08,0 0 0 40px #70f6ff05;pointer-events:none}.eyebrow{font-size:10px;letter-spacing:.3em;color:var(--cyan);font-weight:800}.title{font-size:clamp(40px,8vw,74px);line-height:.84;letter-spacing:-.07em;font-weight:1000;margin:18px 0 16px}.title span{color:var(--cyan)}.desc{max-width:430px;color:#c2dce6;line-height:1.6;font-size:14px}.features{display:flex;gap:9px;flex-wrap:wrap;margin:22px 0}.pill{font-size:10px;letter-spacing:.12em;border:1px solid #9befff44;padding:8px 10px;color:#dcfbff;background:#09263a}.start{pointer-events:auto;border:0;background:var(--cyan);color:#031421;padding:15px 24px;font-weight:1000;letter-spacing:.14em;cursor:pointer;clip-path:polygon(0 0,94% 0,100% 28%,100% 100%,6% 100%,0 72%);min-width:190px}.start:hover{background:white;transform:translateY(-1px)}.foot{font-size:10px;color:#91b6c4;margin-top:18px;line-height:1.6}
+.mobile{position:fixed;bottom:24px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none;z-index:3}.touchBtn{pointer-events:auto;width:60px;height:60px;border:1px solid #c9f9ff70;background:#09253cbb;color:#fff;border-radius:50%;font-weight:900;font-size:18px;touch-action:none;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px #0006}.touchBtn:active{background:var(--cyan);color:#031421;transform:scale(0.92)}.touchCluster{display:flex;gap:10px;align-items:end}
+.joystickZone{pointer-events:auto;width:120px;height:120px;background:#09253c88;border:2px solid #70f6ff66;border-radius:50%;position:relative;touch-action:none;box-shadow:0 0 15px #0005, inset 0 0 15px #70f6ff22;display:flex;align-items:center;justify-content:center}
+.joystickKnob{width:50px;height:50px;background:radial-gradient(circle,#70f6ff,#09253c);border:2px solid #ffffffaa;border-radius:50%;position:absolute;box-shadow:0 4px 10px #0008;pointer-events:none;transition:transform 0.05s ease-out}
+@media(min-width:1024px){.mobile{display:none}}@media(max-width:700px){.help{display:none}.bottom{bottom:110px}.top{top:16px;left:16px;right:16px}.meterBlock{width:50vw}#toast{top:28%}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div class="hud">
+    <div class="top">
+        <div>
+            <div class="brand">RIPTIDE<span> / </span>10 ZONES</div>
+            <div class="sub" id="zoneTitle">ZONE 01 / SHALLOW SWELLS</div>
+            <div class="lives" id="livesContainer">
+                <span class="life-heart">♥</span>
+                <span class="life-heart">♥</span>
+                <span class="life-heart">♥</span>
+            </div>
+            <div id="gamepadStatus">🎮 GAMEPAD CONNECTED</div>
+        </div>
+        <div class="score">
+            <div class="scoreNum" id="score">000000</div>
+            <div class="scoreLabel">DISTANCE / SCORE</div>
+        </div>
+    </div>
+    <div id="toast">RIDE THE RIPTIDE<small>PREPARE FOR 10 OCEAN ZONES</small></div>
+    <div class="bottom">
+        <div class="meterBlock">
+            <div class="meterTitle" id="progressTitle">ZONE PROGRESS</div>
+            <div class="meter"><div class="fill" id="flow"></div></div>
+            <div class="combo" id="combo">COMBO <em>×1.0</em></div>
+            <div class="audioControl">
+                <label for="volControl">SFX VOL</label>
+                <input type="range" id="volControl" min="0" max="1" step="0.01" value="0.7">
+            </div>
+        </div>
+        <div class="help">
+            <span class="key">A</span> <span class="key">D</span> rail carve &nbsp; <span class="key">W</span> pump down face<br>
+            <span class="key">SPACE</span> pop / aerial &nbsp; <span class="key">SHIFT</span> rail boost<br>
+            <span class="key">← →</span> tricks in air &nbsp; <span class="key">R</span> reset ride
+        </div>
+    </div>
+</div>
+<div class="mobile">
+    <div class="joystickZone" id="vJoystick">
+        <div class="joystickKnob" id="vKnob"></div>
+    </div>
+    <div class="touchCluster">
+        <button class="touchBtn" data-key="arrowleft" style="font-size:12px">↶ TRICK</button>
+        <button class="touchBtn" data-key="arrowright" style="font-size:12px">TRICK ↷</button>
+        <button class="touchBtn" data-key="shift" style="border-color:var(--pink)">⚡</button>
+        <button class="touchBtn" data-key=" " style="width:68px;height:68px;background:var(--cyan);color:#031421">POP</button>
+    </div>
+</div>
+
+<div class="overlay" id="intro">
+    <div class="panel">
+        <div class="eyebrow" id="menuEyebrow">ULTIMATE WAVE RIOT EXPANSION</div>
+        <div class="title" id="menuTitle">10 ZONES.<br><span>ANALOG TOUCH & DYNAMIC SOUND.</span></div>
+        <div class="desc" id="menuDesc">Conquer 10 unique ocean zones with responsive virtual analog touch stick, dynamic low-frequency wave rumble synthesis, wave-reacting noise soundscapes, and procedural audio feedback!</div>
+        <div class="features">
+            <div class="pill">VIRTUAL ANALOG JOYSTICK</div>
+            <div class="pill">SYNTHESIZED WAVE RUMBLE</div>
+            <div class="pill">CRASH & CRUSH AUDIO</div>
+            <div class="pill">10 OCEAN ZONES</div>
+        </div>
+        <button class="start" id="start">DROP IN →</button>
+        <div class="foot">WASD / Touch Joystick / Gamepad to carve & pump · SPACE / Pop to jump · SHIFT / Boost · R to restart</div>
+    </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id), container = $('game');
+
+// Global game state & variable declarations
+let t = 0;
+let keys = {};
+let toastTimer = 0;
+let prevGamepadButtons = [];
+
+const camPosSmooth = new THREE.Vector3(0, 5, -20);
+const camLookSmooth = new THREE.Vector3(0, 1, 0);
+
+const state = {
+    started: false,
+    x: 0,
+    y: 0,
+    z: 0,
+    vx: 0,
+    vy: 0,
+    speed: 16,
+    distance: 0,
+    score: 0,
+    lives: 3,
+    flow: 100,
+    combo: 1.0,
+    comboPoints: 0,
+    railBank: 0,
+    air: false,
+    airTime: 0,
+    spin: 0,
+    spinTotal: 0,
+    boost: false,
+    wipe: 0,
+    zoneIndex: 0,
+    dayTime: 12,
+    rideTime: 0
+};
+
+function setKey(k, val) {
+    keys[k] = val;
+}
+
+function updateLivesUI() {
+    const container = $('livesContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+        const heart = document.createElement('span');
+        heart.className = i < state.lives ? 'life-heart' : 'life-heart lost';
+        heart.textContent = '♥';
+        container.appendChild(heart);
+    }
+}
+
+function notify(title, sub) {
+    const toast = $('toast');
+    if (!toast) return;
+    toast.innerHTML = `${title}<small>${sub}</small>`;
+    toast.classList.add('show');
+    toastTimer = 2.5;
+}
+
+function award(points, msg) {
+    state.score += Math.round(points * state.combo);
+    notify(`+${Math.round(points * state.combo)} PTS`, msg);
+}
+
+function playPlayerActionSound(type) {
+    playSynthSound(type === 'VAULT' ? 'TRICK' : 'WIPEOUT');
+}
+
+function pollGamepad() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const gp of gamepads) {
+        if (gp) {
+            const statusEl = $('gamepadStatus');
+            if (statusEl && statusEl.style.display !== 'block') {
+                statusEl.style.display = 'block';
+            }
+            return gp;
+        }
+    }
+    return null;
+}
+
+function reset(fullReset = false) {
+    state.x = 0;
+    state.y = 0;
+    state.vx = 0;
+    state.vy = 0;
+    state.speed = 16;
+    state.air = false;
+    state.wipe = 0;
+    state.combo = 1.0;
+    
+    if (fullReset) {
+        state.started = false;
+        state.distance = 0;
+        state.score = 0;
+        state.lives = 3;
+        state.flow = 100;
+        state.zoneIndex = 0;
+        state.rideTime = 0;
+        $('zoneTitle').textContent = ZONES[0].name;
+        $('intro').classList.remove('hidden');
+        updateLivesUI();
+    }
+}
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x7bc8e3);
+scene.fog = new THREE.FogExp2(0x7bc8e3, 0.0075);
+
+const camera = new THREE.PerspectiveCamera(63, innerWidth / innerHeight, 0.1, 900);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2.0));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+container.appendChild(renderer.domElement);
+
+const hemiLight = new THREE.HemisphereLight(0xcaf7ff, 0x153d55, 1.6);
+scene.add(hemiLight);
+const ambientLight = new THREE.AmbientLight(0x8dd9f1, 0.4);
+scene.add(ambientLight);
+const sun = new THREE.DirectionalLight(0xffe6c1, 2.6);
+sun.position.set(-45, 65, 30);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -55; sun.shadow.camera.right = 55;
+sun.shadow.camera.top = 55; sun.shadow.camera.bottom = -55;
+scene.add(sun);
+
+const mat = (color, roughness = .65, metalness = 0, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, metalness, flatShading: true, ...extra });
+
+const CHUNK_LENGTH = 160;
+const CHUNK_WIDTH = 320;
+const NUM_CHUNKS = 5;
+const oceanChunks = [];
+const oceanMat = mat(0x087f9e, .25, .12, { vertexColors: true, side: THREE.DoubleSide });
+
+for (let i = 0; i < NUM_CHUNKS; i++) {
+    const oceanGeo = new THREE.PlaneGeometry(CHUNK_WIDTH, CHUNK_LENGTH, 60, 45);
+    oceanGeo.rotateX(-Math.PI / 2);
+    const mesh = new THREE.Mesh(oceanGeo, oceanMat);
+    mesh.receiveShadow = true;
+    mesh.position.z = (i - 1) * CHUNK_LENGTH;
+    scene.add(mesh);
+    oceanChunks.push({ mesh, geo: oceanGeo, baseZ: (i - 1) * CHUNK_LENGTH });
+}
+
+const obstacles = [];
+const obsMat = mat(0x523d28, .8, 0);
+const islandMat = mat(0x245b58, .95);
+const buoyMat = mat(0xff5b83, .3);
+const enemyMat = mat(0xff3366, .2, .5);
+
+for (let i = 0; i < 24; i++) {
+    const isEnemy = i % 4 === 0;
+    let mesh;
+    if (isEnemy) {
+        mesh = new THREE.Mesh(new THREE.ConeGeometry(1.2, 3, 5), enemyMat);
+        mesh.rotation.x = Math.PI / 2;
+    } else {
+        const type = i % 3;
+        if (type === 0) {
+            mesh = new THREE.Mesh(new THREE.CylinderGeometry(.6, .6, 4, 6), obsMat);
+            mesh.rotation.z = Math.PI / 2;
+        } else if (type === 1) {
+            mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(1.8, 1), islandMat);
+        } else {
+            mesh = new THREE.Mesh(new THREE.CylinderGeometry(.5, .7, 2.8, 6), buoyMat);
+        }
+    }
+    mesh.position.set((Math.random() - .5) * 44, 0, 40 + i * 40);
+    scene.add(mesh);
+    obstacles.push({ mesh, z: mesh.position.z, isEnemy });
+}
+
+const skySun = new THREE.Mesh(new THREE.SphereGeometry(11, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffe4a1 }));
+skySun.position.set(-90, 62, 230);
+scene.add(skySun);
+
+const cloudMat = new THREE.MeshStandardMaterial({ color: 0xf2ffff, roughness: 1, flatShading: true });
+for (let i = 0; i < 18; i++) {
+    const c = new THREE.Group();
+    for (let j = 0; j < 4; j++) {
+        const p = new THREE.Mesh(new THREE.DodecahedronGeometry(3 + Math.random() * 3, 1), cloudMat);
+        p.position.set(j * 4, Math.random() * 2, Math.random() * 3);
+        c.add(p);
+    }
+    c.position.set((Math.random() - .5) * 260, 30 + Math.random() * 42, 60 + Math.random() * 210);
+    scene.add(c);
+}
+
+const surfer = new THREE.Group();
+scene.add(surfer);
+const wetsuit = mat(0x10243d, .38, .1), skin = mat(0xc98462, .65), accent = mat(0xff4fa3, .35, .15), boardMat = mat(0xffcf5b, .28, .18);
+const boardRig = new THREE.Group();
+boardRig.position.y = .18;
+surfer.add(boardRig);
+const board = new THREE.Mesh(new THREE.CapsuleGeometry(.55, 3.4, 4, 8), boardMat);
+board.rotation.x = Math.PI / 2;
+board.scale.set(.72, .48, 1);
+board.castShadow = true;
+boardRig.add(board);
+const stripe = new THREE.Mesh(new THREE.BoxGeometry(.17, .035, 3.1), accent);
+stripe.position.set(0, .29, 0);
+boardRig.add(stripe);
+
+const torso = new THREE.Mesh(new THREE.CapsuleGeometry(.35, .85, 3, 6), wetsuit);
+torso.position.y = 1.18;
+torso.rotation.x = -.22;
+torso.castShadow = true;
+surfer.add(torso);
+const head = new THREE.Mesh(new THREE.SphereGeometry(.29, 8, 6), skin);
+head.position.set(0, 1.92, .04);
+head.castShadow = true;
+surfer.add(head);
+const hair = new THREE.Mesh(new THREE.DodecahedronGeometry(.3, 1), mat(0x17202a));
+hair.position.set(0, 2.08, -.015);
+surfer.add(hair);
+
+function limb(a, b, r, material) {
+    const d = new THREE.Vector3().subVectors(b, a);
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r * .7, r, d.length(), 6), material);
+    mesh.position.copy(a).add(b).multiplyScalar(.5);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+    surfer.add(mesh);
+    return mesh;
+}
+limb(new THREE.Vector3(-.3, 1.45, 0), new THREE.Vector3(-.95, 1.2, .1), .13, skin);
+limb(new THREE.Vector3(.3, 1.45, 0), new THREE.Vector3(.95, 1.2, .1), .13, skin);
+limb(new THREE.Vector3(-.19, .8, 0), new THREE.Vector3(-.34, .52, -.6), .15, wetsuit);
+limb(new THREE.Vector3(.19, .8, 0), new THREE.Vector3(.34, .52, .55), .15, wetsuit);
+
+// Speed Boost & Landing Visual Effect Ring
+const boostRingMat = new THREE.MeshBasicMaterial({ color: 0x70f6ff, transparent: true, opacity: 0, wireframe: true });
+const boostRing = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.2, 8, 24), boostRingMat);
+boostRing.rotation.x = Math.PI / 2;
+scene.add(boostRing);
+let boostFxTimer = 0;
+
+const sprayMat = new THREE.PointsMaterial({ color: 0xc5ffff, size: .42, transparent: true, opacity: .8, depthWrite: false });
+const sprayCount = 200, sprayGeo = new THREE.BufferGeometry(), sprayPos = new Float32Array(sprayCount * 3), sprayVel = [];
+for (let i = 0; i < sprayCount; i++) {
+    sprayPos[i * 3] = 0; sprayPos[i * 3 + 1] = -30; sprayPos[i * 3 + 2] = 0;
+    sprayVel.push(new THREE.Vector3());
+}
+sprayGeo.setAttribute('position', new THREE.BufferAttribute(sprayPos, 3));
+const spray = new THREE.Points(sprayGeo, sprayMat);
+scene.add(spray);
+
+const ZONES = [
+    { id: 1, name: "ZONE 01 / SHALLOW SWELLS", waveMultiplier: 1.0, climate: "CALM SUN" },
+    { id: 2, name: "ZONE 02 / ROLLING ESTUARY", waveMultiplier: 1.15, climate: "BREEZY" },
+    { id: 3, name: "ZONE 03 / SQUALL REEF", waveMultiplier: 1.3, climate: "SQUALL" },
+    { id: 4, name: "ZONE 04 / MIDNIGHT TRENCH", waveMultiplier: 1.45, climate: "MIDNIGHT" },
+    { id: 5, name: "ZONE 05 / STORM BREAK", waveMultiplier: 1.6, climate: "STORM" },
+    { id: 6, name: "ZONE 06 / ABYSSAL WHIRLPOOL", waveMultiplier: 1.8, climate: "WHIRLPOOL" },
+    { id: 7, name: "ZONE 07 / GLACIAL TUNDRA SWELL", waveMultiplier: 2.0, climate: "BLIZZARD" },
+    { id: 8, name: "ZONE 08 / VOLCANIC CALDERA", waveMultiplier: 2.25, climate: "MAGMA ASH" },
+    { id: 9, name: "ZONE 09 / AURORA OCEAN", waveMultiplier: 2.5, climate: "AURORA BOREALIS" },
+    { id: 10, name: "ZONE 10 / THE INFINITE HORIZON", waveMultiplier: 2.8, climate: "COSMIC TIDE" }
+];
+
+let audioCtx = null;
+let masterGain = null;
+let oceanNoiseGain = null;
+let oceanFilter = null;
+let sprayNoiseGain = null;
+let sprayFilter = null;
+let carveFilter = null;
+let carveNoiseGain = null;
+let audioMasterVol = 0.7;
+
+function initAudio() {
+    if (audioCtx) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioCtx();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(audioMasterVol, audioCtx.currentTime);
+        masterGain.connect(audioCtx.destination);
+
+        // Ambient ocean wave background (smooth pink/white noise buffer)
+        const bufferSize = audioCtx.sampleRate * 3;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            // Soft pink noise filtering to avoid harsh static
+            output[i] = (lastOut + (0.02 * white)) / 1.02;
+            lastOut = output[i];
+            output[i] *= 2.5; 
+        }
+
+        const whiteNoise = audioCtx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        whiteNoise.loop = true;
+
+        oceanFilter = audioCtx.createBiquadFilter();
+        oceanFilter.type = 'lowpass';
+        oceanFilter.frequency.setValueAtTime(280, audioCtx.currentTime);
+
+        oceanNoiseGain = audioCtx.createGain();
+        oceanNoiseGain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+
+        whiteNoise.connect(oceanFilter);
+        oceanFilter.connect(oceanNoiseGain);
+        oceanNoiseGain.connect(masterGain);
+        whiteNoise.start();
+
+        // Swift-Water Board Carve Sound (Hydrodynamic Water Flow)
+        const carveNoise = audioCtx.createBufferSource();
+        carveNoise.buffer = noiseBuffer;
+        carveNoise.loop = true;
+
+        carveFilter = audioCtx.createBiquadFilter();
+        carveFilter.type = 'bandpass';
+        carveFilter.frequency.setValueAtTime(700, audioCtx.currentTime);
+        carveFilter.Q.setValueAtTime(1.2, audioCtx.currentTime);
+
+        carveNoiseGain = audioCtx.createGain();
+        carveNoiseGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+        carveNoise.connect(carveFilter);
+        carveFilter.connect(carveNoiseGain);
+        carveNoiseGain.connect(masterGain);
+        carveNoise.start();
+
+        // High-frequency water spray/hiss when turning sharply
+        const sprayNoise = audioCtx.createBufferSource();
+        sprayNoise.buffer = noiseBuffer;
+        sprayNoise.loop = true;
+
+        sprayFilter = audioCtx.createBiquadFilter();
+        sprayFilter.type = 'highpass';
+        sprayFilter.frequency.setValueAtTime(1800, audioCtx.currentTime);
+
+        sprayNoiseGain = audioCtx.createGain();
+        sprayNoiseGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+        sprayNoise.connect(sprayFilter);
+        sprayFilter.connect(sprayNoiseGain);
+        sprayNoiseGain.connect(masterGain);
+        sprayNoise.start();
+
+    } catch(e) {
+        console.warn("Web Audio failed to initialize", e);
+    }
+}
+
+function playSynthSound(type) {
+    if (!audioCtx) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const now = audioCtx.currentTime;
+
+    if (type === 'POP') {
+        // Natural water snap pop sound
+        const bufferSize = audioCtx.sampleRate * 0.12;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.02));
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1100, now);
+        filter.Q.setValueAtTime(2.0, now);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.3, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+
+        src.connect(filter);
+        filter.connect(g);
+        g.connect(masterGain);
+        src.start(now);
+    } else if (type === 'TRICK') {
+        // Subtle air swish / trick spin sound
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(540, now + 0.1);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.connect(gain);
+        gain.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + 0.11);
+    } else if (type === 'LANDING') {
+        // Soft water thud/splash on landing
+        const bufferSize = audioCtx.sampleRate * 0.25;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.04));
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(450, now);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.4, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+
+        src.connect(filter);
+        filter.connect(g);
+        g.connect(masterGain);
+        src.start(now);
+    } else if (type === 'WIPEOUT') {
+        // Deep splash wave impact sound
+        const bufferSize = audioCtx.sampleRate * 0.6;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(500, now);
+        filter.frequency.exponentialRampToValueAtTime(80, now + 0.6);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.5, now);
+        g.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+
+        src.connect(filter);
+        filter.connect(g);
+        g.connect(masterGain);
+        src.start(now);
+    }
+}
+
+function wipeout() {
+    if (state.wipe > 0) return;
+    
+    playSynthSound('WIPEOUT');
+    state.lives--;
+    updateLivesUI();
+
+    if (state.lives <= 0) {
+        state.wipe = 2.0;
+        notify('GAME OVER!', 'RETURNING TO MAIN MENU...');
+        setTimeout(() => {
+            reset(true);
+        }, 1800);
+        return;
+    }
+
+    state.wipe = 1.5;
+    state.combo = 1;
+    state.comboPoints = 0;
+    state.flow = Math.max(10, state.flow - 25);
+    state.speed = 7;
+    state.vx *= .2;
+    notify('WASHED OUT!', `LIVES REMAINING: ${state.lives}`);
+}
+
+function doTrick(dir) {
+    if (!state.air) return;
+    const trickText = dir > 0 ? 'FRONT SNAP' : 'BACK SNAP';
+    playSynthSound('TRICK');
+    state.spin += dir * Math.PI / 2;
+    state.spinTotal += dir * Math.PI / 2;
+    state.combo = Math.min(12, state.combo + .4);
+    state.flow = Math.max(0, state.flow - 3);
+    award(200, ' ' + trickText);
+}
+
+let analogInput = { x: 0, y: 0 };
+const vJoystick = $('vJoystick');
+const vKnob = $('vKnob');
+
+if (vJoystick) {
+    let joystickTouchId = null;
+    let center = { x: 0, y: 0 };
+    const maxRadius = 42;
+
+    vJoystick.addEventListener('pointerdown', e => {
+        initAudio();
+        joystickTouchId = e.pointerId;
+        vJoystick.setPointerCapture(e.pointerId);
+        const rect = vJoystick.getBoundingClientRect();
+        center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        updateJoystick(e.clientX, e.clientY);
+    });
+
+    vJoystick.addEventListener('pointermove', e => {
+        if (e.pointerId === joystickTouchId) {
+            updateJoystick(e.clientX, e.clientY);
+        }
+    });
+
+    const resetJoystick = e => {
+        if (e.pointerId === joystickTouchId) {
+            joystickTouchId = null;
+            analogInput.x = 0;
+            analogInput.y = 0;
+            if (vKnob) vKnob.style.transform = `translate(0px, 0px)`;
+        }
+    };
+
+    vJoystick.addEventListener('pointerup', resetJoystick);
+    vJoystick.addEventListener('pointercancel', resetJoystick);
+
+    function updateJoystick(clientX, clientY) {
+        let dx = clientX - center.x;
+        let dy = clientY - center.y;
+        let dist = Math.hypot(dx, dy);
+
+        if (dist > maxRadius) {
+            dx = (dx / dist) * maxRadius;
+            dy = (dy / dist) * maxRadius;
+            dist = maxRadius;
+        }
+
+        analogInput.x = dx / maxRadius;
+        analogInput.y = dy / maxRadius;
+
+        if (vKnob) vKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+}
+
+addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
+    if (!keys[k]) setKey(k, true);
+    if (k === ' ' && state.started && !state.air && state.wipe <= 0) {
+        initAudio();
+        playSynthSound('POP');
+        state.air = true;
+        state.vy = 10.2 + Math.min(3.5, state.speed * 0.08);
+        state.airTime = 0; state.spin = 0; state.spinTotal = 0;
+        notify('POP!', 'CLEAN AERIAL');
+    }
+});
+
+addEventListener('keyup', e => {
+    const k = e.key.toLowerCase();
+    setKey(k, false);
+});
+
+$('start').addEventListener('click', () => {
+    initAudio();
+    if (!state.started) {
+        state.started = true;
+        $('intro').classList.add('hidden');
+        notify('LET\'S RIDE!', 'ZONE 01: SHALLOW SWELLS');
+    }
+});
+
+document.querySelectorAll('[data-key]').forEach(btn => {
+    const k = btn.dataset.key;
+    const down = e => {
+        e.preventDefault();
+        initAudio();
+        if (!keys[k]) {
+            setKey(k, true);
+            if (k === ' ' && state.started && !state.air && state.wipe <= 0) {
+                playSynthSound('POP');
+                state.air = true; state.vy = 10.5; state.airTime = 0; state.spin = 0; state.spinTotal = 0;
+            }
+        }
+    };
+    btn.addEventListener('pointerdown', down);
+    btn.addEventListener('pointerup', e => { e.preventDefault(); setKey(k, false); });
+    btn.addEventListener('pointercancel', () => setKey(k, false));
+    btn.addEventListener('pointerleave', () => setKey(k, false));
+});
+
+function waveY(x, z, time) {
+    const zone = ZONES[state.zoneIndex];
+    const climateMult = zone.waveMultiplier;
+    const swell = Math.sin(z * .052 - time * 1.45 + x * .025) * (2.9 * climateMult);
+    const cross = Math.sin(z * .105 + time * .85 - x * .075) * (.9 * climateMult);
+    const chop = Math.sin(x * .19 + z * .17 - time * 2.3) * (.22 * climateMult);
+    return swell + cross + chop;
+}
+
+function waveSlopeX(x, z, time) {
+    const e = 0.2;
+    return (waveY(x + e, z, time) - waveY(x - e, z, time)) / (2 * e);
+}
+
+function waveNormal(x, z, time) {
+    const e = .25;
+    return new THREE.Vector3(waveY(x - e, z, time) - waveY(x + e, z, time), 2 * e, waveY(x, z - e, time) - waveY(x, z + e, time)).normalize();
+}
+
+function updateDayNightCycle(dt) {
+    state.dayTime = (state.distance * 0.05) % 24;
+    
+    const sunAngle = (state.dayTime / 24) * Math.PI * 2 - Math.PI / 2;
+    const sunHeight = Math.sin(sunAngle);
+    
+    skySun.position.x = Math.cos(sunAngle) * 120;
+    skySun.position.y = Math.max(-20, sunHeight * 100);
+    sun.position.copy(skySun.position);
+
+    if (sunHeight > 0.2) {
+        scene.background.lerp(new THREE.Color(0x7bc8e3), 0.05);
+        scene.fog.color.lerp(new THREE.Color(0x7bc8e3), 0.05);
+        sun.color.set(0xffe6c1);
+        sun.intensity = 2.6;
+        hemiLight.intensity = 1.6;
+    } else if (sunHeight <= 0.2 && sunHeight > -0.1) {
+        scene.background.lerp(new THREE.Color(0xd97c62), 0.05);
+        scene.fog.color.lerp(new THREE.Color(0xd97c62), 0.05);
+        sun.color.set(0xff9944);
+        sun.intensity = 1.8;
+        hemiLight.intensity = 1.0;
+    } else {
+        const nightColor = state.zoneIndex === 8 ? new THREE.Color(0x1a3344) : new THREE.Color(0x0a1626);
+        scene.background.lerp(nightColor, 0.05);
+        scene.fog.color.lerp(nightColor, 0.05);
+        sun.color.set(0x70bbff);
+        sun.intensity = 0.6;
+        hemiLight.intensity = 0.4;
+    }
+}
+
+function updateInfiniteChunks(time) {
+    const chunkSpan = CHUNK_LENGTH;
+    oceanChunks.forEach(chunk => {
+        while (chunk.mesh.position.z < state.z - chunkSpan) {
+            chunk.mesh.position.z += chunkSpan * NUM_CHUNKS;
+        }
+
+        const p = chunk.geo.attributes.position;
+        const meshZOffset = chunk.mesh.position.z;
+        for (let i = 0; i < p.count; i++) {
+            const x = p.getX(i);
+            const localZ = p.getZ(i);
+            const worldZ = localZ + meshZOffset;
+            p.setY(i, waveY(x, worldZ, time));
+            const crest = Math.max(0, Math.sin(worldZ * .052 - time * 1.45 + x * .025));
+            const baseHue = state.zoneIndex > 6 ? .65 : .52;
+            const col = new THREE.Color().setHSL(baseHue - crest * .035, .72, .25 + crest * .17);
+            chunk.geo.attributes.color?.setXYZ(i, col.r, col.g, col.b);
+        }
+        p.needsUpdate = true;
+        if (!chunk.geo.attributes.color) {
+            const colors = [];
+            for (let i = 0; i < p.count; i++) colors.push(.03, .35, .43);
+            chunk.geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        }
+        chunk.geo.computeVertexNormals();
+    });
+
+    obstacles.forEach(obs => {
+        if (obs.mesh.position.z < state.z - 30) {
+            obs.mesh.position.z += 500 + Math.random() * 100;
+            obs.mesh.position.x = (Math.random() - .5) * 44;
+            obs.isEnemy = Math.random() < (0.2 + state.zoneIndex * 0.05);
+            obs.mesh.scale.set(obs.isEnemy ? 1.2 : 1, obs.isEnemy ? 1.2 : 1, obs.isEnemy ? 1.2 : 1);
+        }
+
+        if (obs.isEnemy) {
+            obs.mesh.position.x += Math.sin(time * 3 + obs.mesh.position.z) * 0.05;
+        }
+
+        const dx = state.x - obs.mesh.position.x;
+        const dz = state.z - obs.mesh.position.z;
+        if (Math.abs(dx) < 2.2 && Math.abs(dz) < 1.6) {
+            if (!state.air) {
+                if (obs.isEnemy) {
+                    playPlayerActionSound('SMASH');
+                    award(500, 'ENEMY WIPEOUT DODGED & SMASHED!');
+                    obs.mesh.position.z += 100;
+                } else {
+                    wipeout();
+                }
+            } else {
+                playPlayerActionSound('VAULT');
+                award(400, obs.isEnemy ? 'ENEMY AERIAL VAULT!' : 'OBSTACLE CLEAR AIR!');
+            }
+        }
+    });
+}
+
+function update(dt) {
+    t += dt;
+    updateDayNightCycle(dt);
+    updateInfiniteChunks(t);
+
+    if (audioCtx && oceanFilter && oceanNoiseGain) {
+        const zone = ZONES[state.zoneIndex];
+        const waveAmp = zone.waveMultiplier;
+        const currentWaveHeight = Math.abs(waveY(state.x, state.z, t));
+
+        const speedRatio = state.speed / 38;
+        const carveRatio = Math.abs(state.vx) / 15;
+        
+        // Dynamic ambient ocean filter (gentle swell wash)
+        const dynamicOceanFreq = 180 + (currentWaveHeight / waveAmp) * 220 + (state.zoneIndex * 15);
+        oceanFilter.frequency.setTargetAtTime(dynamicOceanFreq, audioCtx.currentTime, 0.1);
+        oceanNoiseGain.gain.setTargetAtTime(0.1 + (currentWaveHeight * 0.025), audioCtx.currentTime, 0.1);
+
+        // Swift water carve audio under the board rail (NO MOTOR hum)
+        if (carveFilter && carveNoiseGain) {
+            if (!state.air && state.wipe <= 0) {
+                const targetCarveFreq = 400 + speedRatio * 800 + carveRatio * 600;
+                const targetCarveGain = 0.03 + speedRatio * 0.08 + carveRatio * 0.12;
+                carveFilter.frequency.setTargetAtTime(targetCarveFreq, audioCtx.currentTime, 0.05);
+                carveNoiseGain.gain.setTargetAtTime(targetCarveGain, audioCtx.currentTime, 0.05);
+            } else {
+                carveNoiseGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.05);
+            }
+        }
+
+        // Fine spray hiss when carving hard
+        if (sprayFilter && sprayNoiseGain) {
+            if (!state.air && state.wipe <= 0) {
+                sprayFilter.frequency.setTargetAtTime(1600 + carveRatio * 1800, audioCtx.currentTime, 0.05);
+                sprayNoiseGain.gain.setTargetAtTime(carveRatio * 0.1, audioCtx.currentTime, 0.05);
+            } else {
+                sprayNoiseGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.05);
+            }
+        }
+    }
+
+    // Process Gamepad & Touch Joystick
+    let gpSteer = 0, gpPump = 0, gpBrake = 0, gpPop = false, gpBoost = false, gpTrickLeft = false, gpTrickRight = false;
+    
+    // Combine virtual analog touch input
+    if (Math.abs(analogInput.x) > 0.05) gpSteer = analogInput.x;
+    if (analogInput.y < -0.15) gpPump = -analogInput.y;
+    if (analogInput.y > 0.15) gpBrake = analogInput.y;
+
+    const gp = pollGamepad();
+    if (gp) {
+        initAudio();
+        if (Math.abs(gp.axes[0]) > 0.15) gpSteer = gp.axes[0];
+        if (gp.buttons[14]?.pressed) gpSteer = -1;
+        if (gp.buttons[15]?.pressed) gpSteer = 1;
+
+        if (gp.axes[1] < -0.2 || gp.buttons[12]?.pressed) gpPump = 1;
+        if (gp.axes[1] > 0.2 || gp.buttons[13]?.pressed) gpBrake = 1;
+
+        gpPop = gp.buttons[0]?.pressed;
+        gpBoost = gp.buttons[7]?.pressed || gp.buttons[5]?.pressed;
+        gpTrickLeft = gp.buttons[4]?.pressed || gp.buttons[2]?.pressed;
+        gpTrickRight = gp.buttons[5]?.pressed || gp.buttons[1]?.pressed;
+
+        if (gpPop && !prevGamepadButtons[0] && state.started && !state.air && state.wipe <= 0) {
+            playSynthSound('POP');
+            state.air = true;
+            state.vy = 10.2 + Math.min(3.5, state.speed * 0.08);
+            state.airTime = 0; state.spin = 0; state.spinTotal = 0;
+            notify('POP!', 'CONTROLLER AERIAL');
+        }
+        if (gpTrickLeft && !prevGamepadButtons[4]) doTrick(-1);
+        if (gpTrickRight && !prevGamepadButtons[5]) doTrick(1);
+
+        prevGamepadButtons = gp.buttons.map(b => b.pressed);
+    }
+
+    if (state.started && state.wipe <= 0) {
+        const left = keys.a || keys.arrowleft, right = keys.d || keys.arrowright;
+        const forward = keys.w || keys.arrowup, brake = keys.s || keys.arrowdown;
+
+        let steerInput = (right ? 1 : 0) - (left ? 1 : 0);
+        if (Math.abs(gpSteer) > 0) steerInput = gpSteer;
+
+        const targetBank = steerInput * 0.78;
+        state.railBank += (targetBank - state.railBank) * Math.min(1, dt * 10);
+
+        const slope = waveSlopeX(state.x, state.z, t);
+        const gravitationalDrive = -slope * 14.0;
+        
+        state.vx += (steerInput * 28.0 + gravitationalDrive) * dt;
+        state.vx *= Math.pow(state.air ? 0.992 : 0.93, dt * 60);
+        state.vx = THREE.MathUtils.clamp(state.vx, -15, 15);
+        state.x += state.vx * dt;
+        state.x = THREE.MathUtils.clamp(state.x, -27, 27);
+
+        state.boost = !!((keys.shift || gpBoost) && state.flow > 2 && !state.air);
+        if (state.boost) state.flow = Math.max(0, state.flow - 18 * dt);
+        else state.flow = Math.min(100, state.flow + ((forward || gpPump > 0) ? 4.0 : 1.2) * dt);
+
+        const pocketEnergy = Math.max(0, -slope * (state.vx * Math.sign(slope))) * 0.6;
+        const targetSpeed = (state.boost ? 34 : (forward || gpPump > 0) ? (25 + gpPump * 4) : (brake || gpBrake > 0) ? 11 : 19) + pocketEnergy;
+        state.speed += (targetSpeed - state.speed) * dt * 2.0;
+        state.speed = THREE.MathUtils.clamp(state.speed, 6, 38);
+        state.z += state.speed * dt;
+        state.distance += state.speed * dt;
+        state.rideTime += dt;
+
+        const newZoneIndex = Math.min(9, Math.floor(state.distance / 600));
+        if (newZoneIndex !== state.zoneIndex) {
+            state.zoneIndex = newZoneIndex;
+            const currentZone = ZONES[state.zoneIndex];
+            $('zoneTitle').textContent = currentZone.name;
+            notify(`ZONE ${currentZone.id}: ${currentZone.climate}`, `WAVE INTENSITY ×${currentZone.waveMultiplier}`);
+        }
+
+        if (!state.air) {
+            state.y = waveY(state.x, state.z, t) + .25;
+            state.combo = Math.min(15, 1 + state.rideTime * 0.012 + Math.abs(state.vx) * 0.015 + state.zoneIndex * 0.35);
+            if (Math.abs(state.x) > 25.8) wipeout();
+            if (Math.abs(state.vx) > 7.5 && Math.random() < dt * 3) {
+                state.score += Math.round(state.speed * state.combo);
+            }
+        } else {
+            state.airTime += dt;
+            state.vy -= 18.5 * dt;
+            state.y += state.vy * dt;
+            state.spin += steerInput * dt * 5.0;
+            surfer.rotation.y += steerInput * dt * 5.0;
+
+            const currentWaveY = waveY(state.x, state.z, t);
+            if (state.y < currentWaveY + .4 && state.vy < 0) {
+                state.air = false;
+                state.y = currentWaveY + .3;
+                state.vy = 0;
+
+                // Precision orientation alignment check relative to rotation angles
+                const normalizedRotation = Math.abs(surfer.rotation.y) % (Math.PI * 2);
+                const isAligned360 = normalizedRotation < 0.85 || normalizedRotation > (Math.PI * 2 - 0.85);
+                const isAligned180 = Math.abs(normalizedRotation - Math.PI) < 0.85;
+
+                const fullSpinCount = Math.floor(Math.abs(state.spinTotal) / (Math.PI * 2));
+                const halfSpinCount = Math.floor(Math.abs(state.spinTotal) / Math.PI);
+
+                if (state.airTime > .22 && isAligned360 && fullSpinCount > 0) {
+                    // Full 360 Spin Landing Triggered
+                    const landingText = `STUNT LANDING ×${fullSpinCount}!`;
+                    playSynthSound('LANDING');
+                    award(350 + Math.round(state.airTime * 250) + fullSpinCount * 800, landingText);
+
+                    // Immediate Speed Boost
+                    state.speed = Math.min(42, state.speed + 9.5 + fullSpinCount * 2.5);
+                    state.flow = Math.min(100, state.flow + 15);
+
+                    // Trigger Boost VFX Ring and Burst Spray
+                    boostRing.position.set(surfer.position.x, surfer.position.y, surfer.position.z);
+                    boostRing.scale.set(1, 1, 1);
+                    boostRingMat.opacity = 1.0;
+                    boostFxTimer = 0.5;
+
+                    for (let i = 0; i < sprayCount; i++) {
+                        const angle = (i / sprayCount) * Math.PI * 2;
+                        const spd = 6 + Math.random() * 12;
+                        sprayVel[i].set(Math.cos(angle) * spd, Math.random() * 9 + 4, Math.sin(angle) * spd);
+                        const arr = sprayGeo.attributes.position.array;
+                        arr[i * 3] = surfer.position.x;
+                        arr[i * 3 + 1] = surfer.position.y;
+                        arr[i * 3 + 2] = surfer.position.z;
+                    }
+                } else if (state.airTime > .22 && isAligned180 && halfSpinCount > 0 && fullSpinCount === 0) {
+                    // 180 Half-Spin Landing Triggered (Half Effect)
+                    const landingText = '180 LANDING!';
+                    playSynthSound('LANDING');
+                    award(175 + Math.round(state.airTime * 125) + 400, landingText);
+
+                    // Half Speed Boost & Flow
+                    state.speed = Math.min(42, state.speed + 4.75);
+                    state.flow = Math.min(100, state.flow + 7.5);
+
+                    // Half Boost VFX
+                    boostRing.position.set(surfer.position.x, surfer.position.y, surfer.position.z);
+                    boostRing.scale.set(1, 1, 1);
+                    boostRingMat.opacity = 0.5;
+                    boostFxTimer = 0.25;
+
+                    for (let i = 0; i < sprayCount / 2; i++) {
+                        const angle = (i / (sprayCount / 2)) * Math.PI * 2;
+                        const spd = 4 + Math.random() * 8;
+                        sprayVel[i].set(Math.cos(angle) * spd, Math.random() * 6 + 3, Math.sin(angle) * spd);
+                        const arr = sprayGeo.attributes.position.array;
+                        arr[i * 3] = surfer.position.x;
+                        arr[i * 3 + 1] = surfer.position.y;
+                        arr[i * 3 + 2] = surfer.position.z;
+                    }
+                } else if (fullSpinCount === 0 && halfSpinCount === 0) {
+                    // Regular jump landing - plain air touch down without stunt bonus
+                } else {
+                    wipeout();
+                }
+                surfer.rotation.y = 0;
+                state.airTime = 0;
+            }
+        }
+    } else if (state.wipe > 0) {
+        state.wipe -= dt;
+        state.y += Math.sin(t * 24) * .035;
+        if (state.wipe <= 0 && state.lives > 0) {
+            state.z += 6;
+            state.y = waveY(state.x, state.z, t) + .3;
+            notify('BACK IN THE SWELL', ZONES[state.zoneIndex].name);
+        }
+    }
+
+    const wave = waveY(state.x, state.z, t);
+    if (!state.air && state.wipe <= 0) state.y = wave + .25;
+    
+    // Smooth frame-rate independent position blending
+    const posLerp = Math.min(1, dt * 18);
+    surfer.position.x += (state.x - surfer.position.x) * posLerp;
+    surfer.position.y += (state.y - surfer.position.y) * posLerp;
+    surfer.position.z += (state.z - surfer.position.z) * posLerp;
+
+    if (state.wipe > 0) {
+        surfer.rotation.z = Math.sin(t * 24) * .6;
+    } else if (!state.air) {
+        const rotLerp = Math.min(1, dt * 14);
+        const targetRotZ = -state.railBank * 0.85;
+        const targetRotX = -state.vx * .01;
+        const targetRotY = Math.atan2(state.vx, Math.max(7, state.speed)) * .65;
+
+        surfer.rotation.z += (targetRotZ - surfer.rotation.z) * rotLerp;
+        surfer.rotation.x += (targetRotX - surfer.rotation.x) * rotLerp;
+        surfer.rotation.y += (targetRotY - surfer.rotation.y) * rotLerp;
+    } else {
+        surfer.rotation.z = Math.sin(t * 8) * .15;
+    }
+
+    const normal = waveNormal(state.x, state.z, t);
+    boardRig.rotation.z = state.air ? Math.sin(t * 8) * .12 : Math.atan2(normal.x, normal.y) * .35 - state.railBank * 0.4;
+    boardRig.rotation.x = state.air ? Math.sin(t * 7) * .12 : Math.atan2(normal.z, normal.y) * .2;
+
+    // Enhanced ultra-smooth camera tracking using exponential dual lerp
+    const targetCamPos = new THREE.Vector3(
+        surfer.position.x * 0.55,
+        surfer.position.y + 2.8 + (state.speed * 0.035),
+        surfer.position.z - 11.5 - (state.speed * 0.085)
+    );
+    const targetCamLook = new THREE.Vector3(
+        surfer.position.x * 0.35,
+        surfer.position.y + 1.2,
+        surfer.position.z + 10.0
+    );
+
+    const cameraSmoothFactor = Math.min(1, dt * 8.5);
+    camPosSmooth.lerp(targetCamPos, cameraSmoothFactor);
+    camLookSmooth.lerp(targetCamLook, cameraSmoothFactor);
+
+    camera.position.copy(camPosSmooth);
+    camera.lookAt(camLookSmooth);
+
+    if (state.air || Math.abs(state.vx) > 6.5) {
+        for (let i = 0; i < 2; i++) {
+            const idx = Math.floor(Math.random() * sprayCount), arr = sprayGeo.attributes.position.array;
+            sprayVel[idx].set((Math.random() - .5) * 10, Math.random() * 8 + 2, Math.random() * 8 + 2);
+            arr[idx * 3] = surfer.position.x; arr[idx * 3 + 1] = surfer.position.y + .3; arr[idx * 3 + 2] = surfer.position.z;
+        }
+    }
+    const arr = sprayGeo.attributes.position.array;
+    for (let i = 0; i < sprayCount; i++) {
+        arr[i * 3] += sprayVel[i].x * dt;
+        arr[i * 3 + 1] += sprayVel[i].y * dt;
+        sprayVel[i].y -= 9.8 * dt;
+        arr[i * 3 + 2] += sprayVel[i].z * dt;
+        if (arr[i * 3 + 1] < waveY(arr[i * 3], arr[i * 3 + 2], t)) {
+            arr[i * 3 + 1] = -40;
+        }
+    }
+    sprayGeo.attributes.position.needsUpdate = true;
+
+    if (boostFxTimer > 0) {
+        boostFxTimer -= dt;
+        const expand = (0.5 - boostFxTimer) * 16.0;
+        boostRing.scale.set(1 + expand, 1 + expand, 1 + expand);
+        boostRingMat.opacity = Math.max(0, boostFxTimer * 2.0);
+    } else {
+        boostRingMat.opacity = 0;
+    }
+
+    if (toastTimer > 0) {
+        toastTimer -= dt;
+        if (toastTimer <= 0) $('toast').classList.remove('show');
+    }
+
+    $('score').textContent = String(Math.floor(state.distance + state.score)).padStart(6, '0');
+    let zoneProgress = ((state.distance % 600) / 600) * 100;
+    $('flow').style.width = zoneProgress + '%';
+    $('progressTitle').textContent = `ZONE ${state.zoneIndex + 1} / 10 PROGRESS`;
+    $('combo').innerHTML = `COMBO <em>×${state.combo.toFixed(1)}</em>`;
+
+    const targetFov = 63 + (state.boost ? 3 : 0) + (state.air ? 2 : 0) + (state.speed * 0.15);
+    camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 6);
+    camera.updateProjectionMatrix();
+}
+
+let last = performance.now();
+
+function loop(now) {
+    requestAnimationFrame(loop);
+    const dt = Math.min(.033, (now - last) / 1000 || .016);
+    last = now;
+    update(dt);
+    renderer.render(scene, camera);
+}
+
+camera.position.set(0, 8, -32);
+camera.lookAt(0, 0, 0);
+requestAnimationFrame(loop);
+
+addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+});
+})();
+</script>
+</body>
+</html>
