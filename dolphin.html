@@ -1,0 +1,2478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>An Underwater Odyssey</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{--cyan:#9ce9e6;--pink:#f1a8bb;--gold:#e9d7a4;--emerald:#a5e5ce;--purple:#c2b8e8;--sea-glass:#9ce9e6;--ink:#06151d;--glass:rgba(7,25,34,.68);--line:rgba(174,225,226,.18);--muted:#a9c5ca;--white:#f0fbfb}
+*{box-sizing:border-box;user-select:none;-webkit-user-select:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--white);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.01em}
+#game{position:fixed;inset:0;z-index:1}canvas{display:block;width:100%;height:100%}
+.hud{position:fixed;inset:0;pointer-events:none;z-index:2;font-feature-settings:"tnum";font-variant-numeric:tabular-nums;padding:clamp(14px,2.5vw,30px);display:flex;flex-direction:column;justify-content:space-between}
+.top-bar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.brand-card,.stats-card,.panel-block,.help-card{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(22px) saturate(125%);-webkit-backdrop-filter:blur(22px) saturate(125%);box-shadow:0 12px 42px rgba(0,0,0,.18);border-radius:18px}
+.brand-card{padding:13px 17px}.brand{font-weight:750;letter-spacing:.13em;font-size:clamp(12px,1.5vw,17px);text-transform:uppercase}.brand span{color:var(--cyan);text-shadow:0 0 18px rgba(156,233,230,.3)}.sub{font-size:9px;letter-spacing:.19em;color:#b1d6d8;margin-top:6px;font-weight:650}
+.stats-card{padding:11px 16px;text-align:right;min-width:120px}.scoreNum{font-size:clamp(24px,3vw,38px);font-weight:700;line-height:1;color:var(--white);letter-spacing:-.035em}.scoreLabel{font-size:9px;letter-spacing:.18em;color:var(--cyan);margin-top:6px;font-weight:700}
+.pause-btn{margin-left:auto;pointer-events:auto;display:flex;align-items:center;gap:9px;justify-content:center;min-height:46px;padding:0 15px;border-radius:15px;border:1px solid rgba(190,235,233,.24);background:rgba(7,25,34,.72);color:#eaf9f8;font:650 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.13em;text-transform:uppercase;backdrop-filter:blur(18px);cursor:pointer;transition:background .2s,border-color .2s,transform .2s}.pause-btn:hover{background:rgba(26,65,72,.85);border-color:rgba(156,233,230,.55);transform:translateY(-1px)}.pause-icon{display:inline-flex;width:13px;height:14px;gap:3px;align-items:stretch}.pause-icon:before,.pause-icon:after{content:"";display:block;width:4px;border-radius:2px;background:var(--cyan)}
+.bottom-bar{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}.panel-block{width:min(340px,48vw);padding:15px 18px}.meter-header{display:flex;justify-content:space-between;font-size:9px;font-weight:750;letter-spacing:.15em;margin-bottom:8px;color:#c9e2e3}.meter{height:7px;background:rgba(1,10,15,.55);border:1px solid rgba(174,225,226,.13);overflow:hidden;border-radius:99px;position:relative}.fill-energy{height:100%;width:100%;background:linear-gradient(90deg,#8bd9c4,#a6e8d8,#d6e6b5);transition:width .14s linear;border-radius:99px}.fill-zone{height:100%;width:0%;background:linear-gradient(90deg,#86d8d9,#b4e8dd);transition:width .2s ease-out;border-radius:99px}
+.depth-indicator{font-size:11px;font-weight:700;color:#b8e6e4;margin-top:13px;display:flex;justify-content:space-between;gap:12px}.combo-badge{font-weight:650;color:#d9e9e9;font-size:11px;margin-top:8px;letter-spacing:.06em}.combo-badge em{font-style:normal;color:var(--pink);font-weight:750}
+.audioControl{pointer-events:auto;margin-top:13px;display:flex;align-items:center;gap:10px}.audioControl label{font-size:9px;letter-spacing:.12em;color:#b8d8da;font-weight:700}.audioControl input{accent-color:var(--cyan);cursor:pointer;width:100px;height:4px}
+.help-card{font-size:10px;color:#c6dcdf;line-height:2;text-align:right;padding:14px 17px}.key{display:inline-block;min-width:20px;text-align:center;border:1px solid rgba(203,234,233,.2);border-radius:6px;padding:0px 6px;color:#e8f5f4;background:rgba(255,255,255,.045);font-size:9px;font-weight:700}
+#toast{position:absolute;left:50%;top:18%;transform:translate(-50%,-14px);opacity:0;text-align:center;font-size:clamp(18px,3vw,32px);font-weight:750;letter-spacing:.08em;color:#f2ffff;transition:all .35s ease;white-space:nowrap;pointer-events:none;text-shadow:0 0 28px rgba(156,233,230,.35);z-index:5}#toast.show{opacity:1;transform:translate(-50%,0)}#toast small{display:block;font-size:10px;letter-spacing:.22em;color:var(--cyan);margin-top:7px;font-weight:650}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 42%,rgba(22,67,75,.48),rgba(3,14,21,.78) 62%,rgba(2,10,16,.91));z-index:10;padding:20px;opacity:1;visibility:visible;transition:opacity .62s cubic-bezier(.22,.8,.25,1),visibility .62s,background .62s;backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px)}.overlay.hidden{opacity:0;visibility:hidden;pointer-events:none;backdrop-filter:blur(0px)}.overlay:not(.hidden){backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}.panel{width:min(440px,90vw);padding:clamp(26px,4vw,42px);border:1px solid rgba(174,225,226,.19);background:linear-gradient(145deg,rgba(10,33,42,.88),rgba(4,17,25,.92));box-shadow:0 32px 110px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.045);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);position:relative;border-radius:24px;text-align:center;transform:translateY(18px) scale(.975);opacity:0;filter:blur(4px);transition:transform .68s cubic-bezier(.16,1,.3,1),opacity .5s ease,filter .6s ease;overflow:hidden}.overlay:not(.hidden) .panel{transform:translateY(0) scale(1);opacity:1;filter:blur(0)}.panel:before{content:"";position:absolute;left:14%;right:14%;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(156,233,230,.62),transparent);opacity:.8}.eyebrow{font-size:9px;letter-spacing:.28em;color:var(--cyan);font-weight:750;text-transform:uppercase}.title{font-size:clamp(34px,6vw,52px);line-height:.98;letter-spacing:-.06em;font-weight:760;margin:17px 0 27px}.title span{color:var(--cyan);text-shadow:0 0 24px rgba(156,233,230,.18)}.game-title{font-size:clamp(20px,3.6vw,29px);line-height:1.12;letter-spacing:-.035em;text-wrap:balance;margin-left:auto;margin-right:auto;max-width:100%;}.desc{color:#b9d1d5;line-height:1.8;font-size:13px;margin-bottom:22px;max-width:520px}.features{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}.pill{font-size:9px;letter-spacing:.07em;border:1px solid rgba(174,225,226,.17);padding:7px 10px;color:#d7e9e9;background:rgba(156,233,230,.045);border-radius:99px;font-weight:650}.start-btn{pointer-events:auto;border:1px solid rgba(205,243,238,.66);background:linear-gradient(135deg,#c0eeea,#9bded5);color:#08242b;padding:15px 25px;font-weight:750;letter-spacing:.13em;cursor:pointer;border-radius:13px;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s,background .25s; text-transform:uppercase;font-size:10px;box-shadow:0 8px 30px rgba(102,201,192,.12);min-width:168px}.start-btn:hover{transform:translateY(-2px);box-shadow:0 12px 35px rgba(102,201,192,.22);background:#e4fbf7}.start-btn:active,.secondary-btn:active{transform:scale(.975)}.secondary-btn{pointer-events:auto;border:1px solid rgba(174,225,226,.22);background:rgba(255,255,255,.035);color:#d6e8e9;padding:14px 21px;font-weight:650;letter-spacing:.12em;cursor:pointer;border-radius:13px;transition:all .25s ease;text-transform:uppercase;font-size:10px;min-width:124px}.secondary-btn:hover{background:rgba(156,233,230,.09);border-color:rgba(174,225,226,.42)}.pause-audio{margin:25px auto 0;max-width:330px;text-align:left;padding:16px 16px 13px;border:1px solid rgba(174,225,226,.14);background:rgba(156,233,230,.035);border-radius:15px}.pause-audio-title{font-size:9px;letter-spacing:.2em;color:#9fc7ca;font-weight:750;margin-bottom:13px}.pause-audio-row{display:grid;grid-template-columns:48px 1fr 32px;gap:10px;align-items:center;margin:12px 0}.pause-audio-row label{font-size:10px;letter-spacing:.1em;color:#e0f0f0;font-weight:650}.pause-audio-row input{width:100%;accent-color:var(--cyan);cursor:pointer}.pause-audio-value{font-size:10px;text-align:right;color:#a8deda;font-variant-numeric:tabular-nums}.pause-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px}.pause-meta{margin-top:20px;font-size:9px;color:#8eafb4;letter-spacing:.18em}.menu-mark{width:38px;height:38px;border:1px solid rgba(156,233,230,.3);border-radius:50%;margin:0 auto 22px;display:grid;place-items:center;box-shadow:0 0 35px rgba(156,233,230,.08),inset 0 0 18px rgba(156,233,230,.06);animation:markFloat 4s ease-in-out infinite}.menu-mark:before{content:"";width:8px;height:8px;background:var(--cyan);border-radius:50%;box-shadow:0 0 16px rgba(156,233,230,.75)}.gameover-panel .title{margin-bottom:12px}.final-score{font-size:11px;letter-spacing:.2em;color:#b6d6d8;margin:0 0 28px;font-variant-numeric:tabular-nums}.overlay .eyebrow,.overlay .title,.overlay .start-btn,.overlay .secondary-btn,.overlay .final-score{animation:menuItemIn .65s both;animation-delay:.08s}.overlay .title{animation-delay:.14s}.overlay .start-btn,.overlay .secondary-btn{animation-delay:.22s}@keyframes menuItemIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes markFloat{0%,100%{transform:translateY(0);opacity:.8}50%{transform:translateY(-4px);opacity:1}}body.is-dying #game{animation:deathDrift .8s cubic-bezier(.2,.7,.2,1) both}body.is-dying #damageFlash{opacity:.45;transition:opacity .45s ease}@keyframes deathDrift{0%{transform:scale(1);filter:brightness(1)}35%{transform:scale(1.025);filter:brightness(.82) saturate(.72)}100%{transform:scale(1.04);filter:brightness(.5) saturate(.55)}}@media(prefers-reduced-motion:reduce){.overlay,.panel,.start-btn,.secondary-btn{transition-duration:.01ms!important;animation-duration:.01ms!important}body.is-dying #game{animation:none}}
+.mobile-controls{position:fixed;bottom:80px;left:0;right:0;display:none;justify-content:space-between;padding:0 20px;pointer-events:none;z-index:5}.touchBtn{pointer-events:auto;width:50px;height:50px;border:1px solid rgba(174,225,226,.24);background:rgba(7,25,34,.68);color:#e7f7f6;border-radius:17px;font-weight:700;font-size:17px;touch-action:none;backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(0,0,0,.16);transition:background .12s,transform .12s}.touchBtn:active{background:rgba(156,233,230,.28);color:#fff;transform:scale(.96)}.touchCluster{display:flex;gap:8px;align-items:flex-end}
+#damageFlash{position:fixed;inset:0;pointer-events:none;z-index:4;background:radial-gradient(circle,rgba(255,125,140,.24) 0%,rgba(180,0,0,0) 80%);opacity:0;transition:opacity .05s linear}
+@media(max-width:768px){.mobile-controls{display:flex}.help-card{display:none}.panel-block{width:min(330px,72vw)}.pause-btn{width:44px;min-width:44px;padding:0;font-size:0;gap:0}.pause-icon{font-size:initial}.top-bar{gap:8px}.brand-card{padding:11px 12px}.sub{font-size:8px;letter-spacing:.12em}.stats-card{padding:10px 12px;min-width:95px}.scoreLabel{font-size:8px}.bottom-bar{gap:8px}.panel-block{padding:13px}.depth-indicator{font-size:10px}.audioControl input{width:74px}}
+@media(max-width:420px){.hud{padding:12px}.brand{font-size:11px;letter-spacing:.08em}.sub{max-width:145px;line-height:1.5}.scoreNum{font-size:24px}.mobile-controls{bottom:74px;padding:0 12px}.touchBtn{width:43px;height:43px;border-radius:14px}.touchCluster{gap:6px}.panel-block{width:78vw}.bottom-bar{align-items:flex-end}}
+
+/* Developer mode — isolated overlay; normal gameplay UI remains unchanged. */
+#devPanel{position:fixed;z-index:40;top:14px;right:14px;width:min(430px,calc(100vw - 28px));max-height:calc(100vh - 28px);overflow:auto;display:none;color:#e9fbfb;background:rgba(3,17,25,.96);border:1px solid rgba(156,233,230,.34);border-radius:16px;box-shadow:0 18px 70px rgba(0,0,0,.55);backdrop-filter:blur(18px);font:12px/1.45 Inter,system-ui,sans-serif;user-select:text;-webkit-user-select:text}
+#devPanel.open{display:block}#devPanel *{box-sizing:border-box}#devPanel .devHead{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:rgba(5,25,34,.98);border-bottom:1px solid rgba(156,233,230,.2)}
+#devPanel .devTitle{font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#9ce9e6}#devPanel .devSub{font-size:10px;color:#91b8bf;margin-top:3px}#devPanel button{font:700 10px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#dff7f5;background:rgba(156,233,230,.08);border:1px solid rgba(156,233,230,.25);border-radius:8px;padding:9px 10px;cursor:pointer}#devPanel button:hover{background:rgba(156,233,230,.17)}
+#devPanel .devBody{padding:8px 14px 14px}#devPanel details{border-bottom:1px solid rgba(156,233,230,.13);padding:8px 0}#devPanel summary{cursor:pointer;color:#b7e5e3;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:5px 0}#devPanel .devControl{padding:8px 0 5px}#devPanel .devLabel{display:flex;justify-content:space-between;gap:12px;color:#d8e9e9;font-size:11px;margin-bottom:6px}#devPanel output{color:#9ce9e6;font-variant-numeric:tabular-nums;font-weight:750}#devPanel input[type=range]{width:100%;accent-color:#9ce9e6;cursor:pointer}#devPanel .devActions{display:flex;gap:8px;flex-wrap:wrap;padding:12px 0 4px}#devPanel .devHint{font-size:10px;color:#87aeb4;padding:8px 0 2px}#devPanel .devStatus{font-size:10px;color:#9ce9e6;min-height:15px;margin-top:5px}
+@media(max-width:600px){#devPanel{top:8px;right:8px;width:calc(100vw - 16px);max-height:calc(100vh - 16px)}}
+
+</style>
+</head>
+<body>
+
+<div id="game"></div>
+<div id="damageFlash"></div>
+
+<div class="hud">
+  <div class="top-bar">
+    <div class="brand-card">
+      <div class="brand">AN UNDERWATER ODYSSEY</div>
+      <div class="sub" id="zoneTitle">ZONE 01 / SUNLIT SHALLOWS</div>
+    </div>
+    <button class="pause-btn" id="pauseBtn" aria-label="Pause game" title="Pause (P or Esc)"><span class="pause-icon" aria-hidden="true"></span><span>Pause</span></button>
+    <div class="stats-card">
+      <div class="scoreNum" id="score">000000</div>
+      <div class="scoreLabel">DISTANCE / SCORE</div>
+    </div>
+  </div>
+
+  <div id="toast">DIVE INTO THE DEEP<small>EXPLORE OCEAN ZONES</small></div>
+
+  <div class="bottom-bar">
+    <div class="panel-block">
+      <div class="meter-header">
+        <span>HYDRO-BOOST</span>
+        <span id="energyNum">100%</span>
+      </div>
+      <div class="meter"><div class="fill-energy" id="energyFill"></div></div>
+
+      <div class="meter-header" style="margin-top: 10px;">
+        <span>ZONE PROGRESS</span>
+      </div>
+      <div class="meter"><div class="fill-zone" id="zoneFill"></div></div>
+
+      <div class="depth-indicator">
+        <span id="depthDisplay">DEPTH: 0.0m</span>
+        <span id="speedDisplay">22 KNOTS</span>
+      </div>
+      <div class="combo-badge" id="comboDisplay">COMBO <em>×1.0</em></div>
+
+      <div class="audioControl">
+        <label for="volRange">AUDIO</label>
+        <input type="range" id="volRange" min="0" max="1" step="0.05" value="0.7">
+      </div>
+    </div>
+
+    <div class="help-card">
+      <span class="key">W</span> Dive / Pitch Down &nbsp; <span class="key">S</span> Surface / Pitch Up<br>
+      <span class="key">A</span> <span class="key">D</span> Turn Left / Right &nbsp; <span class="key">Q</span> <span class="key">E</span> Aerial Spin / Roll<br>
+      <span class="key">SPACE</span> Sonar Echo Ping &nbsp; <span class="key">SHIFT</span> Hydro-Boost<br>
+      <span class="key">R</span> Reset Journey
+    </div>
+  </div>
+</div>
+
+<div class="mobile-controls">
+  <div class="touchCluster">
+    <button class="touchBtn" data-key="a">◀</button>
+    <button class="touchBtn" data-key="d">▶</button>
+    <button class="touchBtn" data-key="w">▼</button>
+    <button class="touchBtn" data-key="s">▲</button>
+  </div>
+  <div class="touchCluster">
+    <button class="touchBtn" data-key="e">🔄</button>
+    <button class="touchBtn" data-key=" ">📡</button>
+    <button class="touchBtn" data-key="shift">⚡</button>
+  </div>
+</div>
+
+<div class="overlay" id="intro">
+  <div class="panel intro-panel">
+    <div class="menu-mark" aria-hidden="true"></div>
+    <div class="eyebrow">A JOURNEY BENEATH THE SURFACE</div>
+    <div class="title game-title">An Underwater Odyssey</div>
+    <button class="start-btn" id="startBtn">BEGIN</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="pauseOverlay" aria-hidden="true">
+  <div class="panel pause-panel">
+    <div class="eyebrow">AN UNDERWATER ODYSSEY</div>
+    <div class="title">PAUSED</div>
+    <div class="pause-audio" aria-label="Audio settings">
+      <div class="pause-audio-title">AUDIO MIX</div>
+      <div class="pause-audio-row">
+        <label for="bgmVolume">BGM</label>
+        <input type="range" id="bgmVolume" min="0" max="1" step="0.05" value="0.8" aria-label="Background music volume">
+        <output class="pause-audio-value" id="bgmVolumeValue">80%</output>
+      </div>
+      <div class="pause-audio-row">
+        <label for="sfxVolume">SFX</label>
+        <input type="range" id="sfxVolume" min="0" max="1" step="0.05" value="0.8" aria-label="Sound effects volume">
+        <output class="pause-audio-value" id="sfxVolumeValue">80%</output>
+      </div>
+    </div>
+    <div class="pause-actions">
+      <button class="start-btn" id="resumeBtn">RESUME</button>
+      <button class="secondary-btn" id="pauseRestartBtn">RESTART</button>
+    </div>
+    <div class="pause-meta">P / ESC</div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="gameover">
+  <div class="panel gameover-panel">
+    <div class="menu-mark" aria-hidden="true"></div>
+    <div class="eyebrow">AN UNDERWATER ODYSSEY</div>
+    <div class="title">DIVE ENDED</div>
+    <div class="final-score" id="finalScoreText">000000</div>
+    <button class="start-btn" id="restartBtn">DIVE AGAIN</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const container = $('game');
+
+// ---------------------------------------------------------------------
+// ENHANCED ADVANCED UNDERWATER AUDIO SYNTHESIZER ENGINE WITH REVERB & ECHO
+// ---------------------------------------------------------------------
+let audioCtx = null;
+let surfNoiseNode = null, surfFilter = null, surfGain = null;
+let swimNoiseNode = null, swimFilter = null, swimGain = null;
+let subRumbleNode = null, subRumbleGain = null;
+
+// Spatial Reverb & Underwater Echo Delay Nodes
+let convolverNode = null;
+let dryGain = null;
+let wetGain = null;
+let underwaterMuffleFilter = null;
+let echoDelayNode = null;
+let echoFeedbackGain = null;
+
+let masterVolume = 0.7;
+let bgmVolume = 0.8;
+let sfxVolume = 0.8;
+let sfxBus = null;
+let audioStarted = false;
+// Procedural ambient score: slow piano arpeggios, sustained string-like tones and soft pads.
+let musicBus = null, musicScheduler = null, nextMusicNoteTime = 0;
+let musicStep = 0, musicChordStep = 0, musicEnabled = true;
+
+function updateAudioMix() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  if (musicBus) musicBus.gain.setTargetAtTime(0.32 * masterVolume * bgmVolume, now, 0.12);
+  if (sfxBus) sfxBus.gain.setTargetAtTime(sfxVolume, now, 0.08);
+  if (surfGain) surfGain.gain.setTargetAtTime(0.25 * masterVolume, now, 0.08);
+}
+$('volRange').addEventListener('input', e => {
+  masterVolume = parseFloat(e.target.value);
+  updateAudioMix();
+});
+$('bgmVolume').addEventListener('input', e => {
+  bgmVolume = parseFloat(e.target.value);
+  $('bgmVolumeValue').textContent = `${Math.round(bgmVolume * 100)}%`;
+  updateAudioMix();
+});
+$('sfxVolume').addEventListener('input', e => {
+  sfxVolume = parseFloat(e.target.value);
+  $('sfxVolumeValue').textContent = `${Math.round(sfxVolume * 100)}%`;
+  updateAudioMix();
+});
+
+// Generate procedural underwater impulse response for reverb
+function createUnderwaterImpulseResponse(ctx, duration = 2.5, decay = 2.0) {
+  const sampleRate = ctx.sampleRate;
+  const length = sampleRate * duration;
+  const impulse = ctx.createBuffer(2, length, sampleRate);
+  const left = impulse.getChannelData(0);
+  const right = impulse.getChannelData(1);
+
+  let lastL = 0, lastR = 0;
+  for (let i = 0; i < length; i++) {
+    const t = i / length;
+    // Exponential decay curve
+    const e = Math.exp(-t * decay);
+    
+    // Lowpass filtered noise simulating acoustic absorption of deep water
+    const whiteL = (Math.random() * 2 - 1);
+    const whiteR = (Math.random() * 2 - 1);
+    
+    lastL = (lastL + 0.12 * whiteL) / 1.12;
+    lastR = (lastR + 0.12 * whiteR) / 1.12;
+
+    left[i] = lastL * e;
+    right[i] = lastR * e;
+  }
+  return impulse;
+}
+
+function initAudio() {
+  if (audioStarted) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const bufferSize = audioCtx.sampleRate * 4;
+
+    // --- REVERB & ECHO DSP CHAIN ---
+    // Underwater Master Muffle Filter
+    underwaterMuffleFilter = audioCtx.createBiquadFilter();
+    underwaterMuffleFilter.type = 'lowpass';
+    underwaterMuffleFilter.frequency.setValueAtTime(800, audioCtx.currentTime);
+    underwaterMuffleFilter.Q.setValueAtTime(1.5, audioCtx.currentTime);
+
+    // Reverb Convolver
+    convolverNode = audioCtx.createConvolver();
+    convolverNode.buffer = createUnderwaterImpulseResponse(audioCtx, 2.8, 3.2);
+
+    // Echo Delay Line
+    echoDelayNode = audioCtx.createDelay();
+    echoDelayNode.delayTime.setValueAtTime(0.22, audioCtx.currentTime); // 220ms aquatic echo reflection
+
+    echoFeedbackGain = audioCtx.createGain();
+    echoFeedbackGain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+
+    // Wire up Echo Loop
+    echoDelayNode.connect(echoFeedbackGain);
+    echoFeedbackGain.connect(echoDelayNode);
+
+    // Dry / Wet Routing
+    sfxBus = audioCtx.createGain();
+    sfxBus.gain.setValueAtTime(sfxVolume, audioCtx.currentTime);
+    sfxBus.connect(audioCtx.destination);
+    dryGain = audioCtx.createGain();
+    wetGain = audioCtx.createGain();
+
+    dryGain.gain.setValueAtTime(0.7, audioCtx.currentTime);
+    wetGain.gain.setValueAtTime(0.65, audioCtx.currentTime);
+
+    // Route Muffle -> Convolver/Delay -> Wet Out
+    underwaterMuffleFilter.connect(convolverNode);
+    underwaterMuffleFilter.connect(echoDelayNode);
+    
+    convolverNode.connect(wetGain);
+    echoDelayNode.connect(wetGain);
+    underwaterMuffleFilter.connect(dryGain);
+
+    dryGain.connect(sfxBus);
+    wetGain.connect(sfxBus);
+
+    // --- AMBIENT NOISE BUFFERS ---
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    let lastOut = 0.0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      output[i] = (lastOut + (0.05 * white)) / 1.05;
+      lastOut = output[i];
+      output[i] *= 3.0;
+    }
+
+    // Ambient Surface Hydro-Noise
+    surfNoiseNode = audioCtx.createBufferSource();
+    surfNoiseNode.buffer = noiseBuffer;
+    surfNoiseNode.loop = true;
+
+    surfFilter = audioCtx.createBiquadFilter();
+    surfFilter.type = 'lowpass';
+    surfFilter.frequency.setValueAtTime(500, audioCtx.currentTime);
+
+    surfGain = audioCtx.createGain();
+    surfGain.gain.setValueAtTime(0.25 * masterVolume, audioCtx.currentTime);
+
+    surfNoiseNode.connect(surfFilter);
+    surfFilter.connect(surfGain);
+    surfGain.connect(sfxBus);
+    surfNoiseNode.start();
+
+    // Swim Velocity Hydro-Flow Noise
+    const swimBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const sOut = swimBuf.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) sOut[i] = Math.random() * 2 - 1;
+
+    swimNoiseNode = audioCtx.createBufferSource();
+    swimNoiseNode.buffer = swimBuf;
+    swimNoiseNode.loop = true;
+
+    swimFilter = audioCtx.createBiquadFilter();
+    swimFilter.type = 'bandpass';
+    swimFilter.frequency.setValueAtTime(350, audioCtx.currentTime);
+    swimFilter.Q.setValueAtTime(2.5, audioCtx.currentTime);
+
+    swimGain = audioCtx.createGain();
+    swimGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+    swimNoiseNode.connect(swimFilter);
+    swimFilter.connect(underwaterMuffleFilter);
+    swimGain.connect(audioCtx.destination);
+    swimNoiseNode.start();
+
+    // Deep Sub-Oceanic Ambient Rumble
+    const subOsc = audioCtx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(42, audioCtx.currentTime);
+
+    subRumbleGain = audioCtx.createGain();
+    subRumbleGain.gain.setValueAtTime(0.12 * masterVolume, audioCtx.currentTime);
+
+    subOsc.connect(subRumbleGain);
+    subRumbleGain.connect(underwaterMuffleFilter);
+    subOsc.start();
+
+    // --- AN UNDERWATER ODYSSEY AMBIENT SCORE ---
+    // Music has its own gentle master and sends into the existing long reverb / echo.
+    musicBus = audioCtx.createGain();
+    musicBus.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    musicBus.connect(audioCtx.destination);
+    // Dedicated sends keep the music spacious without routing it through the SFX muffle filter.
+    musicBus.connect(convolverNode);
+    musicBus.connect(echoDelayNode);
+    musicBus.gain.setTargetAtTime(0.32 * masterVolume * bgmVolume, audioCtx.currentTime, 1.8);
+    startAmbientScore();
+
+    audioStarted = true;
+  } catch(e) {
+    console.warn('AudioContext prevented or not supported', e);
+  }
+}
+
+
+// A slow, continuously evolving original score synthesized locally with Web Audio.
+// No external audio files or network requests are required.
+function startAmbientScore() {
+  if (!audioCtx || musicScheduler) return;
+  const bpm = 64;
+  const beat = 60 / bpm;
+  const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+  // D major / B minor colours with open fifths and suspended ninths.
+  const arps = [
+    [50,57,62,66,69,74,69,66,62,66,69,74,76,74,69,66],
+    [47,54,59,62,66,71,66,62,59,62,66,71,74,71,66,62],
+    [43,50,55,59,62,67,62,59,55,59,62,67,69,67,62,59],
+    [45,52,57,61,64,69,64,61,57,61,64,69,71,69,64,61]
+  ];
+  const padChords = [[50,57,62,66,69],[47,54,59,62,66],[43,50,55,59,62],[45,52,57,61,64]];
+
+  function pianoNote(freq, when, strength=1) {
+    // Polished, soft-focus felt piano: rounded fundamental, inharmonic partials,
+    // a tiny felt transient, and a slow luminous release. The notes/arpeggio stay unchanged.
+    const out = audioCtx.createGain();
+    const tone = audioCtx.createBiquadFilter();
+    tone.type = 'lowpass';
+    tone.frequency.setValueAtTime(4200, when);
+    tone.frequency.exponentialRampToValueAtTime(1700, when + 1.6);
+    tone.Q.value = 0.35;
+    out.gain.setValueAtTime(0.0001, when);
+    out.gain.linearRampToValueAtTime(0.078 * strength, when + 0.012);
+    out.gain.setTargetAtTime(0.0001, when + 0.42, 0.62);
+    tone.connect(out); out.connect(musicBus);
+    [[1,0.82],[2.01,0.19],[3.98,0.055],[5.96,0.018]].forEach(([ratio, level], i) => {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq * ratio, when);
+      osc.detune.setValueAtTime(i === 1 ? -1.8 : (i === 2 ? 1.1 : 0), when);
+      g.gain.setValueAtTime(level, when);
+      osc.connect(g); g.connect(tone);
+      osc.start(when); osc.stop(when + 2.9);
+    });
+    // Very quiet, band-limited hammer/felt touch to remove the sterile synth onset.
+    const transientBuffer = audioCtx.createBuffer(1, Math.max(1, Math.floor(audioCtx.sampleRate * 0.035)), audioCtx.sampleRate);
+    const transientData = transientBuffer.getChannelData(0);
+    for (let i=0; i<transientData.length; i++) transientData[i] = (Math.random()*2-1) * (1-i/transientData.length);
+    const transient = audioCtx.createBufferSource(); transient.buffer = transientBuffer;
+    const hp = audioCtx.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = Math.min(5200, freq*5); hp.Q.value = 0.7;
+    const tg = audioCtx.createGain(); tg.gain.setValueAtTime(0.0001, when); tg.gain.linearRampToValueAtTime(0.012 * strength, when+0.004); tg.gain.exponentialRampToValueAtTime(0.0001, when+0.04);
+    transient.connect(hp); hp.connect(tg); tg.connect(musicBus); transient.start(when); transient.stop(when+0.045);
+  }
+
+  function padChord(chord, when, duration=7.4) {
+    chord.forEach((n, i) => {
+      const osc = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const voice = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      const amp = (i === 0 ? 0.022 : 0.012) * (i > 3 ? 0.7 : 1);
+      osc.type = 'sine'; osc2.type = 'sine';
+      osc.frequency.setValueAtTime(midi(n - 12), when);
+      osc2.frequency.setValueAtTime(midi(n - 12) * 1.0045, when);
+      filter.type = 'lowpass'; filter.frequency.setValueAtTime(1450, when); filter.frequency.linearRampToValueAtTime(1950, when + duration * 0.48); filter.Q.value = 0.28;
+      voice.gain.setValueAtTime(0.0001, when);
+      voice.gain.linearRampToValueAtTime(amp, when + 1.6 + i * 0.12);
+      voice.gain.setTargetAtTime(0.0001, when + duration - 1.0, 0.65);
+      osc.connect(filter); osc2.connect(filter); filter.connect(voice); voice.connect(musicBus);
+      osc.start(when); osc2.start(when);
+      osc.stop(when + duration + 0.2); osc2.stop(when + duration + 0.2);
+    });
+  }
+
+  function violinPhrase(chord, when, duration=6.5) {
+    // A breathy, bowed-string illusion: slow attack, detuned pair and gentle vibrato.
+    const rootNotes = [chord[1] + 12, chord[3] + 12, chord[4] + 12];
+    rootNotes.forEach((n, i) => {
+      const osc = audioCtx.createOscillator();
+      const detune = audioCtx.createOscillator();
+      const vibrato = audioCtx.createOscillator();
+      const vibGain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      const env = audioCtx.createGain();
+      osc.type = 'sine'; detune.type = 'sine'; vibrato.type = 'sine';
+      osc.frequency.setValueAtTime(midi(n), when);
+      detune.frequency.setValueAtTime(midi(n) * 1.0032, when);
+      vibrato.frequency.setValueAtTime(4.2 + i * 0.25, when);
+      vibGain.gain.setValueAtTime(2.1, when); vibrato.connect(vibGain); vibGain.connect(osc.detune);
+      filter.type = 'lowpass'; filter.frequency.setValueAtTime(1800 + i * 120, when); filter.frequency.linearRampToValueAtTime(2400 + i * 100, when + duration * 0.55); filter.Q.value = 0.3;
+      env.gain.setValueAtTime(0.0001, when);
+      env.gain.linearRampToValueAtTime(0.024, when + 1.65 + i * 0.18);
+      env.gain.setTargetAtTime(0.0001, when + duration - 1.2, 0.8);
+      osc.connect(filter); detune.connect(filter); filter.connect(env); env.connect(musicBus);
+      osc.start(when); detune.start(when); vibrato.start(when);
+      osc.stop(when + duration + 0.25); detune.stop(when + duration + 0.25); vibrato.stop(when + duration + 0.25);
+    });
+  }
+
+  nextMusicNoteTime = audioCtx.currentTime + 0.25;
+  let nextPadTime = nextMusicNoteTime + 0.2;
+  let nextViolinTime = nextMusicNoteTime + 2.0;
+  musicScheduler = window.setInterval(() => {
+    if (!audioCtx || audioCtx.state !== 'running' || !musicEnabled) return;
+    const now = audioCtx.currentTime;
+    if (nextMusicNoteTime < now - 0.18) nextMusicNoteTime = now + 0.08;
+    // Look ahead very briefly so notes remain smooth even if a frame takes longer.
+    while (nextMusicNoteTime < now + 0.12) {
+      const chordIndex = Math.floor(musicStep / 16) % arps.length;
+      const note = arps[chordIndex][musicStep % 16];
+      // A slow, gently uneven arpeggio rather than a rigid metronomic loop.
+      pianoNote(midi(note), nextMusicNoteTime, [0.8,0.58,0.72,0.55][musicStep % 4]);
+      if (musicStep % 4 === 2) pianoNote(midi(note + 12), nextMusicNoteTime + 0.035, 0.22);
+      musicStep++;
+      nextMusicNoteTime += beat * 0.72;
+    }
+    if (now + 0.3 >= nextPadTime) {
+      const chordIndex = musicChordStep % padChords.length;
+      padChord(padChords[chordIndex], nextPadTime, beat * 16 * 0.96);
+      nextPadTime += beat * 16;
+      musicChordStep++;
+    }
+    if (now + 0.3 >= nextViolinTime) {
+      const chordIndex = Math.floor(musicChordStep / 1) % padChords.length;
+      violinPhrase(padChords[chordIndex], nextViolinTime, beat * 13.2);
+      nextViolinTime += beat * 16;
+    }
+  }, 180);
+}
+
+function updateAudioState(speed, depth, isAir) {
+  if (!audioCtx || !audioStarted) return;
+  const now = audioCtx.currentTime;
+
+  if (isAir) {
+    // Air mode: Open up frequencies, reduce wet reverb, raise cutoff
+    underwaterMuffleFilter.frequency.setTargetAtTime(14000, now, 0.12);
+    surfFilter.frequency.setTargetAtTime(2400, now, 0.1);
+    wetGain.gain.setTargetAtTime(0.15 * masterVolume, now, 0.15);
+    dryGain.gain.setTargetAtTime(0.9 * masterVolume, now, 0.15);
+  } else {
+    // Underwater mode: Dynamic acoustic muffle based on depth
+    const depthMuffle = Math.max(180, 1100 - Math.abs(depth) * 22);
+    underwaterMuffleFilter.frequency.setTargetAtTime(depthMuffle, now, 0.1);
+    surfFilter.frequency.setTargetAtTime(Math.min(depthMuffle, 550), now, 0.1);
+    
+    // Deeper waters increase reverb reflection & echo tail
+    const depthWetRatio = Math.min(0.85, 0.45 + (Math.abs(depth) / 60.0) * 0.4);
+    wetGain.gain.setTargetAtTime(depthWetRatio * masterVolume, now, 0.2);
+    dryGain.gain.setTargetAtTime((1.0 - depthWetRatio * 0.5) * masterVolume, now, 0.2);
+  }
+
+  const swimIntensity = isAir ? 0.05 : Math.min(1.0, speed / 35);
+  swimGain.gain.setTargetAtTime(swimIntensity * 0.35 * masterVolume, now, 0.05);
+  swimFilter.frequency.setTargetAtTime(180 + speed * 16 + Math.abs(depth) * 4, now, 0.05);
+}
+
+function playSFX(type, intensity = 1.0) {
+  if (!audioCtx || !audioStarted || masterVolume <= 0) return;
+  try {
+    const now = audioCtx.currentTime;
+    const vol = masterVolume * intensity;
+
+    if (type === 'sonar') {
+      // Echoing Sonar Ping routed through Reverb & Delay
+      const osc = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine'; osc2.type = 'triangle';
+      osc.frequency.setValueAtTime(1800, now);
+      osc.frequency.exponentialRampToValueAtTime(3600, now + 0.15);
+      osc.frequency.exponentialRampToValueAtTime(2100, now + 0.35);
+
+      osc2.frequency.setValueAtTime(900, now);
+      osc2.frequency.exponentialRampToValueAtTime(1800, now + 0.18);
+
+      gain.gain.setValueAtTime(0.55 * vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+      osc.connect(gain); osc2.connect(gain);
+      gain.connect(underwaterMuffleFilter); // Route through underwater reverb
+      osc.start(now); osc2.start(now);
+      osc.stop(now + 0.46); osc2.stop(now + 0.46);
+    } else if (type === 'breach' || type === 'splash') {
+      // Surface Splash with open dynamic range
+      const bufSize = audioCtx.sampleRate * 0.5;
+      const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.08));
+
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = type === 'breach' ? 'highpass' : 'bandpass';
+      filter.frequency.setValueAtTime(500, now);
+      filter.frequency.linearRampToValueAtTime(2400, now + 0.25);
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.7 * vol, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.45);
+
+      src.connect(filter); filter.connect(gain); 
+      gain.connect(sfxBus || audioCtx.destination);
+      src.start(now);
+    } else if (type === 'feed' || type === 'pearl' || type === 'seaglass') {
+      // Resonant Aquatic Chimes
+      const freqs = type === 'seaglass' ? [880, 1108.73, 1318.51, 1760] : (type === 'pearl' ? [659.25, 830.61, 987.77, 1318.51] : [523.25, 659.25, 783.99, 1046.50]);
+      freqs.forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.045);
+        gain.gain.setValueAtTime(0.32 * vol, now + idx * 0.045);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.045 + 0.35);
+        
+        osc.connect(gain); 
+        gain.connect(underwaterMuffleFilter); // Deep spatial reverb echo
+        osc.start(now + idx * 0.045); 
+        osc.stop(now + idx * 0.045 + 0.36);
+      });
+    } else if (type === 'boost') {
+      // Deep Sub Hydro-Boost Drive
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(90, now);
+      osc.frequency.exponentialRampToValueAtTime(320, now + 0.3);
+      
+      const fFilter = audioCtx.createBiquadFilter();
+      fFilter.type = 'lowpass';
+      fFilter.frequency.setValueAtTime(450, now);
+
+      gain.gain.setValueAtTime(0.6 * vol, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.32);
+      
+      osc.connect(fFilter);
+      fFilter.connect(gain);
+      gain.connect(underwaterMuffleFilter);
+      osc.start(now); osc.stop(now + 0.33);
+    } else if (type === 'hurt' || type === 'thud') {
+      // Sub-surface Impact Crash with echo feedback
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type === 'hurt' ? 'sawtooth' : 'triangle';
+      osc.frequency.setValueAtTime(type === 'hurt' ? 160 : 100, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+
+      gain.gain.setValueAtTime(0.8 * vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+      osc.connect(gain); 
+      gain.connect(underwaterMuffleFilter);
+      osc.start(now); osc.stop(now + 0.36);
+    } else if (type === 'rustle') {
+      const bufSize = audioCtx.sampleRate * 0.2;
+      const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.2;
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(450, now);
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.35 * vol, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+      src.connect(filter); filter.connect(gain); 
+      gain.connect(underwaterMuffleFilter);
+      src.start(now);
+    }
+  } catch(e) {}
+}
+
+// ---------------------------------------------------------------------
+// SCENE SETUP & RENDERER
+// ---------------------------------------------------------------------
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a3b5c);
+scene.fog = new THREE.FogExp2(0x0a3b5c, 0.006);
+
+const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 1400);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2.0));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+container.appendChild(renderer.domElement);
+
+const hemiLight = new THREE.HemisphereLight(0x70f6ff, 0x02121d, 1.5);
+scene.add(hemiLight);
+
+const sun = new THREE.DirectionalLight(0xfffae6, 2.8);
+sun.position.set(-50, 120, 40);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+scene.add(sun);
+
+// ---------------------------------------------------------------------
+// GAME STATE & CONSTANTS
+// ---------------------------------------------------------------------
+const ZONES = [
+  { name: 'ZONE 01 / SUNLIT SHALLOWS', waveMult: 1.0, fogColor: 0x0a3b5c, depthColor: 0x031c2e },
+  { name: 'ZONE 02 / CORAL SANCTUARY', waveMult: 1.2, fogColor: 0x0a4b6c, depthColor: 0x032238 },
+  { name: 'ZONE 03 / SEAGLASS CAVERNS', waveMult: 1.4, fogColor: 0x085474, depthColor: 0x02283e },
+  { name: 'ZONE 04 / ANCIENT RUINS', waveMult: 1.6, fogColor: 0x063e5b, depthColor: 0x011f32 },
+  { name: 'ZONE 05 / KELP FORESTS', waveMult: 1.8, fogColor: 0x064d42, depthColor: 0x012b23 },
+  { name: 'ZONE 06 / SUNKEN TRENCH', waveMult: 2.0, fogColor: 0x042c44, depthColor: 0x011422 },
+  { name: 'ZONE 07 / ABYSSAL DEEPS', waveMult: 2.3, fogColor: 0x021a2c, depthColor: 0x000c16 },
+  { name: 'ZONE 08 / SHARK DOMAIN', waveMult: 2.6, fogColor: 0x0e2433, depthColor: 0x05121c },
+  { name: 'ZONE 09 / BIOLUMINESCENT VENTS', waveMult: 3.0, fogColor: 0x241e2b, depthColor: 0x120c17 },
+  { name: 'ZONE 10 / ABYSSAL CROWN', waveMult: 3.5, fogColor: 0x023047, depthColor: 0x00101d }
+];
+
+const state = {
+  x: 0, y: 0, z: 0,
+  vx: 0, vy: 0, vz: 0,
+  speed: 22, targetSpeed: 22, acceleration: 0, turnRate: 0,
+  pitch: 0, yaw: 0, roll: 0,
+  targetPitch: 0, targetYaw: 0, targetRoll: 0,
+  isAir: false, airTime: 0, spinTotal: 0,
+  energy: 100, score: 0, distance: 0, combo: 1.0,
+  zoneIndex: 0, sonarTimer: 0, wipe: 0,
+  shakeIntensity: 0, flashOpacity: 0,
+  started: false, isGameOver: false, floorContact: false
+};
+
+let sonarDetectedThisPulse = new WeakSet();
+let isPaused = false;
+
+// Developer tuning is additive: these defaults reproduce the current build.
+const devConfig = {
+  cruiseSpeed: 22, boostSpeed: 48, steeringRate: 2.25, pitchRate: 2.35,
+  waterResponse: 1.0, dolphinAnimationSpeed: 1.0, maxEnergy: 100,
+  passiveEnergyDrain: 1.2, boostEnergyDrain: 12,
+  sonarDuration: 2.5, sonarRange: 120,
+  sharkCount: 5, sharkSpawnStart: 10, sharkSpawnEvery: 5,
+  sharkSpeed: 1.0, sharkDetectionRange: 72, sharkScale: 1.0,
+  sharkAnimationSpeed: 1.0, collisionDamage: 1.0,
+  cameraFollow: 4.8, fogDensity: 1.0
+};
+const devDefaults = {...devConfig};
+let devModeOpen = false;
+let devPanelBuilt = false;
+let devConfigSaved = false;
+
+
+const keys = { w: false, a: false, s: false, d: false, q: false, e: false, arrowup: false, arrowdown: false, arrowleft: false, arrowright: false, shift: false, ' ': false };
+const camPosSmooth = new THREE.Vector3(0, 4, -30);
+let t = 0, last = performance.now(), toastTimer = 0;
+
+// Sonar enemy highlight: clone per-mesh materials so shared world materials
+// are never unintentionally tinted. The original appearance is restored after a short glow.
+function highlightSonarEnemy(asset) {
+  asset.userData.sonarGlowUntil = t + 1.35;
+  asset.traverse(node => {
+    if (!node.isMesh || !node.material) return;
+    if (!node.userData.sonarOriginalMaterial) {
+      node.userData.sonarOriginalMaterial = node.material;
+      node.material = Array.isArray(node.material)
+        ? node.material.map(m => m.clone())
+        : node.material.clone();
+      node.userData.sonarHighlightMaterials = Array.isArray(node.material)
+        ? node.material
+        : [node.material];
+      node.userData.sonarOriginalColors = node.userData.sonarHighlightMaterials.map(m => ({
+        color: m.color ? m.color.clone() : null,
+        emissive: m.emissive ? m.emissive.clone() : null,
+        emissiveIntensity: m.emissiveIntensity
+      }));
+    }
+    const mats = node.userData.sonarHighlightMaterials || [];
+    mats.forEach(m => {
+      if (m.color) m.color.setHex(0xff263f);
+      if (m.emissive) m.emissive.setHex(0x9f0018);
+      if ('emissiveIntensity' in m) m.emissiveIntensity = 0.9;
+    });
+  });
+}
+
+function updateSonarEnemyHighlights() {
+  seaAssets.forEach(asset => {
+    if (!asset.userData.sonarGlowUntil || t < asset.userData.sonarGlowUntil) return;
+    asset.traverse(node => {
+      if (!node.isMesh || !node.userData.sonarHighlightMaterials) return;
+      node.userData.sonarHighlightMaterials.forEach((m, i) => {
+        const original = node.userData.sonarOriginalColors[i];
+        if (original.color && m.color) m.color.copy(original.color);
+        if (original.emissive && m.emissive) m.emissive.copy(original.emissive);
+        if (original.emissiveIntensity !== undefined) m.emissiveIntensity = original.emissiveIntensity;
+      });
+      // Keep the cloned material and original color snapshot for future sonar pulses.
+    });
+    delete asset.userData.sonarGlowUntil;
+  });
+}
+
+function triggerSonarPing() {
+  if (state.sonarTimer <= 0) {
+    state.sonarTimer = devConfig.sonarDuration; // Active ping light duration in seconds
+    sonarDetectedThisPulse = new WeakSet(); // Each entity can react only once per pulse
+    sonarSphere.position.copy(dolphinSnoutPos);
+    sonarLight.position.copy(dolphinSnoutPos);
+    playSFX('sonar');
+  }
+}
+
+function notify(text, subtext) {
+  const toast = $('toast');
+  toast.innerHTML = `${text}<small>${subtext}</small>`;
+  toast.classList.add('show');
+  toastTimer = 2.2;
+}
+
+function award(pts, msg) {
+  const total = Math.round(pts * state.combo);
+  state.score += total;
+  state.combo = Math.min(5.0, state.combo + 0.2);
+  notify(`+${total} PTS`, msg);
+}
+
+// Pause freezes simulation time and suspends the entire Web Audio context.
+function clearInputs() { Object.keys(keys).forEach(k => keys[k] = false); }
+function togglePause() { isPaused ? resumeGame() : pauseGame(); }
+function pauseGame() {
+  if (!state.started || state.isGameOver || isPaused) return;
+  isPaused = true;
+  clearInputs();
+  $('pauseOverlay').classList.remove('hidden');
+  $('pauseOverlay').setAttribute('aria-hidden', 'false');
+  $('pauseBtn').innerHTML = '<span class="pause-icon" aria-hidden="true"></span><span>Resume</span>';
+  $('pauseBtn').setAttribute('aria-label', 'Resume game');
+  $('pauseBtn').title = 'Resume (P or Esc)';
+  last = performance.now();
+  if (audioCtx && audioCtx.state === 'running') audioCtx.suspend().catch(() => {});
+}
+function resumeGame() {
+  if (!isPaused) return;
+  isPaused = false;
+  clearInputs();
+  $('pauseOverlay').classList.add('hidden');
+  $('pauseOverlay').setAttribute('aria-hidden', 'true');
+  $('pauseBtn').innerHTML = '<span class="pause-icon" aria-hidden="true"></span><span>Pause</span>';
+  $('pauseBtn').setAttribute('aria-label', 'Pause game');
+  $('pauseBtn').title = 'Pause (P or Esc)';
+  last = performance.now();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+}
+function restartFromPause() {
+  isPaused = false;
+  document.body.classList.remove('is-dying');
+  $('pauseOverlay').classList.add('hidden');
+  $('pauseOverlay').setAttribute('aria-hidden', 'true');
+  resetGame();
+  $('gameover').classList.add('hidden');
+  $('pauseBtn').innerHTML = '<span class="pause-icon" aria-hidden="true"></span><span>Pause</span>';
+  $('pauseBtn').setAttribute('aria-label', 'Pause game');
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  last = performance.now();
+}
+$('pauseBtn').addEventListener('click', togglePause);
+$('resumeBtn').addEventListener('click', resumeGame);
+$('pauseRestartBtn').addEventListener('click', restartFromPause);
+
+// Input Event Handlers
+addEventListener('keydown', e => {
+  if (e.repeat && (e.key.toLowerCase() === 'p' || e.key.toLowerCase() === 'escape')) return;
+  const k = e.key.toLowerCase();
+  if ((k === 'p' || k === 'escape') && state.started && !state.isGameOver) {
+    e.preventDefault(); togglePause(); return;
+  }
+  if (isPaused) { if (k === 'r') { e.preventDefault(); restartFromPause(); } return; }
+  if (k in keys) {
+    keys[k] = true;
+    e.preventDefault();
+  }
+  if (k === ' ' && state.started) {
+    triggerSonarPing();
+    e.preventDefault();
+  }
+  if (k === 'r' && state.started) resetGame();
+});
+
+addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  if (k in keys) {
+    keys[k] = false;
+    e.preventDefault();
+  }
+});
+// Never leave a control held if the browser loses focus mid-turn.
+addEventListener('blur', () => { Object.keys(keys).forEach(k => keys[k] = false); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { clearInputs(); if (state.started && !state.isGameOver) pauseGame(); }
+});
+
+document.querySelectorAll('.touchBtn').forEach(btn => {
+  const k = btn.dataset.key;
+  const startHandler = e => { e.preventDefault(); if (isPaused || !state.started) return; keys[k] = true; if (k === ' ') triggerSonarPing(); };
+  const endHandler = e => { e.preventDefault(); keys[k] = false; };
+  btn.addEventListener('touchstart', startHandler, { passive: false });
+  btn.addEventListener('touchend', endHandler, { passive: false });
+  btn.addEventListener('touchcancel', endHandler, { passive: false });
+  btn.addEventListener('mousedown', startHandler);
+  btn.addEventListener('mouseup', endHandler);
+  btn.addEventListener('mouseleave', endHandler);
+});
+
+$('startBtn').addEventListener('click', () => {
+  initAudio();
+  isPaused = false;
+  document.body.classList.remove('is-dying');
+  state.started = true;
+  $('intro').classList.add('hidden');
+});
+
+$('restartBtn').addEventListener('click', () => {
+  isPaused = false;
+  document.body.classList.remove('is-dying');
+  $('gameover').classList.add('hidden');
+  $('intro').classList.add('hidden');
+  resetGame();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  last = performance.now();
+});
+
+// ---------------------------------------------------------------------
+// 3D DOLPHIN MODEL & SEGMENTED IK CHAIN
+// ---------------------------------------------------------------------
+const dolphinMat = new THREE.MeshStandardMaterial({ color: 0x3d7ea6, roughness: 0.15, metalness: 0.1 });
+const bellyMat = new THREE.MeshStandardMaterial({ color: 0xe8f8ff, roughness: 0.2, metalness: 0.05 });
+const darkFinMat = new THREE.MeshStandardMaterial({ color: 0x1d4766, roughness: 0.2, metalness: 0.1 });
+
+const dolphinSnoutPos = new THREE.Vector3(0, 0, 0);
+const bodySegPos = new THREE.Vector3(0, 0, -2.2);
+const tailSegPos = new THREE.Vector3(0, 0, -4.6);
+const flukeSegPos = new THREE.Vector3(0, 0, -7.0);
+
+// Head & Snout Segment
+const headGroup = new THREE.Group();
+const headGeo = new THREE.SphereGeometry(1.1, 16, 16);
+headGeo.scale(0.85, 0.85, 1.3);
+const headMesh = new THREE.Mesh(headGeo, dolphinMat);
+headMesh.position.set(0, 0.1, -0.4);
+headGroup.add(headMesh);
+
+const snoutGeo = new THREE.ConeGeometry(0.35, 1.6, 12);
+snoutGeo.rotateX(Math.PI / 2);
+const snoutMesh = new THREE.Mesh(snoutGeo, dolphinMat);
+snoutMesh.position.set(0, -0.15, 0.8);
+headGroup.add(snoutMesh);
+
+// Dolphin Eyes
+const eyeGeo = new THREE.SphereGeometry(0.12, 8, 8);
+const eyeMat = new THREE.MeshBasicMaterial({ color: 0x050d1a });
+const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+leftEye.position.set(0.65, 0.25, -0.1);
+const rightEye = leftEye.clone();
+rightEye.position.x = -0.65;
+headGroup.add(leftEye); headGroup.add(rightEye);
+
+scene.add(headGroup);
+
+// Torso / Main Body Segment
+const bodyGroup = new THREE.Group();
+const bodyGeo = new THREE.ConeGeometry(1.2, 3.8, 16);
+bodyGeo.rotateX(Math.PI / 2);
+const bodyMesh = new THREE.Mesh(bodyGeo, dolphinMat);
+bodyGroup.add(bodyMesh);
+
+const bellyGeo = new THREE.SphereGeometry(1.05, 14, 14);
+bellyGeo.scale(0.85, 0.65, 1.8);
+const bellyMesh = new THREE.Mesh(bellyGeo, bellyMat);
+bellyMesh.position.set(0, -0.3, 0);
+bodyGroup.add(bellyMesh);
+
+// Dorsal Fin
+const dorsalShape = new THREE.Shape();
+dorsalShape.moveTo(0, 0);
+dorsalShape.quadraticCurveTo(-0.2, 1.2, -1.2, 1.8);
+dorsalShape.quadraticCurveTo(-0.4, 0.8, 0.8, 0);
+const dorsalGeo = new THREE.ExtrudeGeometry(dorsalShape, { depth: 0.15, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.04, bevelThickness: 0.04 });
+const dorsalMesh = new THREE.Mesh(dorsalGeo, darkFinMat);
+dorsalMesh.rotation.y = Math.PI / 2;
+dorsalMesh.position.set(0.07, 0.9, 0.2);
+bodyGroup.add(dorsalMesh);
+
+// Pectoral Side Fins
+const finShape = new THREE.Shape();
+finShape.moveTo(0, 0);
+finShape.quadraticCurveTo(1.2, -0.4, 2.0, -1.2);
+finShape.quadraticCurveTo(0.8, -0.8, 0, -0.2);
+const finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.08, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.02, bevelThickness: 0.02 });
+
+const leftFin = new THREE.Mesh(finGeo, darkFinMat);
+leftFin.position.set(0.8, -0.2, 0.8);
+leftFin.rotation.set(-0.2, 0.4, -0.3);
+bodyGroup.add(leftFin);
+
+const rightFin = new THREE.Mesh(finGeo, darkFinMat);
+rightFin.scale.set(-1, 1, 1);
+rightFin.position.set(-0.8, -0.2, 0.8);
+rightFin.rotation.set(-0.2, -0.4, 0.3);
+bodyGroup.add(rightFin);
+
+scene.add(bodyGroup);
+
+// Tail Segment
+const tailGroup = new THREE.Group();
+const tailConeGeo = new THREE.ConeGeometry(0.85, 2.4, 14);
+tailConeGeo.rotateX(-Math.PI / 2);
+const tailConeMesh = new THREE.Mesh(tailConeGeo, dolphinMat);
+tailGroup.add(tailConeMesh);
+scene.add(tailGroup);
+
+// Fluke (Tail Fin) Segment
+const flukeGroup = new THREE.Group();
+const flukeShape = new THREE.Shape();
+flukeShape.moveTo(0, 0);
+flukeShape.quadraticCurveTo(1.4, -0.6, 2.2, -0.2);
+flukeShape.quadraticCurveTo(1.0, 0.4, 0, 0.1);
+flukeShape.quadraticCurveTo(-1.0, 0.4, -2.2, -0.2);
+flukeShape.quadraticCurveTo(-1.4, -0.6, 0, 0);
+const flukeGeo = new THREE.ExtrudeGeometry(flukeShape, { depth: 0.08, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.02, bevelThickness: 0.02 });
+const flukeMesh = new THREE.Mesh(flukeGeo, darkFinMat);
+flukeMesh.rotation.x = Math.PI / 12;
+flukeGroup.add(flukeMesh);
+scene.add(flukeGroup);
+
+// ---------------------------------------------------------------------
+// SONAR WAVE & ILLUMINATION LIGHTS
+// ---------------------------------------------------------------------
+const sonarSphereGeo = new THREE.SphereGeometry(1, 32, 32);
+const sonarSphereMat = new THREE.MeshBasicMaterial({
+  color: 0x70f6ff, transparent: true, opacity: 0, wireframe: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending
+});
+const sonarSphere = new THREE.Mesh(sonarSphereGeo, sonarSphereMat);
+scene.add(sonarSphere);
+
+// Wide-area sonar flash light illuminating seafloor terrain and objects
+const sonarLight = new THREE.PointLight(0x70f6ff, 0, 350);
+scene.add(sonarLight);
+
+const dolphinLight = new THREE.PointLight(0x70f6ff, 2.0, 40);
+dolphinLight.position.set(0, 1, 0);
+headGroup.add(dolphinLight);
+
+// Splash Particle System
+const splashCount = 120;
+const splashGeo = new THREE.BufferGeometry();
+const splashPos = new Float32Array(splashCount * 3);
+const splashVel = [];
+for (let i = 0; i < splashCount; i++) {
+  splashPos[i * 3] = 0; splashPos[i * 3 + 1] = -500; splashPos[i * 3 + 2] = 0;
+  splashVel.push(new THREE.Vector3());
+}
+splashGeo.setAttribute('position', new THREE.BufferAttribute(splashPos, 3));
+const splashMat = new THREE.PointsMaterial({ color: 0xd0f7fc, size: 0.6, transparent: true, opacity: 0.8 });
+const splashParticles = new THREE.Points(splashGeo, splashMat);
+scene.add(splashParticles);
+
+// A lightweight, recycled ribbon of bubbles follows the dolphin's wake.
+const wakeCount = 64;
+const wakeGeo = new THREE.BufferGeometry();
+const wakePos = new Float32Array(wakeCount * 3);
+const wakeLife = new Float32Array(wakeCount);
+const wakeVel = Array.from({length: wakeCount}, () => new THREE.Vector3());
+for (let i = 0; i < wakeCount; i++) { wakePos[i*3+1] = -500; wakeLife[i] = 0; }
+wakeGeo.setAttribute('position', new THREE.BufferAttribute(wakePos, 3));
+const wakeMat = new THREE.PointsMaterial({ color: 0x9beeff, size: 0.22, transparent: true, opacity: 0.52, depthWrite: false, blending: THREE.AdditiveBlending });
+const wakeParticles = new THREE.Points(wakeGeo, wakeMat);
+scene.add(wakeParticles);
+let wakeCursor = 0, wakeEmitTimer = 0;
+
+// Impact Debris Particle System (Rock chips, coral dust, collision sparks)
+const debrisCount = 80;
+const debrisGeo = new THREE.BufferGeometry();
+const debrisPos = new Float32Array(debrisCount * 3);
+const debrisVel = [];
+const debrisLife = new Float32Array(debrisCount);
+for (let i = 0; i < debrisCount; i++) {
+  debrisPos[i * 3] = 0; debrisPos[i * 3 + 1] = -500; debrisPos[i * 3 + 2] = 0;
+  debrisVel.push(new THREE.Vector3());
+  debrisLife[i] = 0;
+}
+debrisGeo.setAttribute('position', new THREE.BufferAttribute(debrisPos, 3));
+const debrisMat = new THREE.PointsMaterial({ color: 0xffd080, size: 0.8, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending });
+const debrisParticles = new THREE.Points(debrisGeo, debrisMat);
+scene.add(debrisParticles);
+
+function triggerDebris(x, y, z, colorHex = 0xffd080) {
+  const p = debrisParticles.geometry.attributes.position;
+  debrisMat.color.setHex(colorHex);
+  for (let i = 0; i < debrisCount; i++) {
+    p.setXYZ(i, x + (Math.random() - 0.5) * 1.5, y + (Math.random() - 0.5) * 1.5, z + (Math.random() - 0.5) * 1.5);
+    debrisVel[i].set((Math.random() - 0.5) * 24, (Math.random() - 0.5) * 24, (Math.random() - 0.5) * 24);
+    debrisLife[i] = 0.6 + Math.random() * 0.4;
+  }
+  p.needsUpdate = true;
+}
+
+function triggerSplash(x, y, z) {
+  const p = splashParticles.geometry.attributes.position;
+  for (let i = 0; i < splashCount; i++) {
+    p.setXYZ(i, x + (Math.random() - 0.5) * 3, y, z + (Math.random() - 0.5) * 3);
+    splashVel[i].set((Math.random() - 0.5) * 12, 5 + Math.random() * 10, (Math.random() - 0.5) * 12);
+  }
+  p.needsUpdate = true;
+  playSFX('splash');
+}
+
+// ---------------------------------------------------------------------
+// ENVIRONMENT PROPS & SEA LIFE GENERATOR
+// ---------------------------------------------------------------------
+let seaAssets = [];
+const sharedMaterialCache = new Map();
+const mat = (color, roughness = 0.5, metalness = 0.1, extra = {}) => {
+  const key = JSON.stringify([color, roughness, metalness, extra]);
+  if (!sharedMaterialCache.has(key)) {
+    sharedMaterialCache.set(key, new THREE.MeshStandardMaterial({ color, roughness, metalness, flatShading: true, ...extra }));
+  }
+  return sharedMaterialCache.get(key);
+};
+
+// REALISTIC SEAGLASS MATERIALS (PHYSICALLY BASED GLASS REACTION)
+const seaglassColors = [0x52ffb8, 0x70f6ff, 0x38ef7d, 0x4facfe, 0xb57eff, 0xffa07a];
+
+function createSeaglass(x, y, z) {
+  const group = new THREE.Group();
+  const baseColor = seaglassColors[Math.floor(Math.random() * seaglassColors.length)];
+
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: baseColor,
+    transmission: 0.88,
+    opacity: 0.95,
+    transparent: true,
+    roughness: 0.12,
+    metalness: 0.05,
+    ior: 1.52,
+    reflectivity: 0.9,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.1,
+    emissive: baseColor,
+    emissiveIntensity: 0.25
+  });
+
+  const clusterSize = 3 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < clusterSize; i++) {
+    const geoChoice = Math.random();
+    let glassGeo;
+    if (geoChoice > 0.6) {
+      glassGeo = new THREE.IcosahedronGeometry(0.6 + Math.random() * 0.8, 0);
+    } else if (geoChoice > 0.3) {
+      glassGeo = new THREE.DodecahedronGeometry(0.5 + Math.random() * 0.7, 0);
+    } else {
+      glassGeo = new THREE.OctahedronGeometry(0.7 + Math.random() * 0.9, 0);
+    }
+
+    const shard = new THREE.Mesh(glassGeo, glassMat);
+    shard.position.set((Math.random() - 0.5) * 2.5, Math.random() * 1.2, (Math.random() - 0.5) * 2.5);
+    shard.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    shard.scale.set(0.6 + Math.random() * 0.8, 0.4 + Math.random() * 0.9, 0.6 + Math.random() * 0.8);
+    group.add(shard);
+  }
+
+  const pLight = new THREE.PointLight(baseColor, 1.2, 12);
+  pLight.position.set(0, 0.5, 0);
+  group.add(pLight);
+
+  group.position.set(x, y, z);
+  group.userData = { isSeaglass: true, rotSpeed: 0.5 + Math.random() * 1.0, radius: 1.2 };
+  scene.add(group);
+  seaAssets.push(group);
+}
+
+// REALISTIC BOULDERS AND SEAFLOOR ROCKS
+function createRockFormation(x, y, z) {
+  const group = new THREE.Group();
+  const rockMat = mat(0x324759, 0.9, 0.1);
+  const count = 2 + Math.floor(Math.random() * 5);
+
+  for (let i = 0; i < count; i++) {
+    const scale = 2.0 + Math.random() * 4.5;
+    const rGeo = new THREE.DodecahedronGeometry(scale, 1);
+    
+    const pos = rGeo.attributes.position;
+    for (let v = 0; v < pos.count; v++) {
+      const vx = pos.getX(v), vy = pos.getY(v), vz = pos.getZ(v);
+      pos.setXYZ(v, vx + (Math.random() - 0.5) * scale * 0.2, vy + (Math.random() - 0.5) * scale * 0.2, vz + (Math.random() - 0.5) * scale * 0.2);
+    }
+    rGeo.computeVertexNormals();
+
+    const rock = new THREE.Mesh(rGeo, rockMat);
+    // Keep each boulder upright and embed its lower edge into the local seabed.
+    // The previous random X rotation tipped boulders and left some visibly floating.
+    rock.position.set((Math.random() - 0.5) * 4, scale * 0.88, (Math.random() - 0.5) * 4);
+    rock.rotation.set(0, Math.random() * Math.PI * 2, 0);
+    group.add(rock);
+  }
+
+  group.position.set(x, seabedHeight(x, z), z);
+  group.userData = { isObstacle: true, radius: 3.2, type: 'rock' };
+  scene.add(group);
+  seaAssets.push(group);
+}
+
+// ARCHWAY & SEAFALL TOPOGRAPHY FORMATIONS
+function createSeaArch(x, y, z) {
+  const group = new THREE.Group();
+  const rockMat = mat(0x2d3e4f, 0.85, 0.1);
+
+  const leftPillar = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 4.0, 24, 8), rockMat);
+  leftPillar.position.set(-8, 12, 0);
+  leftPillar.rotation.z = 0;
+  group.add(leftPillar);
+
+  const rightPillar = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 4.0, 24, 8), rockMat);
+  rightPillar.position.set(8, 12, 0);
+  rightPillar.rotation.z = 0;
+  group.add(rightPillar);
+
+  const lintel = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.0, 20, 8), rockMat);
+  lintel.rotation.z = Math.PI / 2;
+  lintel.position.set(0, 22, 0);
+  group.add(lintel);
+
+  // Pillar bottoms sit at the arch's local origin, which is aligned to seabed.
+  group.position.set(x, seabedHeight(x, z), z);
+  group.userData = { isArch: true, pillarDistance: 8, archHeight: 22, radius: 2.8 };
+  scene.add(group);
+  seaAssets.push(group);
+}
+
+// Kelp Stalk Builder
+function createKelp(x, z, y) {
+  const group = new THREE.Group();
+  const kMat = mat(0x1b7a43, 0.7, 0.0);
+  const height = 15 + Math.random() * 20;
+  const segments = 8;
+  const leaves = [];
+  for (let i = 0; i < segments; i++) {
+    const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.8, height / segments, 5), kMat);
+    leaf.position.set(Math.sin(i) * 0.4, (i * height) / segments, Math.cos(i) * 0.4);
+    leaf.rotation.z = Math.sin(i * 0.5) * 0.2;
+    group.add(leaf);
+    leaves.push(leaf);
+  }
+  group.position.set(x, seabedHeight(x, z), z);
+  group.userData = { isKelp: true, leaves, offset: Math.random() * 10, height, radius: 1.5 };
+  scene.add(group);
+  seaAssets.push(group);
+}
+
+// Glowing Jellyfish Builder (Hazard)
+function createJellyfish(x, y, z) {
+  const group = new THREE.Group();
+  const jMat = new THREE.MeshStandardMaterial({ color: 0xb57eff, roughness: 0.1, transparent: true, opacity: 0.75, emissive: 0x8b3dff, emissiveIntensity: 0.6 });
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(1.5, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2), jMat);
+  group.add(cap);
+
+  const tentacles = [];
+  for (let i = 0; i < 6; i++) {
+    const tentacle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.02, 3.5), jMat);
+    tentacle.position.set(Math.cos(i) * 0.8, -1.8, Math.sin(i) * 0.8);
+    group.add(tentacle);
+    tentacles.push(tentacle);
+  }
+  group.position.set(x, y, z);
+  group.userData = { 
+    isJellyfish: true, 
+    tentacles, 
+    baseY: y, 
+    vy: 0, 
+    pulsePhase: Math.random() * Math.PI * 2,
+    cap,
+    radius: 1.4,
+    isEnemy: true
+  };
+  scene.add(group);
+  seaAssets.push(group);
+}
+
+// Pearl Shell Collectible Builder
+function createPearlShell(x, y, z) {
+  const group = new THREE.Group();
+  const shellMat = mat(0xffa07a, 0.3, 0.2);
+  const pearlMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, metalness: 0.8, emissive: 0x70f6ff, emissiveIntensity: 0.5 });
+
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(1.0, 10, 10, 0, Math.PI * 2, 0, Math.PI / 3), shellMat);
+  shell.rotation.x = -Math.PI / 4;
+  group.add(shell);
+
+  const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 12), pearlMat);
+  pearl.position.set(0, 0.2, 0);
+  group.add(pearl);
+
+  group.position.set(x, y, z);
+  group.userData = { isPearl: true, baseY: y, phase: Math.random() * Math.PI * 2, radius: 1.2 };
+  scene.add(group);
+  seaAssets.push(group);
+}
+
+// Ancient Ruins Pillar Builder
+function createRuins(x, z, y) {
+  const rMat = mat(0x738a9c, 0.8, 0.1);
+  const pillar = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.2, 16, 10), rMat);
+  const groundY = seabedHeight(x, z);
+  pillar.position.set(x, groundY + 8, z);
+  pillar.rotation.z = 0;
+  pillar.userData = { isObstacle: true, radius: 1.8, type: 'ruin' };
+  scene.add(pillar);
+  seaAssets.push(pillar);
+}
+
+// Coral Cluster Builder
+function createCoralCluster(x, z, y) {
+  const group = new THREE.Group();
+  const colors = [0xff4fa3, 0x52ffb8, 0xffa04f, 0x9e52ff];
+  const count = 3 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < count; i++) {
+    const cMat = mat(colors[Math.floor(Math.random() * colors.length)], 0.7, 0.1);
+    const geo = new THREE.ConeGeometry(0.8 + Math.random() * 0.8, 2.5 + Math.random() * 3.0, 7);
+    const m = new THREE.Mesh(geo, cMat);
+    m.position.set((Math.random() - 0.5) * 3, 1.2, (Math.random() - 0.5) * 3);
+    m.rotation.z = (Math.random() - 0.5) * 0.4;
+    group.add(m);
+  }
+  group.position.set(x, seabedHeight(x, z), z);
+  group.userData = { isObstacle: true, radius: 1.6, type: 'coral' };
+  scene.add(group);
+  seaAssets.push(group);
+}
+
+// Shark Hazard Builder — enlarged predator with a genuinely articulated procedural rig.
+function createShark(x, y, z) {
+  const shark = new THREE.Group();
+  shark.name = 'ArticulatedGreatWhite';
+  // Larger silhouette, but the collision radius is updated alongside the model.
+  shark.scale.setScalar(1.42 * devConfig.sharkScale);
+  const slate = mat(0x536d7c, 0.26, 0.34);
+  const back = mat(0x263d4c, 0.3, 0.28);
+  const pale = mat(0xc8d6d8, 0.34, 0.12);
+  const dark = mat(0x101e27, 0.18, 0.1);
+  const toothMat = mat(0xe8eee8, 0.28, 0.04);
+  const eyeMat = new THREE.MeshStandardMaterial({color:0x050d12, roughness:0.18, metalness:0.15});
+
+  // The trunk carries the head and shoulder girdle. Rear body sections are
+  // nested beneath articulated spine joints, so the silhouette actually bends.
+  const trunk = new THREE.Group();
+  shark.add(trunk);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 18), slate);
+  body.scale.set(0.91, 0.76, 2.22); body.position.z = 0.05; trunk.add(body);
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), pale);
+  belly.scale.set(0.72, 0.31, 1.88); belly.position.set(0,-0.39,0.12); trunk.add(belly);
+
+  // Tapered snout, with a hinged lower jaw rather than a painted mouth line.
+  const snout = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 12), slate);
+  snout.scale.set(0.54,0.48,1.0); snout.position.set(0,-0.01,1.72); trunk.add(snout);
+  const upperMuzzle = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), slate);
+  upperMuzzle.scale.set(0.47,0.26,0.58); upperMuzzle.position.set(0,-0.19,2.03); trunk.add(upperMuzzle);
+  const jawPivot = new THREE.Group(); jawPivot.position.set(0,-0.27,1.78); trunk.add(jawPivot);
+  const lowerJaw = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), pale);
+  lowerJaw.scale.set(0.46,0.15,0.62); lowerJaw.position.set(0,-0.055,0.28); jawPivot.add(lowerJaw);
+  const mouthCavity = new THREE.Mesh(new THREE.BoxGeometry(0.77,0.075,0.42), dark);
+  mouthCavity.position.set(0,-0.25,1.98); trunk.add(mouthCavity);
+  // Small conical teeth along both jaws, visible when the jaw articulates.
+  for (let i=0;i<7;i++) {
+    const tx=(i-3)*0.105;
+    const upperTooth=new THREE.Mesh(new THREE.ConeGeometry(0.043,0.13,5),toothMat);
+    upperTooth.position.set(tx,-0.30,2.08-Math.abs(i-3)*0.025); upperTooth.rotation.x=Math.PI; trunk.add(upperTooth);
+    const lowerTooth=new THREE.Mesh(new THREE.ConeGeometry(0.038,0.11,5),toothMat);
+    lowerTooth.position.set(tx,-0.035,0.43-Math.abs(i-3)*0.025); jawPivot.add(lowerTooth);
+  }
+
+  // Fins are mounted on pivots so the pectorals, dorsal fin and tail can flex.
+  const dorsalShape = new THREE.Shape();
+  dorsalShape.moveTo(-0.56,0); dorsalShape.lineTo(-0.13,1.16); dorsalShape.lineTo(0.12,1.03); dorsalShape.lineTo(0.50,0); dorsalShape.closePath();
+  const dorsalPivot = new THREE.Group(); dorsalPivot.position.set(0,0.48,0.05); trunk.add(dorsalPivot);
+  const dorsal = new THREE.Mesh(new THREE.ShapeGeometry(dorsalShape),back); dorsal.rotation.y=Math.PI; dorsalPivot.add(dorsal);
+  const rearDorsal = new THREE.Mesh(new THREE.ShapeGeometry(dorsalShape),back);
+  rearDorsal.scale.set(0.34,0.36,0.34); rearDorsal.position.set(0,0.27,-1.58); trunk.add(rearDorsal);
+  const pectoralShape = new THREE.Shape();
+  pectoralShape.moveTo(0,0); pectoralShape.lineTo(1.78,-0.18); pectoralShape.lineTo(0.44,-0.50); pectoralShape.lineTo(0.12,-0.20); pectoralShape.closePath();
+  const finPivots=[];
+  for (const side of [-1,1]) {
+    const pivot=new THREE.Group(); pivot.position.set(side*0.58,-0.17,0.56); trunk.add(pivot);
+    const fin=new THREE.Mesh(new THREE.ShapeGeometry(pectoralShape),back);
+    fin.scale.x=side; fin.rotation.y=side*0.12; pivot.add(fin); finPivots.push({pivot,side});
+  }
+  // Pelvic fins and paired anal fin complete the silhouette.
+  for (const side of [-1,1]) {
+    const pelvic=new THREE.Mesh(new THREE.ShapeGeometry(pectoralShape),back);
+    pelvic.scale.set(side*0.28,0.25,0.28); pelvic.position.set(side*0.28,-0.35,-1.22); trunk.add(pelvic);
+  }
+  const anal=new THREE.Mesh(new THREE.ShapeGeometry(dorsalShape),back);
+  anal.scale.set(0.23,0.24,0.23); anal.rotation.z=Math.PI; anal.position.set(0,-0.49,-1.55); trunk.add(anal);
+
+  // Internal axial skeleton: spine links and ribs are real rig geometry nested
+  // inside the body. Their joint hierarchy drives the external rear-body mesh.
+  const boneMat = new THREE.MeshStandardMaterial({color:0xb4c4c8, roughness:0.72, metalness:0.02});
+  const skeleton = new THREE.Group(); trunk.add(skeleton);
+  const spineJoints=[];
+  for (let i=0;i<8;i++) {
+    const vertebra=new THREE.Mesh(new THREE.SphereGeometry(0.105-i*0.006,8,6),boneMat);
+    vertebra.position.set(0,0.015,1.05-i*0.31); skeleton.add(vertebra);
+    if (i<7) {
+      const ribGeo=new THREE.TorusGeometry(0.34-i*0.018,0.025,5,12,Math.PI);
+      const rib=new THREE.Mesh(ribGeo,boneMat); rib.rotation.z=Math.PI; rib.position.set(0,-0.015,0.93-i*0.31); skeleton.add(rib);
+    }
+  }
+  // A chain of pivoted caudal segments gives the tail a traveling lateral wave.
+  const spine1=new THREE.Group(); spine1.position.set(0,0,-1.28); trunk.add(spine1);
+  const segment1=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),slate);
+  segment1.scale.set(0.59,0.51,0.92); segment1.position.z=-0.37; spine1.add(segment1);
+  const belly1=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),pale);
+  belly1.scale.set(0.42,0.20,0.72); belly1.position.set(0,-0.23,-0.37); spine1.add(belly1);
+  const spine2=new THREE.Group(); spine2.position.z=-0.70; spine1.add(spine2);
+  const segment2=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),slate);
+  segment2.scale.set(0.38,0.34,0.76); segment2.position.z=-0.30; spine2.add(segment2);
+  const spine3=new THREE.Group(); spine3.position.z=-0.58; spine2.add(spine3);
+  const segment3=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),slate);
+  segment3.scale.set(0.23,0.22,0.63); segment3.position.z=-0.25; spine3.add(segment3);
+  const tailPivot=new THREE.Group(); tailPivot.position.z=-0.53; spine3.add(tailPivot);
+  const tailShape=new THREE.Shape();
+  tailShape.moveTo(0,0); tailShape.lineTo(-0.22,0.30); tailShape.lineTo(-0.68,1.30);
+  tailShape.lineTo(-0.38,0.18); tailShape.lineTo(-0.55,-0.95); tailShape.lineTo(0,-0.34);
+  tailShape.lineTo(0.55,-0.95); tailShape.lineTo(0.38,0.18); tailShape.lineTo(0.68,1.30); tailShape.lineTo(0.22,0.30); tailShape.closePath();
+  const tailFin=new THREE.Mesh(new THREE.ShapeGeometry(tailShape),back); tailFin.rotation.y=Math.PI; tailPivot.add(tailFin);
+  // Tiny caudal keel helps the tail read as an anatomical continuation.
+  const keel=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.55),back); keel.position.set(0,0,-0.28); spine3.add(keel);
+
+  // Eyes, reflective glints, gill slits and subtle raised gill ridges.
+  for (const side of [-1,1]) {
+    for (let i=0;i<5;i++) {
+      const gill=new THREE.Mesh(new THREE.BoxGeometry(0.035,0.39,0.045),dark);
+      gill.position.set(side*(0.77-i*0.018),-0.025,0.88-i*0.17); gill.rotation.z=side*0.16; trunk.add(gill);
+    }
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(0.105,12,8),eyeMat);
+    eye.position.set(side*0.59,0.15,1.62); trunk.add(eye);
+    const glint=new THREE.Mesh(new THREE.SphereGeometry(0.028,6,6),new THREE.MeshBasicMaterial({color:0xd8f5f2}));
+    glint.position.set(side*0.625,0.19,1.66); trunk.add(glint);
+  }
+
+  shark.position.set(x,y,z);
+  const initialSharkSpeed=10+Math.random()*3;
+  const initialSharkHeading=(Math.random()-0.5)*0.5;
+  shark.userData={
+    isShark:true,vx:0,vz:initialSharkSpeed,initialSpeed:initialSharkSpeed,
+    heading:initialSharkHeading,initialHeading:initialSharkHeading,
+    tail:tailPivot,tailFin,spine1,spine2,spine3,finPivots,jawPivot,dorsalPivot,trunk,
+    radius:3.0 * devConfig.sharkScale,isEnemy:true,aiMode:'patrol',aiTimer:1+Math.random()*2,
+    sideBias:Math.random()<0.5?-1:1,swimPhase:Math.random()*Math.PI*2,
+    homeX:x,homeY:y,lastTargetX:x,lastTargetZ:z
+  };
+  scene.add(shark); seaAssets.push(shark);
+}
+
+// Fish School Pickup Builder
+function createFishSchool(x, y, z) {
+  const school = new THREE.Group();
+  const fMat = mat(0xffe066, 0.2, 0.8);
+  const fishList = [];
+  for (let i = 0; i < 8; i++) {
+    const fish = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.7, 6), fMat);
+    fish.rotation.x = Math.PI / 2;
+    const offset = new THREE.Vector3((Math.random() - 0.5) * 2.5, (Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 2.5);
+    fish.position.copy(offset);
+    school.add(fish);
+    fishList.push({ mesh: fish, offset, phase: Math.random() * Math.PI * 2 });
+  }
+  school.position.set(x, y, z);
+  school.userData = { isFishSchool: true, fishList, radius: 1.5 };
+  scene.add(school);
+  seaAssets.push(school);
+}
+
+// Clear and Regenerate All Sea Assets Fresh
+function populateSeaAssets() {
+  seaAssets.forEach(asset => scene.remove(asset));
+  seaAssets = [];
+
+  for (let i = 0; i < 35; i++) {
+    const px = (Math.random() - 0.5) * 90;
+    const pz = i * 22 + 30;
+    const py = seabedHeight(px, pz);
+
+    createCoralCluster(px, pz, py);
+    const rockX = (Math.random() - 0.5) * 80;
+    createRockFormation(rockX, seabedHeight(rockX, pz + 8), pz + 8);
+    
+    if (i % 2 === 0) {
+      const kelpX = (Math.random() - 0.5) * 80;
+      createKelp(kelpX, pz + 5, seabedHeight(kelpX, pz + 5));
+    }
+    if (i % 3 === 0) createSeaglass((Math.random() - 0.5) * 70, py + 0.8, pz + 12);
+    // Predator pacing: let the opening stretch establish calm exploration.
+    // Sharks begin farther into the journey and are spaced more widely.
+    if (i >= devConfig.sharkSpawnStart && i % Math.max(1, Math.round(devConfig.sharkSpawnEvery)) === 0) {
+      createShark((Math.random() - 0.5) * 70, py + 12 + Math.random() * 12, pz);
+    }
+    if (i % 2 === 0) createFishSchool((Math.random() - 0.5) * 70, py + 8 + Math.random() * 14, pz + 10);
+    if (i % 4 === 0) createJellyfish((Math.random() - 0.5) * 60, py + 10 + Math.random() * 15, pz + 12);
+    if (i % 3 === 0) createPearlShell((Math.random() - 0.5) * 60, py + 1.2, pz + 15);
+    if (i % 5 === 0) { const ruinX = (Math.random() - 0.5) * 70; createRuins(ruinX, pz, seabedHeight(ruinX, pz)); }
+    if (i % 6 === 0) { const archX = (Math.random() - 0.5) * 40; createSeaArch(archX, seabedHeight(archX, pz + 18), pz + 18); }
+  }
+  // Save spawn transforms once so restart can recycle these objects in-place.
+  seaAssets.forEach(asset => {
+    asset.userData.homePosition = asset.position.clone();
+    asset.userData.homeRotation = asset.rotation.clone();
+  });
+}
+
+function resetSeaAssets() {
+  seaAssets.forEach(asset => {
+    if (asset.userData.homePosition) asset.position.copy(asset.userData.homePosition);
+    if (asset.userData.homeRotation) asset.rotation.copy(asset.userData.homeRotation);
+    asset.userData.collisionCooldownUntil = 0;
+    asset.userData.sonarAttractUntil = 0;
+    asset.userData.sonarAttractTarget = null;
+    delete asset.userData.sonarGlowUntil;
+    if (asset.userData.isShark) {
+      asset.userData.heading = asset.userData.initialHeading ?? 0;
+      asset.userData.vx = 0;
+      asset.userData.vz = asset.userData.initialSpeed ?? 11;
+      asset.userData.aiMode = 'patrol';
+      asset.userData.aiTimer = 1 + Math.random() * 2;
+      asset.userData.pitch = 0;
+      asset.userData.swimPhase = 0;
+      if (asset.userData.tail) asset.userData.tail.rotation.set(0, 0, 0);
+      ['spine1','spine2','spine3','tailFin','dorsalPivot','jawPivot'].forEach(key=>{
+        if (asset.userData[key]) asset.userData[key].rotation.set(0,0,0);
+      });
+      if (asset.userData.finPivots) asset.userData.finPivots.forEach(({pivot})=>pivot.rotation.set(0,0,0));
+    } else if (asset.userData.heading !== undefined) asset.userData.heading = 0;
+    if (asset.userData.phase !== undefined) asset.userData.phase = 0;
+    if (asset.userData.pulsePhase !== undefined) asset.userData.pulsePhase = 0;
+    if (asset.userData.baseY !== undefined) asset.userData.baseY = asset.position.y;
+    if (asset.userData.fishList) asset.userData.fishList.forEach(f => f.phase = 0);
+  });
+}
+
+populateSeaAssets();
+
+function resetGame() {
+  isPaused = false;
+  $('pauseOverlay').classList.add('hidden');
+  $('pauseOverlay').setAttribute('aria-hidden', 'true');
+  state.x = 0; state.y = 0; state.z = 0;
+  state.vx = 0; state.vy = 0; state.vz = 0;
+  state.speed = devConfig.cruiseSpeed; state.targetSpeed = devConfig.cruiseSpeed; state.acceleration = 0; state.turnRate = 0;
+  state.pitch = 0; state.yaw = 0; state.roll = 0;
+  state.targetPitch = 0; state.targetYaw = 0; state.targetRoll = 0;
+  state.isAir = false; state.airTime = 0; state.spinTotal = 0;
+  state.energy = devConfig.maxEnergy; state.score = 0; state.distance = 0; state.combo = 1.0;
+  state.zoneIndex = 0; state.wipe = 0; state.isGameOver = false; state.sonarTimer = 0;
+  sonarSphere.scale.setScalar(0.001); sonarSphereMat.opacity = 0; sonarLight.intensity = 0;
+  state.shakeIntensity = 0; state.flashOpacity = 0; state.floorContact = false;
+  state.started = true;
+
+  // Reset inputs
+  for (let key in keys) keys[key] = false;
+  
+  dolphinSnoutPos.set(0, 0, 0);
+  bodySegPos.set(0, 0, -2.2);
+  tailSegPos.set(0, 0, -4.6);
+  flukeSegPos.set(0, 0, -7.0);
+  camPosSmooth.set(0, 4, -30);
+  $('zoneTitle').textContent = ZONES[0].name;
+
+  // Reset clock delta tracker
+  last = performance.now();
+
+  // Reset UI elements
+  $('score').textContent = '000000';
+  $('energyFill').style.width = '100%';
+  $('zoneFill').style.width = '0%';
+  $('damageFlash').style.opacity = 0;
+
+  // Reset seabed and ocean mesh chunk positions to origin
+  for (let i = 0; i < NUM_CHUNKS; i++) {
+    const chunkZ = (i - 1) * CHUNK_LENGTH;
+    oceanChunks[i].mesh.position.z = chunkZ;
+    seabedChunks[i].mesh.position.z = chunkZ;
+
+    const p = seabedChunks[i].geo.attributes.position;
+    for (let k = 0; k < p.count; k++) {
+      const x = p.getX(k), localZ = p.getZ(k), worldZ = localZ + chunkZ;
+      p.setY(k, seabedHeight(x, worldZ));
+    }
+    p.needsUpdate = true;
+    seabedChunks[i].geo.computeVertexNormals();
+  }
+
+  // Reuse the existing environment objects; no mesh/material churn on restart.
+  resetSeaAssets();
+  sonarDetectedThisPulse = new WeakSet();
+}
+
+// Animated Volumetric God Rays
+const rayGeo = new THREE.CylinderGeometry(0.8, 14.0, 90, 16, 1, true);
+const rayMat = new THREE.MeshBasicMaterial({ color: 0x70f6ff, transparent: true, opacity: 0.18, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+const godRaysGroup = new THREE.Group();
+for (let i = 0; i < 8; i++) {
+  const ray = new THREE.Mesh(rayGeo, rayMat);
+  ray.position.set((Math.random() - 0.5) * 90, 10, (i - 3) * 50);
+  ray.rotation.z = (Math.random() - 0.5) * 0.25;
+  ray.rotation.x = 0.15;
+  godRaysGroup.add(ray);
+}
+scene.add(godRaysGroup);
+
+// Water Caustics Grid Plane
+const causticsGeo = new THREE.PlaneGeometry(350, 350, 32, 32);
+causticsGeo.rotateX(-Math.PI / 2);
+const causticsMat = new THREE.MeshBasicMaterial({ color: 0x70f6ff, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, wireframe: true });
+const causticsMesh = new THREE.Mesh(causticsGeo, causticsMat);
+scene.add(causticsMesh);
+
+// ---------------------------------------------------------------------
+// HIGH-VARIETY PROCEDURAL SEAFALL NOISE & TERRAIN
+// ---------------------------------------------------------------------
+const CHUNK_LENGTH = 160;
+const CHUNK_WIDTH = 360;
+const NUM_CHUNKS = 5;
+const oceanChunks = [];
+const seabedChunks = [];
+let surfaceNormalFrame = 0;
+
+const oceanMat = mat(0x087f9e, 0.1, 0.3, { vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.88, roughness: 0.05 });
+const seabedMat = mat(0x1a453b, 0.85, 0.05, { vertexColors: true, flatShading: true });
+
+// Multi-octave Topography Function (Trenches, Ridge Walls, Sea Valleys)
+function seabedHeight(x, z) {
+  // Broad abyssal trenches and ocean ridges
+  const trenchWave = Math.sin(x * 0.025 + z * 0.01) * 16.0;
+  
+  // Steep canyon walls
+  const wallFactor = Math.cos(x * 0.06);
+  const canyons = Math.pow(Math.abs(wallFactor), 2.5) * -18.0;
+
+  // Medium underwater mountains & hills
+  const hills = Math.sin(z * 0.04) * Math.cos(x * 0.03) * 9.0;
+
+  // Sand ripples and dunes
+  const dunes = Math.sin(z * 0.12 + x * 0.08) * 1.8;
+
+  return -42.0 + trenchWave + canyons + hills + dunes;
+}
+
+for (let i = 0; i < NUM_CHUNKS; i++) {
+  const oceanGeo = new THREE.PlaneGeometry(CHUNK_WIDTH, CHUNK_LENGTH, 55, 40);
+  oceanGeo.rotateX(-Math.PI / 2);
+  const oMesh = new THREE.Mesh(oceanGeo, oceanMat);
+  oMesh.position.z = (i - 1) * CHUNK_LENGTH;
+  scene.add(oMesh);
+  oceanChunks.push({ mesh: oMesh, geo: oceanGeo });
+
+  const seabedGeo = new THREE.PlaneGeometry(CHUNK_WIDTH, CHUNK_LENGTH, 52, 42);
+  seabedGeo.rotateX(-Math.PI / 2);
+
+  const pos = seabedGeo.attributes.position;
+  const colors = [];
+  const cDeep = new THREE.Color(0x0c241f);
+  const cMid = new THREE.Color(0x1a4a3e);
+  const cPeak = new THREE.Color(0x2f7362);
+
+  for (let p = 0; p < pos.count; p++) {
+    const vx = pos.getX(p);
+    const vz = pos.getZ(p) + (i - 1) * CHUNK_LENGTH;
+    const h = seabedHeight(vx, vz);
+    pos.setY(p, h);
+
+    const ratio = THREE.MathUtils.clamp((h + 60) / 35, 0, 1);
+    let col;
+    if (ratio < 0.5) {
+      col = cDeep.clone().lerp(cMid, ratio * 2);
+    } else {
+      col = cMid.clone().lerp(cPeak, (ratio - 0.5) * 2);
+    }
+    colors.push(col.r, col.g, col.b);
+  }
+  seabedGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  seabedGeo.computeVertexNormals();
+
+  const sMesh = new THREE.Mesh(seabedGeo, seabedMat);
+  sMesh.position.set(0, 0, (i - 1) * CHUNK_LENGTH);
+  sMesh.receiveShadow = true;
+  scene.add(sMesh);
+  seabedChunks.push({ mesh: sMesh, geo: seabedGeo });
+}
+
+// Marine Dust Particle Field
+const snowCount = 450;
+const snowGeo = new THREE.BufferGeometry();
+const snowPos = new Float32Array(snowCount * 3);
+for (let i = 0; i < snowCount; i++) {
+  snowPos[i * 3] = (Math.random() - 0.5) * 120;
+  snowPos[i * 3 + 1] = -45 + Math.random() * 45;
+  snowPos[i * 3 + 2] = (Math.random() - 0.5) * 300;
+}
+snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+const snowMat = new THREE.PointsMaterial({ color: 0x8df2ff, size: 0.35, transparent: true, opacity: 0.5 });
+const marineSnow = new THREE.Points(snowGeo, snowMat);
+scene.add(marineSnow);
+
+// Wave Superposition Physics
+function waveY(x, z, time) {
+  const zone = ZONES[state.zoneIndex];
+  const mult = zone.waveMult;
+  const swell = Math.sin(z * 0.045 - time * 1.8 + x * 0.02) * (2.8 * mult);
+  const chop = Math.cos(x * 0.08 + time * 2.2 + z * 0.04) * (0.9 * mult);
+  const ripple = Math.sin(x * 0.2 - z * 0.2 + time * 3.5) * (0.25 * mult);
+  return swell + chop + ripple;
+}
+
+function updateSegmentIK(leaderPos, followerPos, distance, swayAngle = 0, swayAxisY = true) {
+  const dir = new THREE.Vector3().subVectors(followerPos, leaderPos);
+  if (swayAngle !== 0) {
+    if (swayAxisY) dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), swayAngle);
+    else dir.applyAxisAngle(new THREE.Vector3(1, 0, 0), swayAngle);
+  }
+  dir.normalize().multiplyScalar(distance);
+  followerPos.copy(leaderPos).add(dir);
+}
+
+function orientSegment(mesh, currentPos, targetPos, roll = 0) {
+  mesh.position.copy(currentPos);
+  mesh.lookAt(targetPos);
+  if (roll !== 0) mesh.rotation.z += roll;
+}
+
+function triggerGameOver() {
+  state.isGameOver = true;
+  state.started = false;
+  $('finalScoreText').textContent = Math.floor(state.score + state.distance / 10).toString().padStart(6, '0');
+  clearInputs();
+  document.body.classList.add('is-dying');
+  if (audioCtx && audioCtx.state === 'running') audioCtx.suspend().catch(() => {});
+  window.setTimeout(() => { $('gameover').classList.remove('hidden'); }, 520);
+}
+
+// HUD & UI Rendering Logic
+function renderHUD() {
+  const currentZone = ZONES[state.zoneIndex];
+  const surfWave = waveY(state.x, state.z, t);
+  const currentDepth = Math.max(0, -(state.y - surfWave));
+
+  const displayScore = Math.floor(state.score + state.distance / 10);
+  $('score').textContent = displayScore.toString().padStart(6, '0');
+  
+  $('energyNum').textContent = `${Math.round(state.energy)}%`;
+  $('energyFill').style.width = `${Math.max(0, Math.min(100, state.energy))}%`;
+
+  const zoneProgress = Math.min(100, ((state.distance % 1600) / 1600) * 100);
+  $('zoneFill').style.width = `${zoneProgress}%`;
+
+  $('depthDisplay').textContent = `DEPTH: ${currentDepth.toFixed(1)}m`;
+  $('speedDisplay').textContent = `${Math.round(state.speed)} KNOTS`;
+  
+  $('comboDisplay').innerHTML = `COMBO <em>×${state.combo.toFixed(1)}</em>`;
+
+  if (toastTimer > 0) {
+    toastTimer -= 0.016;
+    if (toastTimer <= 0) $('toast').classList.remove('show');
+  }
+}
+
+// ---------------------------------------------------------------------
+// MAIN PHYSICS & UPDATE LOOP
+// ---------------------------------------------------------------------
+function update(dt) {
+  if (state.energy > devConfig.maxEnergy) state.energy = devConfig.maxEnergy;
+  t += dt;
+
+  const currentZone = ZONES[state.zoneIndex];
+  const surfWave = waveY(state.x, state.z, t);
+
+  // Depth & Light Attenuation Physics
+  const currentDepth = Math.max(0, -(state.y - surfWave));
+  const depthFactor = THREE.MathUtils.clamp(currentDepth / 45.0, 0, 1.0);
+
+  sun.intensity = THREE.MathUtils.lerp(2.8, 0.3, depthFactor);
+  hemiLight.intensity = THREE.MathUtils.lerp(1.5, 0.35, depthFactor);
+  dolphinLight.intensity = THREE.MathUtils.lerp(2.0, 3.8, depthFactor);
+
+  causticsMesh.position.set(state.x, seabedHeight(state.x, state.z) + 0.3, state.z);
+  causticsMat.opacity = Math.max(0.02, (1.0 - depthFactor) * 0.22);
+  causticsMesh.rotation.y = t * 0.1;
+
+  godRaysGroup.position.z = state.z;
+  godRaysGroup.children.forEach((ray, idx) => {
+    ray.rotation.y = Math.sin(t * 0.5 + idx) * 0.12;
+    ray.scale.x = 1.0 + Math.sin(t * 1.5 + idx) * 0.2;
+  });
+  rayMat.opacity = Math.max(0.01, (1.0 - depthFactor) * 0.22);
+
+  // Update Splash Particles Physics
+  const sp = splashParticles.geometry.attributes.position;
+  for (let i = 0; i < splashCount; i++) {
+    if (sp.getY(i) > -400) {
+      splashVel[i].y -= 25.0 * dt;
+      sp.setX(i, sp.getX(i) + splashVel[i].x * dt);
+      sp.setY(i, sp.getY(i) + splashVel[i].y * dt);
+      sp.setZ(i, sp.getZ(i) + splashVel[i].z * dt);
+    }
+  }
+  sp.needsUpdate = true;
+
+  // Emit a continuous but delicate wake while swimming; boost leaves a denser trail.
+  wakeEmitTimer -= dt;
+  if (state.started && !state.isAir && state.speed > 7 && wakeEmitTimer <= 0) {
+    const emitCount = state.speed > 36 ? 2 : 1;
+    for (let n = 0; n < emitCount; n++) {
+      const i = wakeCursor++ % wakeCount;
+      const back = 4.4 + Math.random() * 2.4;
+      wakePos[i*3] = state.x - Math.sin(state.yaw) * back + (Math.random() - 0.5) * 0.75;
+      wakePos[i*3+1] = state.y + (Math.random() - 0.5) * 0.55;
+      wakePos[i*3+2] = state.z - Math.cos(state.yaw) * back + (Math.random() - 0.5) * 0.75;
+      wakeVel[i].set(-state.vx * 0.08 + (Math.random()-0.5)*0.8, 0.35 + Math.random()*0.7, -state.vz*0.035 + (Math.random()-0.5)*0.8);
+      wakeLife[i] = 0.65 + Math.random() * 0.75;
+    }
+    wakeEmitTimer = state.speed > 36 ? 0.045 : 0.075;
+  }
+  for (let i = 0; i < wakeCount; i++) {
+    if (wakeLife[i] > 0) {
+      wakeLife[i] -= dt;
+      wakePos[i*3] += wakeVel[i].x * dt;
+      wakePos[i*3+1] += wakeVel[i].y * dt;
+      wakePos[i*3+2] += wakeVel[i].z * dt;
+      wakeVel[i].multiplyScalar(Math.exp(-dt * 0.7));
+    } else {
+      wakePos[i*3+1] = -500;
+    }
+  }
+  wakeGeo.attributes.position.needsUpdate = true;
+  wakeMat.opacity = state.isAir ? 0.08 : 0.22 + Math.min(0.35, state.speed / 100);
+  wakeMat.size = 0.12 + Math.min(0.18, state.speed / 180);
+
+  const snowPositions = marineSnow.geometry.attributes.position;
+  for (let s = 0; s < snowCount; s++) {
+    let sz = snowPositions.getZ(s);
+    if (sz < state.z - 50) snowPositions.setZ(s, state.z + 250);
+  }
+  snowPositions.needsUpdate = true;
+
+  // Seabed Chunks Recycling
+  seabedChunks.forEach(chunk => {
+    while (chunk.mesh.position.z < state.z - CHUNK_LENGTH) {
+      chunk.mesh.position.z += CHUNK_LENGTH * NUM_CHUNKS;
+      const p = chunk.geo.attributes.position;
+      const meshZ = chunk.mesh.position.z;
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i), localZ = p.getZ(i), worldZ = localZ + meshZ;
+        p.setY(i, seabedHeight(x, worldZ));
+      }
+      p.needsUpdate = true;
+      chunk.geo.computeVertexNormals();
+    }
+  });
+
+  const currentFloorY = seabedHeight(state.x, state.z) + 2.5;
+
+  const targetFogColor = new THREE.Color(state.y < surfWave ? currentZone.depthColor : currentZone.fogColor);
+  scene.fog.color.lerp(targetFogColor, 0.08);
+  scene.fog.density = THREE.MathUtils.lerp(0.005, 0.018, depthFactor) * devConfig.fogDensity;
+  scene.background.lerp(targetFogColor, 0.08);
+
+  surfaceNormalFrame++;
+  oceanChunks.forEach(chunk => {
+    while (chunk.mesh.position.z < state.z - CHUNK_LENGTH) {
+      chunk.mesh.position.z += CHUNK_LENGTH * NUM_CHUNKS;
+    }
+    const p = chunk.geo.attributes.position;
+    const meshZ = chunk.mesh.position.z;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), localZ = p.getZ(i), worldZ = localZ + meshZ;
+      p.setY(i, waveY(x, worldZ, t));
+    }
+    p.needsUpdate = true;
+    if (surfaceNormalFrame % 3 === 0) chunk.geo.computeVertexNormals();
+  });
+
+  // Sea Assets Physics & Interaction Loop
+  seaAssets.forEach(asset => {
+    if (asset.userData.isShark && asset.userData.devHidden) return;
+    if (asset.position.z < state.z - 30) {
+      asset.position.z += 450 + Math.random() * 80;
+      asset.position.x = (Math.random() - 0.5) * 90;
+      const gY = seabedHeight(asset.position.x, asset.position.z);
+      if (asset.userData.isShark) {
+        asset.position.y = gY + 12 + Math.random() * 14;
+      } else if (asset.userData.isJellyfish) {
+        asset.position.y = gY + 10 + Math.random() * 15;
+        asset.userData.baseY = asset.position.y;
+      } else if (asset.userData.isSeaglass) {
+        asset.position.y = gY + 0.8;
+      } else if (!asset.userData.isFishSchool && !asset.userData.isPearl) {
+        asset.position.y = gY + 1.2;
+      } else if (asset.userData.isPearl) {
+        asset.userData.baseY = gY + 1.2;
+      }
+    }
+
+    // REALISTIC ASSET PHYSICAL DYNAMICS & HYDRODYNAMICS
+    if (asset.userData.isShark) {
+      if (asset.userData.devHidden) return;
+      // State-based predator AI: patrol, stalk, then commit to a predictive intercept.
+      const ai = asset.userData;
+      ai.aiTimer -= dt; ai.swimPhase += dt * (2.0 + ai.vz * 0.035) * devConfig.sharkAnimationSpeed;
+      const dx = state.x - asset.position.x, dy = state.y - asset.position.y, dz = state.z - asset.position.z;
+      const range = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      let tx = ai.homeX + Math.sin(t*0.32 + ai.swimPhase)*13;
+      let ty = ai.homeY + Math.sin(t*0.65 + ai.swimPhase)*2.5;
+      let tz = state.z + 24 + Math.sin(t*0.22 + ai.swimPhase)*12;
+      if (range < devConfig.sharkDetectionRange) {
+        ai.aiMode = range < 20 ? 'intercept' : 'stalk';
+        // Lead the dolphin's heading and velocity so it must actually evade.
+        const lead = THREE.MathUtils.clamp(range / 13, 0.6, 3.2);
+        tx = state.x + (state.vx || Math.sin(state.yaw)*state.speed) * lead + Math.sin(t*0.8+ai.swimPhase)*ai.sideBias*5;
+        ty = state.y + (state.vy || Math.sin(state.pitch)*state.speed) * lead * 0.45;
+        tz = state.z + (state.vz || Math.cos(state.pitch)*state.speed) * lead;
+        if (range < 16) { tx += ai.sideBias*5; tz -= 2; }
+      } else if (range > devConfig.sharkDetectionRange * 1.32) ai.aiMode = 'patrol';
+      const aimX=tx-asset.position.x, aimY=ty-asset.position.y, aimZ=tz-asset.position.z;
+      const desiredYaw=Math.atan2(aimX,Math.max(0.01,aimZ));
+      let yawDiff=((desiredYaw-ai.heading+Math.PI*3)%(Math.PI*2))-Math.PI;
+      ai.heading += THREE.MathUtils.clamp(yawDiff,-1.15*dt,1.15*dt);
+      const desiredY=Math.atan2(aimY,Math.max(1,Math.hypot(aimX,aimZ)));
+      ai.pitch = THREE.MathUtils.lerp(ai.pitch||0,THREE.MathUtils.clamp(desiredY,-0.38,0.38),Math.min(1,dt*1.4));
+      const targetSpeed = (ai.aiMode==='intercept' ? 19 : ai.aiMode==='stalk' ? 13.5 : 10.5) * devConfig.sharkSpeed;
+      ai.vz = THREE.MathUtils.lerp(ai.vz,targetSpeed,Math.min(1,dt*(ai.aiMode==='intercept'?1.1:0.45)));
+      asset.position.x += Math.sin(ai.heading)*ai.vz*0.72*dt;
+      asset.position.z += Math.cos(ai.heading)*ai.vz*dt;
+      asset.position.y += Math.sin(ai.pitch)*ai.vz*0.55*dt + Math.sin(ai.swimPhase*1.8)*0.35*dt;
+      asset.rotation.y = ai.heading; asset.rotation.x = -ai.pitch;
+      asset.rotation.z = THREE.MathUtils.clamp(-yawDiff*0.18,-0.22,0.22) + Math.sin(ai.swimPhase*2)*0.035;
+      // Traveling lateral flex: the caudal wave grows toward the tail, while
+      // the paired fins stabilize roll and the hinged jaw cycles with respiration.
+      const phase=ai.swimPhase*2.35;
+      if (ai.spine1) ai.spine1.rotation.y=Math.sin(phase-0.55)*0.095;
+      if (ai.spine2) ai.spine2.rotation.y=Math.sin(phase-1.05)*0.17;
+      if (ai.spine3) ai.spine3.rotation.y=Math.sin(phase-1.6)*0.27;
+      if (ai.tail) ai.tail.rotation.y=Math.sin(phase-2.15)*0.38;
+      if (ai.tailFin) ai.tailFin.rotation.x=Math.sin(phase-2.2)*0.055;
+      if (ai.finPivots) ai.finPivots.forEach(({pivot,side})=>{
+        pivot.rotation.z=side*(0.035+Math.sin(ai.swimPhase*1.35+side*0.25)*0.065);
+        pivot.rotation.x=Math.sin(ai.swimPhase*1.1+side)*0.045;
+      });
+      if (ai.dorsalPivot) ai.dorsalPivot.rotation.z=Math.sin(ai.swimPhase*1.7)*0.018;
+      if (ai.jawPivot) ai.jawPivot.rotation.x=0.025+Math.max(0,Math.sin(ai.swimPhase*2.0))*0.095;
+    } else if (asset.userData.isJellyfish) {
+      asset.userData.pulsePhase = (asset.userData.pulsePhase || 0) + dt * 2.5;
+      const pulse = Math.sin(asset.userData.pulsePhase);
+      const capScale = 1.0 + pulse * 0.15;
+      
+      if (asset.userData.cap) {
+        asset.userData.cap.scale.set(capScale, 1.0 - pulse * 0.1, capScale);
+      }
+
+      // Buoyant pulse vertical movement
+      asset.userData.vy = pulse > 0 ? pulse * 1.5 : -0.5;
+      asset.position.y += asset.userData.vy * dt;
+      const jdx = asset.position.x - state.x, jdz = asset.position.z - state.z;
+      const jdist = Math.hypot(jdx, jdz);
+      const flee = jdist < 22 ? (1 - jdist/22) : 0;
+      asset.userData.driftPhase = (asset.userData.driftPhase || Math.random()*6.28) + dt*0.42;
+      asset.position.x += (Math.cos(t*0.38 + asset.userData.driftPhase)*0.42 + (jdist>0.01 ? jdx/jdist*flee*2.4 : 0))*dt;
+      asset.position.z += (Math.sin(t*0.28 + asset.userData.driftPhase)*0.3 + (jdist>0.01 ? jdz/jdist*flee*1.6 : 0))*dt;
+
+      // Realistic tentacle hydrodynamic drag physics
+      if (asset.userData.tentacles) {
+        asset.userData.tentacles.forEach((tentacle, idx) => {
+          tentacle.rotation.z = Math.sin(asset.userData.pulsePhase - idx * 0.3) * 0.2;
+          tentacle.rotation.x = Math.cos(asset.userData.pulsePhase - idx * 0.3) * 0.2;
+        });
+      }
+    } else if (asset.userData.isKelp) {
+      // Dynamic current-driven sway physics across kelp leaves
+      if (asset.userData.leaves) {
+        asset.userData.leaves.forEach((leaf, idx) => {
+          leaf.rotation.z = Math.sin(t * 2 + asset.userData.offset + idx * 0.4) * (0.15 + idx * 0.03);
+          leaf.rotation.x = Math.cos(t * 1.5 + asset.userData.offset + idx * 0.4) * (0.1 + idx * 0.02);
+        });
+      }
+    } else if (asset.userData.isPearl) {
+      asset.userData.phase += dt * 2;
+      asset.position.y = asset.userData.baseY + Math.sin(asset.userData.phase) * 0.3;
+      asset.rotation.y += dt * 1.2;
+    } else if (asset.userData.isSeaglass) {
+      asset.rotation.y += dt * asset.userData.rotSpeed;
+    } else if (asset.userData.isFishSchool) {
+      const schoolAI = asset.userData;
+      // Cohesive school behavior: gentle current drift, threat-aware evasions, and persistent sonar response.
+      schoolAI.schoolPhase = (schoolAI.schoolPhase || Math.random()*6.28) + dt*0.55;
+      const threatX = asset.position.x - state.x, threatY = asset.position.y - state.y, threatZ = asset.position.z - state.z;
+      const threatDist = Math.sqrt(threatX*threatX + threatY*threatY + threatZ*threatZ);
+      const flee = threatDist < 19 ? (1 - threatDist/19) : 0;
+      if (schoolAI.sonarAttractUntil > t && schoolAI.sonarAttractTarget) {
+        const toPing = schoolAI.sonarAttractTarget.clone().sub(asset.position);
+        const distanceToPing = toPing.length();
+        if (distanceToPing > 1.35) {
+          toPing.normalize();
+          asset.position.addScaledVector(toPing, Math.min(distanceToPing - 1.35, 15.5 * dt));
+        } else schoolAI.sonarAttractUntil = 0;
+      } else {
+        asset.position.x += (Math.sin(schoolAI.schoolPhase)*0.65 + (threatDist>0.01 ? threatX/threatDist*flee*5.5 : 0))*dt;
+        asset.position.y += (Math.sin(schoolAI.schoolPhase*0.7)*0.22 + (threatDist>0.01 ? threatY/threatDist*flee*2.4 : 0))*dt;
+        asset.position.z += (Math.cos(schoolAI.schoolPhase*0.6)*0.32 + (threatDist>0.01 ? threatZ/threatDist*flee*5.0 : 0))*dt;
+      }
+      schoolAI.fishList.forEach((fishData, idx) => {
+        fishData.phase += dt * (3.4 + flee*2.2);
+        const formation = 1 + flee*0.28;
+        fishData.mesh.position.x = fishData.offset.x*formation + Math.sin(fishData.phase + idx*0.32)*0.42;
+        fishData.mesh.position.y = fishData.offset.y*formation + Math.cos(fishData.phase*0.8)*0.3;
+        fishData.mesh.position.z = fishData.offset.z + Math.sin(fishData.phase*0.6)*0.28;
+        fishData.mesh.rotation.z = Math.sin(fishData.phase)*0.2;
+        fishData.mesh.rotation.y = Math.atan2(Math.cos(fishData.phase),Math.sin(fishData.phase*0.6))*0.18;
+      });
+    }
+
+    // ---------------------------------------------------------------------
+    // COMPREHENSIVE COLLISION DETECTION & MECHANICS FOR ALL ASSETS
+    // ---------------------------------------------------------------------
+    // Multi-point Dolphin Bounding Spheres (Head, Body, Tail)
+    const dolphinNodes = [
+      { pos: dolphinSnoutPos, radius: 1.1 },
+      { pos: bodySegPos, radius: 1.3 },
+      { pos: tailSegPos, radius: 0.9 }
+    ];
+
+    let primaryNode = null;
+    let minDist = Infinity;
+    for (const node of dolphinNodes) {
+      const d = asset.position.distanceTo(node.pos);
+      if (d < minDist) {
+        minDist = d;
+        primaryNode = node;
+      }
+    }
+    const dist = minDist;
+
+    // Helper for applying collision effects
+    const handleImpact = (contactPos, contactNormal, obstacleType, baseDamage, colorHex = 0xffd080) => {
+      // One damage event per contact, not one per frame while overlapping.
+      if ((asset.userData.collisionCooldownUntil || 0) > t) return false;
+      asset.userData.collisionCooldownUntil = t + 0.9;
+      state.wipe = 0.8;
+      state.combo = 1.0;
+
+      if (contactNormal.lengthSq() < 0.0001) contactNormal.set(0, 0, -1);
+      else contactNormal.normalize();
+      const penetration = Math.max(0, (asset.userData.radius || 3.2) + (primaryNode?.radius || 1.2) - minDist);
+      const separation = THREE.MathUtils.clamp(penetration + 0.45, 1.2, 5.5);
+      // Move the dolphin clear of the contact volume before the next physics tick.
+      state.x += contactNormal.x * separation;
+      state.y += contactNormal.y * separation;
+      state.z += contactNormal.z * separation;
+
+      const kineticMult = Math.max(0.6, state.speed / 22.0);
+      const totalDamage = Math.round(baseDamage * kineticMult * devConfig.collisionDamage);
+      state.energy = Math.max(0, state.energy - totalDamage);
+
+      const impactVelocity = new THREE.Vector3(state.vx, state.vy, state.vz || Math.cos(state.pitch) * state.speed);
+      impactVelocity.reflect(contactNormal).multiplyScalar(0.38);
+      state.vx = impactVelocity.x;
+      state.vy = impactVelocity.y;
+      state.vz = impactVelocity.z;
+      const reboundSpeed = THREE.MathUtils.clamp(impactVelocity.length(), 8, 28);
+      state.speed = reboundSpeed;
+      state.targetSpeed = reboundSpeed;
+      // The movement model advances along heading/pitch, so feed the rebound
+      // back into those controls instead of letting the next frame erase it.
+      state.targetYaw = Math.atan2(impactVelocity.x, Math.max(0.25, impactVelocity.z));
+      state.targetPitch = Math.asin(THREE.MathUtils.clamp(impactVelocity.y / reboundSpeed, -0.7, 0.7));
+
+      state.shakeIntensity = Math.min(2.5, 0.8 + (state.speed / 20.0));
+      state.flashOpacity = 0.85;
+
+      triggerDebris(contactPos.x, contactPos.y, contactPos.z, colorHex);
+      playSFX('hurt', 1.2);
+      playSFX('thud', 1.0);
+      notify(`CRASH: ${obstacleType.toUpperCase()}`, `-${totalDamage}% ENERGY`);
+
+      if (state.energy <= 0) triggerGameOver();
+      return true;
+    };
+
+    // 1. Solid Obstacles (Rocks, Ruins, Coral Formations)
+    if (asset.userData.isObstacle) {
+      if (dist < asset.userData.radius + primaryNode.radius) {
+        const contactNormal = new THREE.Vector3().subVectors(primaryNode.pos, asset.position).normalize();
+        handleImpact(primaryNode.pos, contactNormal, asset.userData.type || 'rock', 18, 0xffaa44);
+      }
+    }
+
+    // 2. Underwater Archways
+    else if (asset.userData.isArch) {
+      const pLeft = new THREE.Vector3(asset.position.x - asset.userData.pillarDistance, asset.position.y + 12, asset.position.z);
+      const pRight = new THREE.Vector3(asset.position.x + asset.userData.pillarDistance, asset.position.y + 12, asset.position.z);
+      const pTop = new THREE.Vector3(asset.position.x, asset.position.y + asset.userData.archHeight, asset.position.z);
+
+      if (dolphinSnoutPos.distanceTo(pLeft) < asset.userData.radius + 1.2) {
+        handleImpact(dolphinSnoutPos, new THREE.Vector3(1, 0, 0), 'ARCH PILLAR', 22, 0x88bbff);
+      } else if (dolphinSnoutPos.distanceTo(pRight) < asset.userData.radius + 1.2) {
+        handleImpact(dolphinSnoutPos, new THREE.Vector3(-1, 0, 0), 'ARCH PILLAR', 22, 0x88bbff);
+      } else if (dolphinSnoutPos.distanceTo(pTop) < asset.userData.radius + 1.5) {
+        handleImpact(dolphinSnoutPos, new THREE.Vector3(0, -1, 0), 'ARCH LINTEL', 22, 0x88bbff);
+      }
+    }
+
+    // 3. Kelp Stalks (Hydrodynamic Drag Resistance)
+    else if (asset.userData.isKelp) {
+      if (dist < asset.userData.radius + 1.2) {
+        state.speed = Math.max(12, state.speed - dt * 25.0);
+        if (Math.random() < 0.15) {
+          playSFX('rustle', 0.5);
+          triggerDebris(dolphinSnoutPos.x, dolphinSnoutPos.y, dolphinSnoutPos.z, 0x52ffb8);
+        }
+      }
+    }
+
+    // 4. Predators (Sharks)
+    else if (asset.userData.isShark) {
+      if (dist < 4.6) {
+        const contactNormal = new THREE.Vector3().subVectors(dolphinSnoutPos, asset.position).normalize();
+        if (handleImpact(dolphinSnoutPos, contactNormal, 'SHARK BITE', 30, 0xff3344)) asset.position.z += 60;
+      }
+    }
+
+    // 5. Environmental Hazards (Glowing Jellyfish)
+    else if (asset.userData.isJellyfish) {
+      if (dist < 2.8) {
+        const contactNormal = new THREE.Vector3().subVectors(dolphinSnoutPos, asset.position).normalize();
+        if (handleImpact(dolphinSnoutPos, contactNormal, 'JELLYFISH STING', 15, 0xb57eff)) asset.position.z += 80;
+      }
+    }
+
+    // 6. Fish Schools
+    else if (asset.userData.isFishSchool) {
+      // Generous feeding range plus a subtle magnetic pull: near misses become satisfying catches.
+      if (dist < 14) {
+        const towardSchool = new THREE.Vector3(
+          asset.position.x - state.x,
+          asset.position.y - state.y,
+          asset.position.z - state.z
+        );
+        const pullDistance = towardSchool.length();
+        if (pullDistance > 0.001) {
+          const sonarBoost = asset.userData.sonarAttractUntil > t ? 2.1 : 1.0;
+          const pull = Math.min(4.8 * sonarBoost * dt, pullDistance * 0.12);
+          towardSchool.multiplyScalar(pull / pullDistance);
+          state.x += towardSchool.x;
+          state.y += towardSchool.y;
+          state.z += towardSchool.z;
+        }
+      }
+      if (dist < 7.2) {
+        award(150, 'FISH SCHOOL FEED');
+        state.energy = Math.min(100, state.energy + 18);
+        playSFX('feed');
+        triggerDebris(asset.position.x, asset.position.y, asset.position.z, 0xffe066);
+        asset.position.z += 350;
+      }
+    }
+
+    // 7. Pearl Shell Collectibles
+    else if (asset.userData.isPearl) {
+      if (dist < 3.2) {
+        award(400, 'PEARL OBTAINED!');
+        state.energy = Math.min(100, state.energy + 25);
+        playSFX('pearl');
+        triggerDebris(asset.position.x, asset.position.y, asset.position.z, 0x70f6ff);
+        asset.position.z += 400;
+      }
+    }
+
+    // 8. Seaglass Crystal Formations
+    else if (asset.userData.isSeaglass) {
+      if (dist < 3.5) {
+        award(300, 'SEAGLASS RECOVERED');
+        state.energy = Math.min(100, state.energy + 15);
+        playSFX('seaglass');
+        triggerDebris(asset.position.x, asset.position.y, asset.position.z, 0x52ffb8);
+        asset.position.z += 380;
+      }
+    }
+  });
+
+  // Seafloor Collision Check
+  if (state.y < currentFloorY) {
+    const enteringFloor = !state.floorContact;
+    state.y = currentFloorY;
+    const impactSpeed = Math.abs(state.vy) + state.speed * 0.5;
+    if (enteringFloor && impactSpeed > 10) {
+      state.shakeIntensity = Math.min(1.2, impactSpeed * 0.045);
+      state.flashOpacity = 0.35;
+      playSFX('thud', 0.55);
+      triggerDebris(state.x, state.y, state.z, 0x3d7ea6);
+      state.energy = Math.max(0, state.energy - Math.round(Math.max(0, Math.abs(state.vy) - 5) * 0.8));
+      if (state.energy <= 0) triggerGameOver();
+    }
+    state.vy = Math.max(0, state.vy);
+    state.floorContact = true;
+  } else {
+    state.floorContact = false;
+  }
+
+  // Active Sonar Pulse Processing
+  if (state.sonarTimer > 0) {
+    state.sonarTimer -= dt;
+    const sonarDuration = Math.max(0.1, devConfig.sonarDuration);
+    const progress = THREE.MathUtils.clamp((sonarDuration - state.sonarTimer) / sonarDuration, 0, 1);
+    const pulseRadius = progress * devConfig.sonarRange;
+
+    sonarSphere.scale.set(pulseRadius, pulseRadius, pulseRadius);
+    sonarSphereMat.opacity = (1.0 - progress) * 0.8;
+    sonarLight.intensity = (1.0 - progress) * 12.0;
+
+    // Scan for enemies and entities in wave front with red enemy radar flash
+    seaAssets.forEach(asset => {
+      const d = asset.position.distanceTo(sonarSphere.position);
+      if (Math.abs(d - pulseRadius) < 8 && !sonarDetectedThisPulse.has(asset)) {
+        sonarDetectedThisPulse.add(asset);
+        if (asset.userData.isShark || asset.userData.isJellyfish || asset.userData.isEnemy) {
+          highlightSonarEnemy(asset);
+          triggerDebris(asset.position.x, asset.position.y, asset.position.z, 0xff2233);
+        } else if (asset.userData.isFishSchool) {
+          triggerDebris(asset.position.x, asset.position.y, asset.position.z, 0x70f6ff);
+          // A detected school is drawn toward the ping's origin for a few seconds.
+          asset.userData.sonarAttractUntil = t + 11.0;
+          asset.userData.sonarAttractTarget = sonarSphere.position.clone();
+        } else if (asset.userData.isPearl || asset.userData.isSeaglass) {
+          triggerDebris(asset.position.x, asset.position.y, asset.position.z, 0x70f6ff);
+        }
+      }
+    });
+
+    if (state.sonarTimer <= 0) {
+      sonarSphereMat.opacity = 0;
+      sonarLight.intensity = 0;
+    }
+  }
+
+  updateSonarEnemyHighlights();
+
+  // ---------------------------------------------------------------------
+  // DOLPHIN FLIGHT, DIVE, AND ROTATION PHYSICS
+  // ---------------------------------------------------------------------
+  if (state.started) {
+    // Arcade-first handling: the dolphin answers immediately, while the body
+    // still eases into the turn instead of snapping like a vehicle on rails.
+    const maxPitchRate = devConfig.pitchRate;
+    const maxYawRate = devConfig.steeringRate;
+
+    // Controls set a desired attitude; the body and velocity respond with weight.
+    let pitchDir = 0;
+    if (keys.w || keys.arrowup) pitchDir -= 1;
+    if (keys.s || keys.arrowdown) pitchDir += 1;
+    state.targetPitch = THREE.MathUtils.clamp(state.targetPitch + pitchDir * maxPitchRate * dt, -Math.PI * 0.40, Math.PI * 0.40);
+
+    let yawDir = 0;
+    if (keys.a || keys.arrowleft) yawDir += 1;
+    if (keys.d || keys.arrowright) yawDir -= 1;
+    state.targetYaw += yawDir * maxYawRate * dt;
+    // A little counter-steer settles the heading without snapping it straight.
+    if (yawDir === 0) state.targetYaw = state.yaw;
+    state.targetRoll = THREE.MathUtils.clamp(-yawDir * 0.58 - state.turnRate * 0.10, -0.8, 0.8);
+    if (keys.q) state.targetRoll -= 2.2 * dt;
+    if (keys.e) state.targetRoll += 2.2 * dt;
+    state.targetRoll = THREE.MathUtils.clamp(state.targetRoll, -1.05, 1.05);
+
+    const attitudeBlend = 1 - Math.exp(-dt * 9.0);
+    const oldYaw = state.yaw;
+    state.pitch = THREE.MathUtils.lerp(state.pitch, state.targetPitch, attitudeBlend);
+    state.yaw = THREE.MathUtils.lerp(state.yaw, state.targetYaw, 1 - Math.exp(-dt * 8.5));
+    state.turnRate = (state.yaw - oldYaw) / Math.max(dt, 0.001);
+    state.roll = THREE.MathUtils.lerp(state.roll, state.targetRoll, 1 - Math.exp(-dt * 8.0));
+
+    const previousSpeed = state.speed;
+    if (keys.shift && state.energy > 5) {
+      state.targetSpeed = devConfig.boostSpeed;
+      state.energy = Math.max(0, state.energy - dt * devConfig.boostEnergyDrain);
+      if (Math.random() < dt * 5) playSFX('boost', 0.35);
+    } else {
+      state.targetSpeed = devConfig.cruiseSpeed;
+    }
+    state.speed = THREE.MathUtils.lerp(state.speed, state.targetSpeed, 1 - Math.exp(-dt * 4.5));
+    state.acceleration = (state.speed - previousSpeed) / Math.max(dt, 0.001);
+
+    // Momentum: steer the dolphin's desired velocity, but let existing velocity
+    // carry through turns. At speed the response is nimble; at low speed it is softer.
+    const cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+    const cy = Math.cos(state.yaw), sy = Math.sin(state.yaw);
+    const desiredVX = sy * cp * state.speed;
+    const desiredVY = sp * state.speed;
+    const desiredVZ = cy * cp * state.speed;
+    const waterResponse = (state.isAir ? 2.6 : 5.2 + Math.min(1.8, state.speed / 22)) * devConfig.waterResponse;
+    const velocityBlend = 1 - Math.exp(-dt * waterResponse);
+    state.vx = THREE.MathUtils.lerp(state.vx, desiredVX, velocityBlend);
+
+    // Surface crossings retain the upward impulse, creating earned breaches rather
+    // than teleporting into an air state simply because the dolphin is above a wave.
+    if (state.isAir) {
+      state.vy -= 22.0 * dt;
+      state.vx *= Math.exp(-dt * 0.12);
+      state.vz = THREE.MathUtils.lerp(state.vz, desiredVZ, 1 - Math.exp(-dt * 0.45));
+      state.airTime += dt;
+    } else {
+      state.vy = THREE.MathUtils.lerp(state.vy, desiredVY, velocityBlend * 0.96);
+      state.vz = THREE.MathUtils.lerp(state.vz, desiredVZ, velocityBlend);
+    }
+
+    const prevY = state.y;
+    state.x += state.vx * dt;
+    state.y += state.vy * dt;
+    state.z += state.vz * dt;
+    state.distance = state.z;
+
+    const surfaceNow = waveY(state.x, state.z, t);
+    if (!state.isAir && prevY <= surfaceNow + 0.1 && state.y > surfaceNow && state.vy > 2.8 && state.speed > 16) {
+      state.isAir = true;
+      state.airTime = 0;
+      // A launch splash is strongest when the dolphin has built real upward speed.
+      triggerSplash(state.x, surfaceNow, state.z);
+      playSFX('breach', THREE.MathUtils.clamp(state.vy / 12, 0.45, 1.2));
+      state.shakeIntensity = Math.max(state.shakeIntensity, 0.12);
+    } else if (state.isAir && state.y <= surfaceNow) {
+      state.y = surfaceNow - 0.15;
+      state.isAir = false;
+      triggerSplash(state.x, surfaceNow, state.z);
+      state.shakeIntensity = Math.max(state.shakeIntensity, 0.22 + Math.min(0.4, Math.abs(state.vy) * 0.012));
+      if (state.airTime > 0.55) award(180 * Math.floor(state.airTime * 1.8), 'CLEAN WATER ENTRY!');
+      state.airTime = 0;
+      // Water entry damps the fall, not the forward glide.
+      state.vy = Math.max(1.5, Math.abs(state.vy) * 0.18);
+    }
+
+    // Passive Energy Drain & Zone Progression
+    state.energy = Math.max(0, state.energy - dt * devConfig.passiveEnergyDrain);
+    if (state.energy <= 0) triggerGameOver();
+
+    const zoneIdx = Math.min(ZONES.length - 1, Math.floor(state.distance / 1600));
+    if (zoneIdx !== state.zoneIndex) {
+      state.zoneIndex = zoneIdx;
+      notify(ZONES[state.zoneIndex].name, 'NEW OCEAN ZONE ENTERED');
+      $('zoneTitle').textContent = ZONES[state.zoneIndex].name;
+    }
+  }
+
+  // Dolphin Segment Inverse Kinematics Position Update
+  dolphinSnoutPos.set(state.x, state.y, state.z);
+  const swimEffort = THREE.MathUtils.clamp(0.45 + state.speed / 38 + Math.abs(state.acceleration) / 45, 0.45, 1.8);
+  const kickRate = (3.8 + state.speed * 0.17 + Math.abs(state.acceleration) * 0.045) * devConfig.dolphinAnimationSpeed;
+  const kickPhase = t * kickRate;
+  const turnFlex = THREE.MathUtils.clamp(state.turnRate * 0.11, -0.34, 0.34);
+  // Restrained, narrow swimming articulation: keep the head and torso steady,
+  // with most of the visible motion concentrated toward the tail and fluke.
+  updateSegmentIK(dolphinSnoutPos, bodySegPos, 2.2, Math.sin(kickPhase - 0.25) * (0.045 + 0.035 * swimEffort) + turnFlex * 0.10);
+  updateSegmentIK(bodySegPos, tailSegPos, 2.4, Math.sin(kickPhase - 0.9) * (0.085 + 0.065 * swimEffort) + turnFlex * 0.28);
+  updateSegmentIK(tailSegPos, flukeSegPos, 2.4, Math.sin(kickPhase - 1.65) * (0.14 + 0.09 * swimEffort) + turnFlex * 0.45);
+
+  // Small fin adjustments preserve life without broad, distracting flapping.
+  leftFin.rotation.z = -0.3 + Math.sin(kickPhase - 0.45) * (0.04 + 0.025 * swimEffort) - turnFlex * 0.07;
+  rightFin.rotation.z = 0.3 - Math.sin(kickPhase - 0.45) * (0.04 + 0.025 * swimEffort) + turnFlex * 0.07;
+  leftFin.rotation.x = -0.2 + Math.cos(kickPhase * 0.5) * 0.025;
+  rightFin.rotation.x = -0.2 - Math.cos(kickPhase * 0.5) * 0.025;
+  flukeMesh.rotation.x = Math.PI / 12 + Math.sin(kickPhase - 1.9) * (0.12 + 0.08 * swimEffort);
+  flukeMesh.rotation.z = Math.sin(kickPhase - 1.6) * (0.055 + Math.abs(turnFlex) * 0.18);
+
+  orientSegment(headGroup, dolphinSnoutPos, bodySegPos, state.roll);
+  orientSegment(bodyGroup, bodySegPos, tailSegPos, state.roll);
+  orientSegment(tailGroup, tailSegPos, flukeSegPos, state.roll);
+  orientSegment(flukeGroup, flukeSegPos, new THREE.Vector3().subVectors(flukeSegPos, tailSegPos).add(flukeSegPos), state.roll);
+
+  // ---------------------------------------------------------------------
+  // CAMERA TRACKING, SHAKE & IMPACT FLASH RENDERING
+  // Restored original camera movement.
+  // ---------------------------------------------------------------------
+  const targetCam = new THREE.Vector3(
+    state.x - Math.sin(state.yaw) * 26,
+    state.y + 6 - Math.sin(state.pitch) * 12,
+    state.z - 28
+  );
+  camPosSmooth.lerp(targetCam, 1 - Math.exp(-dt * devConfig.cameraFollow));
+
+  let shakeOffset = new THREE.Vector3();
+  if (state.shakeIntensity > 0) {
+    shakeOffset.set(
+      (Math.random() - 0.5) * state.shakeIntensity,
+      (Math.random() - 0.5) * state.shakeIntensity,
+      (Math.random() - 0.5) * state.shakeIntensity
+    );
+    state.shakeIntensity = Math.max(0, state.shakeIntensity - dt * 3.5);
+  }
+
+  camera.position.copy(camPosSmooth).add(shakeOffset);
+  camera.lookAt(state.x, state.y + 1, state.z + 8);
+
+  // Damage Flash Layer Fade
+  if (state.flashOpacity > 0) {
+    state.flashOpacity = Math.max(0, state.flashOpacity - dt * 3.0);
+    $('damageFlash').style.opacity = state.flashOpacity;
+  }
+
+  updateAudioState(state.speed, currentDepth, state.isAir);
+  renderHUD();
+}
+
+// ---------------------------------------------------------------------
+// MAIN GAME LOOP
+// ---------------------------------------------------------------------
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+
+  if (!isPaused) update(dt);
+  renderer.render(scene, camera);
+}
+
+
+// ---------------------------------------------------------------------
+// OPTIONAL DEVELOPER MODE — isolated tuning panel (F3 to toggle, Esc to close).
+// Every control below is connected to an existing simulation parameter.
+// ---------------------------------------------------------------------
+const DEV_GROUPS = [
+  {title:'Dolphin / Movement',items:[
+    ['cruiseSpeed','Cruise speed',8,36,1,' kn'],['boostSpeed','Hydro-boost speed',24,72,1,' kn'],
+    ['steeringRate','Turn response',0.5,4,0.05,''],['pitchRate','Dive / surface response',0.5,4,0.05,''],
+    ['waterResponse','Water momentum response',0.25,2,0.05,'×'],['dolphinAnimationSpeed','Dolphin animation speed',0.25,2.5,0.05,'×']
+  ]},
+  {title:'Energy / Sonar',items:[
+    ['maxEnergy','Maximum energy',25,200,5,'%'],['passiveEnergyDrain','Passive energy drain',0,5,0.1,' /s'],
+    ['boostEnergyDrain','Boost energy drain',0,30,0.5,' /s'],['sonarDuration','Sonar pulse duration',0.5,6,0.1,' s'],
+    ['sonarRange','Sonar range',30,240,5,' m']
+  ]},
+  {title:'Sharks / Wildlife',items:[
+    ['sharkCount','Visible sharks',0,35,1,''],['sharkSpawnStart','First shark segment',0,30,1,''],
+    ['sharkSpawnEvery','Shark spacing (segments)',1,12,1,''],['sharkSpeed','Shark AI speed',0.25,2.5,0.05,'×'],
+    ['sharkDetectionRange','Shark detection range',15,130,1,' m'],['sharkScale','Shark model size',0.5,1.8,0.05,'×'],
+    ['sharkAnimationSpeed','Shark animation speed',0.25,2.5,0.05,'×']
+  ]},
+  {title:'Safety / Camera / Atmosphere',items:[
+    ['collisionDamage','Collision damage',0,2.5,0.05,'×'],['cameraFollow','Camera follow response',0.5,10,0.1,''],
+    ['fogDensity','Fog density',0.25,2.5,0.05,'×']
+  ]}
+];
+function devFormat(key,value,suffix){
+  const n = Number(value);
+  return (['steeringRate','pitchRate','waterResponse','dolphinAnimationSpeed','sharkSpeed','sharkScale','sharkAnimationSpeed','collisionDamage','fogDensity'].includes(key) ? n.toFixed(2) : (Number.isInteger(n)?String(n):n.toFixed(1))) + suffix;
+}
+function buildDeveloperPanel(){
+  if(devPanelBuilt)return;
+  const panel=document.createElement('section');panel.id='devPanel';panel.setAttribute('aria-label','Developer mode controls');
+  panel.innerHTML='<header class="devHead"><div><div class="devTitle">Developer Mode</div><div class="devSub">Live tuning · F3 toggle · Esc close</div></div><button type="button" id="devClose">Close</button></header><div class="devBody" id="devBody"></div>';
+  document.body.appendChild(panel);
+  const body=panel.querySelector('#devBody');
+  DEV_GROUPS.forEach((group,gi)=>{
+    const details=document.createElement('details');details.open=gi===0||gi===2;
+    const summary=document.createElement('summary');summary.textContent=group.title;details.appendChild(summary);
+    group.items.forEach(([key,label,min,max,step,suffix])=>{
+      const wrap=document.createElement('div');wrap.className='devControl';
+      const line=document.createElement('div');line.className='devLabel';
+      const lab=document.createElement('label');lab.htmlFor='dev-'+key;lab.textContent=label;
+      const out=document.createElement('output');out.id='dev-out-'+key;out.textContent=devFormat(key,devConfig[key],suffix);
+      line.append(lab,out);
+      const input=document.createElement('input');input.type='range';input.id='dev-'+key;input.min=min;input.max=max;input.step=step;input.value=devConfig[key];input.dataset.setting=key;input.dataset.suffix=suffix;
+      input.addEventListener('input',()=>{devConfig[key]=Number(input.value);out.textContent=devFormat(key,input.value,suffix);applyDeveloperSettings(key);});
+      wrap.append(line,input);details.appendChild(wrap);
+    });
+    body.appendChild(details);
+  });
+  const actions=document.createElement('div');actions.className='devActions';
+  actions.innerHTML='<button type="button" id="devReset">Reset defaults</button><button type="button" id="devSave">Save settings</button><button type="button" id="devExport">Export JSON</button><button type="button" id="devRebuild">Regenerate sea</button><div class="devStatus" id="devStatus" aria-live="polite"></div><div class="devHint">Settings are live. Shark spawn changes apply after “Regenerate sea”. Defaults match this build’s current tuning.</div>';
+  body.appendChild(actions);
+  panel.querySelector('#devClose').addEventListener('click',closeDeveloperMode);
+  panel.querySelector('#devReset').addEventListener('click',()=>{Object.assign(devConfig,devDefaults);try{localStorage.removeItem('underwaterOdysseyDevConfig');}catch(e){}syncDeveloperControls();applyDeveloperSettings();setDevStatus('Defaults restored and saved tuning cleared.');});
+  panel.querySelector('#devSave').addEventListener('click',()=>{try{localStorage.setItem('underwaterOdysseyDevConfig',JSON.stringify(devConfig));setDevStatus('Settings saved in this browser.');}catch(e){setDevStatus('Browser storage is unavailable.');}});
+  panel.querySelector('#devExport').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(devConfig,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='underwater-odyssey-dev-settings.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setDevStatus('Configuration exported.');});
+  panel.querySelector('#devRebuild').addEventListener('click',()=>{populateSeaAssets();applyDeveloperSettings();setDevStatus('Sea regenerated with current shark spawn settings.');});
+  try{const saved=localStorage.getItem('underwaterOdysseyDevConfig');if(saved){const parsed=JSON.parse(saved);Object.keys(devConfig).forEach(k=>{if(Number.isFinite(parsed[k]))devConfig[k]=parsed[k];});}}catch(e){}
+  syncDeveloperControls();applyDeveloperSettings();devPanelBuilt=true;
+}
+function setDevStatus(message){const el=document.getElementById('devStatus');if(el)el.textContent=message;}
+function syncDeveloperControls(){document.querySelectorAll('#devPanel input[data-setting]').forEach(input=>{const key=input.dataset.setting;input.value=devConfig[key];const out=document.getElementById('dev-out-'+key);if(out)out.textContent=devFormat(key,devConfig[key],input.dataset.suffix||'');});}
+function applyDeveloperSettings(changedKey){
+  // Existing player systems read these values directly during their next update.
+  if(typeof state!=='undefined' && state){state.energy=Math.min(state.energy,devConfig.maxEnergy);if(changedKey==='cruiseSpeed'&&!keys.shift)state.targetSpeed=devConfig.cruiseSpeed;}
+  let visibleIndex=0;
+  if(typeof seaAssets!=='undefined') seaAssets.forEach(asset=>{
+    if(!asset.userData.isShark)return;
+    const show=visibleIndex<Math.round(devConfig.sharkCount);visibleIndex++;
+    asset.userData.devHidden=!show;asset.visible=show;
+    asset.scale.setScalar(1.42*devConfig.sharkScale);asset.userData.radius=3.0*devConfig.sharkScale;
+  });
+  if(typeof scene!=='undefined'&&scene.fog&&scene.fog.isFogExp2){/* density is applied in the simulation loop */}
+}
+function openDeveloperMode(){buildDeveloperPanel();devModeOpen=true;document.getElementById('devPanel').classList.add('open');}
+function closeDeveloperMode(){devModeOpen=false;const p=document.getElementById('devPanel');if(p)p.classList.remove('open');}
+function toggleDeveloperMode(){if(devModeOpen)closeDeveloperMode();else openDeveloperMode();}
+window.addEventListener('keydown',e=>{
+  if(e.key==='F3'){e.preventDefault();e.stopPropagation();toggleDeveloperMode();return;}
+  if(e.key==='Escape'&&devModeOpen){e.preventDefault();e.stopPropagation();closeDeveloperMode();}
+},true);
+
+
+window.onload = () => {
+  animate();
+};
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+})();
+</script>
+</body>
+</html>
